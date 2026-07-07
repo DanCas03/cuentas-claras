@@ -15,11 +15,12 @@ Jerarquía ante dudas: la spec (`docs/superpowers/specs/2026-07-07-finanzas-pers
 ## Reglas no negociables
 
 1. **Privacidad**: `TXTBNC1.txt`, `TXTBNC2.txt`, `PDFBNC.pdf`, `ExcelBNC.xls` y `Resumen_de_movimientos_*_Zinli.pdf` contienen cédula, cuentas, teléfonos y dirección reales. Están gitignored: **nunca los commitees ni copies ningún dato suyo** a fixtures, docs o código. Las fixtures del plan ya vienen anonimizadas — úsalas tal cual.
-2. **TDD por tarea** (skill `superpowers:test-driven-development`): test rojo → implementación mínima → verde → commit. Suite completa (`npx vitest run`) verde antes de CADA commit; `npm run build` limpio al cerrar cada fase.
+2. **Tests SOLO en el núcleo crítico** (dinero, tasas, saldos, stats, reglas, parsers, dedupe, commit transaccional, respaldo), con TDD (skill `superpowers:test-driven-development`). **La UI no lleva tests automáticos**: cada tarea de UI trae pasos de verificación manual bloqueantes — ejecútalos de verdad, no los marques sin mirar. Suite (`npx vitest run`) verde antes de CADA commit; `npm run build` limpio al cerrar cada fase.
 3. **`superpowers:verification-before-completion`** antes de declarar cualquier tarea o fase terminada: ejecuta los comandos de verificación del plan y confirma la salida esperada.
 4. Commits en español, terminando con:
    `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`
 5. UI y docs en **español**. Montos siempre en céntimos enteros (`Bs 13.517,75`, `$84.20`). Ninguna tarea puede degradar el registro rápido (FAB → dígitos → categoría).
+6. **El diseño visual es pilar del producto**: tema oscuro premium con sistema de tokens definido en la Tarea 7 — todo color/espaciado/efecto sale de `estilos.css`, nada de valores inventados ni librerías de estilos. La Tarea 24 cierra con un pase de pulido visual por todas las pantallas; las verificaciones visuales de cada tarea de UI son bloqueantes.
 
 ## Entorno
 
@@ -37,6 +38,7 @@ Windows 11, working dir `C:\Users\danie\Documents\code\Proyects\AppNueva`. Shell
 - En `normalizePdfLine` (Tarea 20) el regex de NBSP lleva un **U+00A0 literal** — el comentario del plan explica la alternativa con escape ASCII si tu copia lo convierte.
 - La **Tarea 13 depende de las fixtures que capture la Tarea 2** (respuestas JSON reales de los proveedores de tasas). Si un proveedor no pasó el spike, elimina su parser, fixture y tests, y ajusta la cadena.
 - El scaffold (Tarea 1) crea `package.json` a mano — no uses `npm create vite` (el directorio no está vacío y el asistente interactivo se traba).
+- La Tarea 7 define el sistema de diseño (tokens + clases en `estilos.css`, tema oscuro premium, Manrope). Todas las tareas de UI se apoyan en él: si necesitas un estilo nuevo, añádelo como token/clase ahí, nunca como valores sueltos inline.
 - No commitees `.claude/` (configuración local, ya aparece como untracked).
 
 ## Estado del repo al recibir esto

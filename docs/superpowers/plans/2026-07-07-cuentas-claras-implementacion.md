@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Objetivo:** Construir "Cuentas Claras", una PWA offline-first de finanzas personales bi-monetarias (Bs + USD) con registro en ≤ 3 toques, importadores de comprobantes BNC (TXT) y Zinli (PDF), tasas BCV/Binance, dashboard consolidado y respaldo JSON, desplegada por HTTPS e instalada en el Android y el Windows de Daniel.
+**Objetivo:** Construir "Cuentas Claras", una PWA offline-first de finanzas personales bi-monetarias (Bs + USD) con registro en ≤ 3 toques, importadores de comprobantes BNC (TXT) y Zinli (PDF), tasas BCV/Binance, dashboard consolidado y respaldo JSON, **con un diseño visual oscuro premium como seña de identidad**, desplegada por HTTPS e instalada en el Android y el Windows de Daniel.
 
-**Arquitectura:** SPA React con navegación por hash (sin router externo), datos en IndexedDB vía Dexie con `useLiveQuery` para reactividad, y un núcleo de dominio en funciones puras (dinero, tasas, saldos, parsers, reglas, dedupe) separado de la UI para poder hacer TDD sin navegador. Los importadores son pipelines `parse → map → preview → commit transaccional`. Todo el estado vive en el dispositivo; el hosting solo sirve código estático.
+**Arquitectura:** SPA React con navegación por hash (sin router externo), datos en IndexedDB vía Dexie con `useLiveQuery` para reactividad, y un núcleo de dominio en funciones puras (dinero, tasas, saldos, parsers, reglas, dedupe) separado de la UI para poder hacer TDD sin navegador. Los importadores son pipelines `parse → map → preview → commit transaccional`. Todo el estado vive en el dispositivo; el hosting solo sirve código estático. La UI se construye sobre un **sistema de diseño propio en CSS puro** (tokens de color/espaciado/tipografía en `estilos.css`, tema oscuro premium, tipografía Manrope con números tabulares): la estética es un requisito de primera clase, no un pulido final.
 
-**Stack:** React 19 + TypeScript + Vite · Dexie 4 + dexie-react-hooks · Recharts · pdfjs-dist · vite-plugin-pwa · Vitest + Testing Library + fake-indexeddb.
+**Stack:** React 19 + TypeScript + Vite · Dexie 4 + dexie-react-hooks · Recharts · pdfjs-dist · vite-plugin-pwa · Vitest + fake-indexeddb (tests solo del núcleo) · CSS puro con design tokens · @fontsource-variable/manrope (tipografía self-hosted).
 
 **Spec (fuente de verdad del *qué*):** `docs/superpowers/specs/2026-07-07-finanzas-personales-design.md`
 
@@ -17,14 +17,15 @@ Aplican a TODAS las tareas; cada tarea las incluye implícitamente.
 1. **Montos siempre como enteros en céntimos** (`amountMinor`), nunca float. Formato visual venezolano exacto: `Bs 13.517,75` (punto de miles, coma decimal) y `$84.20` (formato US).
 2. **Todo en español**: textos de UI, docs, nombres de campos visibles, mensajes de commit. Nombres de código (tipos, funciones) pueden mezclar inglés/español; sé consistente con lo que define este plan.
 3. **Privacidad**: `TXTBNC1.txt`, `TXTBNC2.txt`, `PDFBNC.pdf`, `ExcelBNC.xls` y `Resumen_de_movimientos_*_Zinli.pdf` están gitignored y contienen cédula, cuentas, teléfonos y dirección reales. **Nunca los commitees ni copies ningún dato de ellos** a fixtures, docs o código. Las fixtures de este plan ya vienen anonimizadas (estructura idéntica, datos inventados) — úsalas tal cual.
-4. **TDD** (skill `superpowers:test-driven-development`) en parsers, motor de reglas, dedupe, encadenado de saldos, conversión de monedas, saldos/patrimonio y export/import JSON: test rojo primero, implementación mínima, verde, commit.
-5. Antes de cada commit: `npx vitest run` con **toda** la suite en verde. Al cerrar cada fase: `npm run build` sin errores.
+4. **Tests SOLO en el núcleo crítico** (donde un bug corrompe dinero), con TDD (skill `superpowers:test-driven-development`): dinero/formato, tasas y conversión, saldos/patrimonio, estadísticas del mes, motor de reglas, parsers BNC y Zinli, mappers con dedupe/pares/hueco, commit transaccional y export/import JSON. **La UI NO lleva tests automáticos**: cada tarea de UI incluye pasos de verificación manual bloqueantes — ejecútalos de verdad y confirma lo que describen antes de commitear.
+5. Antes de cada commit: `npx vitest run` con la suite (del núcleo) en verde. Al cerrar cada fase: `npm run build` sin errores.
 6. **Prioridad UX #1**: registro manual de gasto en ≤ 3 toques (+ dígitos). Ninguna tarea posterior puede degradar ese flujo.
 7. Entorno: Windows 11, PowerShell 5.1 — **no existe `&&` en la consola**; encadena con `;` o ejecuta comandos separados (dentro de `package.json` los `&&` sí funcionan porque npm usa cmd.exe). Node v23.3.0, npm como gestor de paquetes.
 8. Mensajes de commit en español terminando con:
    `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`
 9. Decisiones cerradas por Daniel (NO reabrir): el stack fijado en la cabecera; importador BNC solo formato TXT tabulado; respaldo por selector de archivos (sin Drive API); tasas BCV + Binance USDT/VES con override manual e histórico; efectivo físico solo USD (disposición + ahorro); widget nativo Android queda para v2 (v1 solo `shortcuts` del manifest); céntimos enteros.
 10. IDs de entidades: `crypto.randomUUID()`, salvo los seeds que usan ids fijos legibles (`acc-bnc`, `cat-comisiones`, …) definidos en la Tarea 5.
+11. **El diseño visual es pilar del producto** (junto a la facilidad UX): tema oscuro premium definido en la Tarea 7. Todo color, tinte, radio, sombra y transición sale de los tokens CSS de `estilos.css` — no inventes valores sueltos ni añadas librerías de estilos. Montos siempre con tipografía tabular (clases `.cifra`/`.monto-*`). Todo lo tocable da feedback (estados `:active`, transiciones ~160 ms). Ninguna pantalla se da por terminada sin pasar su verificación visual.
 
 ## Estructura de archivos final
 
@@ -35,8 +36,7 @@ scripts/generar-iconos.mjs
 docs/spikes/2026-07-07-cors-tasas.md          ← resultado del spike CORS
 src/
   main.tsx
-  test/setup.ts            ← fake-indexeddb + jest-dom
-  test/utils.ts            ← limpiarDb()
+  test/setup.ts            ← fake-indexeddb
   domain/types.ts          ← TODAS las entidades e invariantes
   domain/money.ts          ← parse/format de montos (Bs y US)
   domain/dates.ts          ← helpers de fechas ISO
@@ -62,8 +62,9 @@ src/
   ui/componentes/Teclado.tsx, CategoriaGrid.tsx, PatrimonioCard.tsx,
      GraficasMes.tsx, ImportPreview.tsx, FormCuenta.tsx, FormCategoria.tsx,
      TasasSection.tsx, RespaldoSection.tsx, TransferForm.tsx, AjusteForm.tsx
-  (cada módulo de dominio/parser/backup lleva su `*.test.ts` al lado;
-   fixtures de tests en src/import/bnc/fixtures/ y src/import/zinli/fixtures/)
+  (los módulos del núcleo — dominio/db/rates/import/backup — llevan su `*.test.ts`
+   al lado; la UI NO lleva tests, se verifica manualmente. Fixtures en
+   src/import/bnc/fixtures/ y src/import/zinli/fixtures/)
 ```
 
 Convención: los módulos de `src/domain`, `src/import`, `src/rates`, `src/backup` y `src/db` **no importan nada de React ni de `src/ui`**. Las funciones que tocan la base reciben la instancia `CuentasDB` como primer parámetro `d`; la UI usa el singleton `db`.
@@ -75,7 +76,7 @@ Convención: los módulos de `src/domain`, `src/import`, `src/rates`, `src/backu
 ### Tarea 1: Scaffold del proyecto
 
 **Files:**
-- Create: `package.json`, `tsconfig.json`, `vite.config.ts`, `index.html`, `src/main.tsx`, `src/ui/App.tsx`, `src/ui/estilos.css`, `src/test/setup.ts`, `src/ui/App.test.tsx`, `README.md`
+- Create: `package.json`, `tsconfig.json`, `vite.config.ts`, `index.html`, `src/main.tsx`, `src/ui/App.tsx`, `src/ui/estilos.css`, `src/test/setup.ts`, `src/test/humo.test.ts`, `README.md`
 - Modify: `.gitignore`
 
 **Interfaces:**
@@ -104,8 +105,8 @@ Convención: los módulos de `src/domain`, `src/import`, `src/rates`, `src/backu
 - [ ] **Paso 2: Instalar dependencias** (últimas versiones estables; quedan registradas en package.json):
 
 ```powershell
-npm install react react-dom dexie dexie-react-hooks recharts pdfjs-dist
-npm install -D typescript vite @vitejs/plugin-react vitest jsdom fake-indexeddb "@testing-library/react" "@testing-library/jest-dom" "@testing-library/user-event" "@types/react" "@types/react-dom" vite-plugin-pwa sharp
+npm install react react-dom dexie dexie-react-hooks recharts pdfjs-dist @fontsource-variable/manrope
+npm install -D typescript vite @vitejs/plugin-react vitest fake-indexeddb "@types/react" "@types/react-dom" vite-plugin-pwa sharp
 ```
 
 Verifica majors esperados en package.json: react ^19, vite ^7, dexie ^4, vitest ^3–4, pdfjs-dist ^5, recharts ^3. Si algún major difiere y una API de este plan no compila, adapta la llamada puntual (documentándolo en el commit), no cambies de librería.
@@ -128,7 +129,7 @@ Verifica majors esperados en package.json: react ^19, vite ^7, dexie ^4, vitest 
     "noEmit": true,
     "isolatedModules": true,
     "forceConsistentCasingInFileNames": true,
-    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"]
+    "types": ["vite/client", "vitest/globals"]
   },
   "include": ["src", "scripts", "vite.config.ts"]
 }
@@ -144,7 +145,7 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   test: {
-    environment: 'jsdom',
+    environment: 'node', // solo se testea el núcleo (sin DOM); fake-indexeddb cubre Dexie
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
   },
@@ -155,7 +156,6 @@ export default defineConfig({
 
 ```ts
 import 'fake-indexeddb/auto';
-import '@testing-library/jest-dom/vitest';
 ```
 
 `index.html`:
@@ -166,7 +166,8 @@ import '@testing-library/jest-dom/vitest';
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#0e7490" />
+    <meta name="theme-color" content="#0a0f1c" />
+    <meta name="color-scheme" content="dark" />
     <title>Cuentas Claras</title>
   </head>
   <body>
@@ -181,6 +182,7 @@ import '@testing-library/jest-dom/vitest';
 ```tsx
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import '@fontsource-variable/manrope';
 import { App } from './ui/App';
 import './ui/estilos.css';
 
@@ -203,19 +205,21 @@ export function App() {
 
 ```css
 :root {
-  --fondo: #f6f7f9;
-  --tarjeta: #ffffff;
-  --primario: #0e7490;
-  --gasto: #dc2626;
-  --ingreso: #16a34a;
-  --texto: #111827;
-  --texto2: #6b7280;
-  --borde: #e5e7eb;
+  color-scheme: dark;
+  --fondo: #0a0f1c;
+  --tarjeta: #121a2b;
+  --primario: #2dd4bf;
+  --gasto: #f87171;
+  --ingreso: #34d399;
+  --texto: #e8edf6;
+  --texto2: #8b96ab;
+  --borde: #223049;
 }
 * { box-sizing: border-box; }
+html { background: var(--fondo); }
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Manrope Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   background: var(--fondo);
   color: var(--texto);
 }
@@ -254,15 +258,11 @@ dev-dist/
 *.tsbuildinfo
 ```
 
-- [ ] **Paso 5: Test de humo del pipeline.** Crear `src/ui/App.test.tsx`:
+- [ ] **Paso 5: Test de humo del pipeline.** Crear `src/test/humo.test.ts` (solo verifica que Vitest corre; la Tarea 3 lo elimina cuando existan tests reales):
 
-```tsx
-import { render, screen } from '@testing-library/react';
-import { App } from './App';
-
-test('la app monta y muestra el título', () => {
-  render(<App />);
-  expect(screen.getByText('Cuentas Claras')).toBeInTheDocument();
+```ts
+test('el pipeline de tests funciona', () => {
+  expect(1 + 1).toBe(2);
 });
 ```
 
@@ -599,9 +599,10 @@ export function monthOf(dateIso: string): string {
 
 Verifica que pasa: `npx vitest run src/domain/dates.test.ts` → PASS.
 
-- [ ] **Paso 8: Suite completa y commit.**
+- [ ] **Paso 8: Retirar el test de humo, suite completa y commit.**
 
 ```powershell
+git rm src/test/humo.test.ts
 npx vitest run
 git add src/domain
 git commit -m "Dominio: tipos, parseo/formato de dinero en céntimos y fechas
@@ -735,7 +736,7 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 ### Tarea 5: Base de datos Dexie — schema, seeds y settings
 
 **Files:**
-- Create: `src/db/db.ts`, `src/test/utils.ts`
+- Create: `src/db/db.ts`
 - Test: `src/db/db.test.ts`
 
 **Interfaces:**
@@ -745,8 +746,7 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
   - `export const db = new CuentasDB()` (singleton de la app).
   - `seedIfEmpty(d: CuentasDB): Promise<void>` — idempotente.
   - `getSettings(d: CuentasDB): Promise<Settings>` / `saveSettings(d: CuentasDB, patch: Partial<Omit<Settings,'id'>>): Promise<void>`.
-  - Ids fijos de seeds que otras tareas referencian: cuentas `acc-bnc`, `acc-zinli`, `acc-binance`, `acc-efectivo`, `acc-efectivo-ahorro`; categorías `cat-supermercado`, `cat-comida-fuera`, `cat-transporte`, `cat-salud`, `cat-servicios`, `cat-comisiones`, `cat-hogar`, `cat-ocio`, `cat-suscripciones`, `cat-ropa`, `cat-otros-gastos`, `cat-pago-movil-recibido`, `cat-transferencia-recibida`, `cat-sueldo`, `cat-otros-ingresos`.
-  - `limpiarDb(): Promise<void>` en `src/test/utils.ts` (resetea el singleton entre tests).
+  - Ids fijos de seeds que otras tareas referencian: cuentas `acc-bnc`, `acc-zinli`, `acc-binance`, `acc-efectivo`, `acc-efectivo-ahorro`; categorías `cat-supermercado`, `cat-comida-fuera`, `cat-transporte`, `cat-salud`, `cat-servicios`, `cat-comisiones`, `cat-hogar`, `cat-ocio`, `cat-suscripciones`, `cat-ropa`, `cat-otros-gastos`, `cat-pago-movil-recibido`, `cat-transferencia-recibida`, `cat-sueldo`, `cat-otros-ingresos`. (Colores elegidos para leerse sobre el fondo oscuro — también alimentan el donut del dashboard.)
 
 - [ ] **Paso 1: Test `src/db/db.test.ts`:**
 
@@ -841,21 +841,21 @@ const CUENTAS_SEED: Account[] = [
 ];
 
 const CATEGORIAS_SEED: Category[] = [
-  { id: 'cat-supermercado', name: 'Supermercado', icon: '🛒', color: '#16a34a', kind: 'expense' },
-  { id: 'cat-comida-fuera', name: 'Comida fuera', icon: '🍔', color: '#f59e0b', kind: 'expense' },
-  { id: 'cat-transporte', name: 'Transporte', icon: '🚌', color: '#3b82f6', kind: 'expense' },
-  { id: 'cat-salud', name: 'Salud', icon: '💊', color: '#ef4444', kind: 'expense' },
-  { id: 'cat-servicios', name: 'Servicios', icon: '💡', color: '#eab308', kind: 'expense' },
-  { id: 'cat-comisiones', name: 'Comisiones bancarias', icon: '🏦', color: '#64748b', kind: 'expense' },
-  { id: 'cat-hogar', name: 'Hogar', icon: '🏠', color: '#8b5cf6', kind: 'expense' },
-  { id: 'cat-ocio', name: 'Ocio/Juegos', icon: '🎮', color: '#ec4899', kind: 'expense' },
-  { id: 'cat-suscripciones', name: 'Suscripciones', icon: '📺', color: '#06b6d4', kind: 'expense' },
-  { id: 'cat-ropa', name: 'Ropa', icon: '👕', color: '#a16207', kind: 'expense' },
-  { id: 'cat-otros-gastos', name: 'Otros gastos', icon: '📦', color: '#6b7280', kind: 'expense' },
-  { id: 'cat-pago-movil-recibido', name: 'Pago móvil recibido', icon: '📲', color: '#16a34a', kind: 'income' },
-  { id: 'cat-transferencia-recibida', name: 'Transferencia recibida', icon: '🔁', color: '#0ea5e9', kind: 'income' },
-  { id: 'cat-sueldo', name: 'Sueldo/Pagos', icon: '💼', color: '#22c55e', kind: 'income' },
-  { id: 'cat-otros-ingresos', name: 'Otros ingresos', icon: '➕', color: '#94a3b8', kind: 'income' },
+  { id: 'cat-supermercado', name: 'Supermercado', icon: '🛒', color: '#4ade80', kind: 'expense' },
+  { id: 'cat-comida-fuera', name: 'Comida fuera', icon: '🍔', color: '#fbbf24', kind: 'expense' },
+  { id: 'cat-transporte', name: 'Transporte', icon: '🚌', color: '#60a5fa', kind: 'expense' },
+  { id: 'cat-salud', name: 'Salud', icon: '💊', color: '#f87171', kind: 'expense' },
+  { id: 'cat-servicios', name: 'Servicios', icon: '💡', color: '#facc15', kind: 'expense' },
+  { id: 'cat-comisiones', name: 'Comisiones bancarias', icon: '🏦', color: '#94a3b8', kind: 'expense' },
+  { id: 'cat-hogar', name: 'Hogar', icon: '🏠', color: '#a78bfa', kind: 'expense' },
+  { id: 'cat-ocio', name: 'Ocio/Juegos', icon: '🎮', color: '#f472b6', kind: 'expense' },
+  { id: 'cat-suscripciones', name: 'Suscripciones', icon: '📺', color: '#22d3ee', kind: 'expense' },
+  { id: 'cat-ropa', name: 'Ropa', icon: '👕', color: '#fb923c', kind: 'expense' },
+  { id: 'cat-otros-gastos', name: 'Otros gastos', icon: '📦', color: '#9ca3af', kind: 'expense' },
+  { id: 'cat-pago-movil-recibido', name: 'Pago móvil recibido', icon: '📲', color: '#4ade80', kind: 'income' },
+  { id: 'cat-transferencia-recibida', name: 'Transferencia recibida', icon: '🔁', color: '#38bdf8', kind: 'income' },
+  { id: 'cat-sueldo', name: 'Sueldo/Pagos', icon: '💼', color: '#34d399', kind: 'income' },
+  { id: 'cat-otros-ingresos', name: 'Otros ingresos', icon: '➕', color: '#cbd5e1', kind: 'income' },
 ];
 
 const SETTINGS_SEED: Settings = { id: 'main', viewCurrency: 'USD', rateSource: 'BCV', lastAccountId: 'acc-bnc' };
@@ -879,26 +879,13 @@ export async function saveSettings(d: CuentasDB, patch: Partial<Omit<Settings, '
 }
 ```
 
-- [ ] **Paso 4: Crear `src/test/utils.ts`** (lo usan los tests de componentes que comparten el singleton):
+- [ ] **Paso 4: Verificar que pasa.** `npx vitest run src/db/db.test.ts` → PASS.
 
-```ts
-import { db, seedIfEmpty } from '../db/db';
-
-/** Borra y recrea la base singleton con seeds. Llamar en beforeEach de tests de UI. */
-export async function limpiarDb(): Promise<void> {
-  await db.delete();
-  await db.open();
-  await seedIfEmpty(db);
-}
-```
-
-- [ ] **Paso 5: Verificar que pasa.** `npx vitest run src/db/db.test.ts` → PASS.
-
-- [ ] **Paso 6: Commit.**
+- [ ] **Paso 5: Commit.**
 
 ```powershell
 npx vitest run
-git add src/db src/test/utils.ts
+git add src/db
 git commit -m "Base Dexie: schema v1, seeds de cuentas/categorías y settings
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
@@ -1069,11 +1056,13 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 
 ## Fase 2 — Shell de UI y registro rápido
 
-### Tarea 7: Shell de la app, navegación por hash y estilos
+### Tarea 7: Sistema de diseño oscuro premium + shell de la app
+
+Esta tarea define la identidad visual de TODA la app: los tokens y clases que crea aquí son la única fuente de estilos del proyecto. Dedícale atención — es la base del pilar visual.
 
 **Files:**
 - Create: `src/ui/useHashRoute.ts`, `src/ui/Nav.tsx`, `src/ui/Toast.tsx`, `src/ui/paginas/DashboardPage.tsx`, `src/ui/paginas/NuevoPage.tsx`, `src/ui/paginas/MovimientosPage.tsx`, `src/ui/paginas/ImportarPage.tsx`, `src/ui/paginas/AjustesPage.tsx`
-- Modify: `src/ui/App.tsx`, `src/ui/App.test.tsx`, `src/ui/estilos.css` (reemplazar completo)
+- Modify: `src/ui/App.tsx`, `src/ui/estilos.css` (reemplazar completo)
 
 **Interfaces:**
 - Consumes: `db`, `seedIfEmpty` de `src/db/db.ts`.
@@ -1081,40 +1070,9 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
   - `useHashRoute(): { path: string; params: URLSearchParams }` y `navigate(to: string): void` (asigna `window.location.hash`).
   - `avisar(mensaje: string): void` y componente `<Toast />`.
   - Rutas: `/` dashboard · `/nuevo` registro · `/movimientos` · `/importar` · `/ajustes`.
-  - Clases CSS que TODAS las tareas de UI posteriores reutilizan: `.tarjeta .boton .boton.secundario .boton.peligro .segmentado .monto-display .teclado .grid-categorias .fila-mov .monto-pos .monto-neg .banner(.aviso/.error/.ok) .modal-fondo .modal .fila-form .tabla .progreso .chip`.
+  - **Design tokens** (variables CSS de color/tinte/radio/sombra/transición) y clases que TODAS las tareas de UI posteriores reutilizan sin inventar estilos nuevos: `.tarjeta .boton(.secundario/.peligro) .segmentado .monto-display .cifra .cifra-grande .teclado .grid-categorias .fila-mov .monto-pos .monto-neg .banner(.aviso/.error/.ok) .modal-fondo .modal .fila-form .tabla .progreso .chip .vacio`.
 
-- [ ] **Paso 1: Test primero** — reemplazar `src/ui/App.test.tsx`:
-
-```tsx
-import { render, screen } from '@testing-library/react';
-import { App } from './App';
-import { limpiarDb } from '../test/utils';
-
-beforeEach(async () => {
-  await limpiarDb();
-  window.location.hash = '';
-});
-
-test('arranca en el dashboard y navega por hash', async () => {
-  render(<App />);
-  expect(await screen.findByRole('heading', { name: 'Inicio' })).toBeInTheDocument();
-  window.location.hash = '#/ajustes';
-  window.dispatchEvent(new HashChangeEvent('hashchange')); // jsdom no siempre lo emite solo
-  expect(await screen.findByRole('heading', { name: 'Ajustes' })).toBeInTheDocument();
-});
-
-test('la barra inferior tiene las 4 secciones y el botón +', async () => {
-  render(<App />);
-  await screen.findByRole('heading', { name: 'Inicio' });
-  expect(screen.getByText('Movs')).toBeInTheDocument();
-  expect(screen.getByText('Importar')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Nuevo' })).toBeInTheDocument();
-});
-```
-
-Verifica que falla: `npx vitest run src/ui/App.test.tsx` → FAIL.
-
-- [ ] **Paso 2: Implementar la navegación** — `src/ui/useHashRoute.ts`:
+- [ ] **Paso 1: Implementar la navegación** — `src/ui/useHashRoute.ts`:
 
 ```ts
 import { useEffect, useState } from 'react';
@@ -1191,7 +1149,7 @@ export function Toast() {
 }
 ```
 
-- [ ] **Paso 3: Páginas stub** (las tareas siguientes las rellenan; el `<h2>` es lo que asertan los tests de navegación):
+- [ ] **Paso 2: Páginas stub** (las tareas siguientes las rellenan):
 
 ```tsx
 // src/ui/paginas/DashboardPage.tsx
@@ -1245,117 +1203,289 @@ export function App() {
 }
 ```
 
-- [ ] **Paso 4: Reemplazar `src/ui/estilos.css` completo** (hoja única de la app; las tareas posteriores NO añaden CSS salvo que un paso lo diga):
+- [ ] **Paso 3: Reemplazar `src/ui/estilos.css` completo** — el sistema de diseño. Hoja única de la app: las tareas posteriores NO añaden CSS (salvo que un paso lo diga o el pase de pulido de la Tarea 24 lo pida); si una vista necesita algo nuevo, se añade aquí como token/clase:
 
 ```css
+/* ==========================================================================
+   Cuentas Claras — sistema de diseño (tema oscuro premium)
+   ÚNICA fuente de verdad visual: todo color/espaciado/radio/sombra sale de aquí.
+   ========================================================================== */
+
 :root {
-  --fondo: #f6f7f9;
-  --tarjeta: #ffffff;
-  --primario: #0e7490;
-  --gasto: #dc2626;
-  --ingreso: #16a34a;
-  --texto: #111827;
-  --texto2: #6b7280;
-  --borde: #e5e7eb;
+  color-scheme: dark;
+
+  /* Paleta base */
+  --fondo: #0a0f1c;
+  --fondo-2: #0d1424;          /* zonas hundidas: inputs, pistas */
+  --tarjeta: #121a2b;
+  --tarjeta-2: #182338;        /* superficies elevadas: modales, hover */
+  --borde: #223049;
+  --borde-suave: #1a2438;
+
+  /* Marca y semánticos */
+  --primario: #2dd4bf;         /* teal menta — marca y acciones */
+  --primario-fuerte: #14b8a6;
+  --primario-tinta: rgba(45, 212, 191, 0.14);
+  --ingreso: #34d399;
+  --ingreso-tinta: rgba(52, 211, 153, 0.12);
+  --gasto: #f87171;
+  --gasto-tinta: rgba(248, 113, 113, 0.12);
+  --aviso: #fbbf24;
+  --aviso-tinta: rgba(251, 191, 36, 0.12);
+
+  /* Texto */
+  --texto: #e8edf6;
+  --texto2: #8b96ab;
+  --texto-sobre-acento: #06251f;
+
+  /* Geometría y efectos */
+  --radio: 16px;
+  --radio-s: 10px;
+  --sombra: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --sombra-fab: 0 6px 20px rgba(45, 212, 191, 0.35);
+  --transicion: 160ms ease;
 }
+
 * { box-sizing: border-box; }
+html { background: var(--fondo); }
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  background: var(--fondo);
+  font-family: 'Manrope Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  background:
+    radial-gradient(1200px 500px at 50% -10%, rgba(45, 212, 191, 0.07), transparent 60%),
+    var(--fondo);
   color: var(--texto);
+  -webkit-font-smoothing: antialiased;
 }
-h1, h2, h3 { margin: 8px 0; }
-button { font: inherit; cursor: pointer; }
+h1, h2, h3, h4 { margin: 8px 0; letter-spacing: -0.02em; }
+h2 { font-size: 22px; font-weight: 800; }
+h3 { font-size: 16px; font-weight: 700; }
+button { font: inherit; cursor: pointer; color: inherit; }
+:focus-visible { outline: 2px solid var(--primario); outline-offset: 2px; border-radius: 4px; }
 
-.app { max-width: 480px; margin: 0 auto; min-height: 100vh; }
-.contenido { padding: 12px 12px 92px; }
+/* Cifras de dinero: SIEMPRE dígitos tabulares para que alineen en columnas */
+.cifra, .cifra-grande, .monto-pos, .monto-neg, .monto-display {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+.cifra-grande { font-size: 34px; font-weight: 800; letter-spacing: -0.03em; }
 
+.app { max-width: 480px; margin: 0 auto; min-height: 100vh; min-height: 100dvh; }
+.contenido { padding: 16px 16px 104px; animation: aparecer 220ms ease both; }
+
+@keyframes aparecer {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Barra inferior con efecto vidrio */
 .nav {
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
   width: 100%; max-width: 480px;
   display: grid; grid-template-columns: repeat(5, 1fr); align-items: center;
-  background: var(--tarjeta); border-top: 1px solid var(--borde);
-  padding: 4px 0 max(4px, env(safe-area-inset-bottom));
+  background: rgba(13, 20, 36, 0.85);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid var(--borde-suave);
+  padding: 6px 0 max(6px, env(safe-area-inset-bottom));
 }
-.nav a { text-align: center; text-decoration: none; color: var(--texto2); font-size: 11px; }
-.nav a.activo { color: var(--primario); font-weight: 600; }
-.nav .icono { display: block; font-size: 20px; }
+.nav a {
+  text-align: center; text-decoration: none; color: var(--texto2);
+  font-size: 11px; font-weight: 600; padding: 4px 0;
+  transition: color var(--transicion);
+}
+.nav a.activo { color: var(--primario); }
+.nav .icono { display: block; font-size: 20px; margin-bottom: 1px; }
 .fab {
-  width: 54px; height: 54px; margin: -22px auto 0; display: block;
-  border-radius: 50%; border: none; background: var(--primario); color: #fff;
-  font-size: 30px; line-height: 1; box-shadow: 0 2px 8px rgb(0 0 0 / 0.25);
+  width: 56px; height: 56px; margin: -24px auto 0; display: block;
+  border-radius: 50%; border: none;
+  background: linear-gradient(135deg, var(--primario), var(--primario-fuerte));
+  color: var(--texto-sobre-acento); font-size: 30px; font-weight: 700; line-height: 1;
+  box-shadow: var(--sombra-fab);
+  transition: transform var(--transicion);
+}
+.fab:active { transform: scale(0.92); }
+
+/* Superficies */
+.tarjeta {
+  background: var(--tarjeta);
+  border: 1px solid var(--borde-suave);
+  border-radius: var(--radio);
+  padding: 16px;
+  margin-bottom: 14px;
+  box-shadow: var(--sombra);
 }
 
-.tarjeta { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
-.boton { background: var(--primario); color: #fff; border: none; border-radius: 10px; padding: 12px 16px; font-size: 16px; width: 100%; }
-.boton.secundario { background: #e2e8f0; color: var(--texto); }
-.boton.peligro { background: var(--gasto); }
-.boton:disabled { opacity: 0.5; cursor: default; }
+/* Botones */
+.boton {
+  background: linear-gradient(135deg, var(--primario), var(--primario-fuerte));
+  color: var(--texto-sobre-acento); font-weight: 700;
+  border: none; border-radius: 12px; padding: 13px 16px; font-size: 16px; width: 100%;
+  transition: transform var(--transicion), opacity var(--transicion), filter var(--transicion);
+}
+.boton:active { transform: scale(0.98); filter: brightness(1.08); }
+.boton.secundario { background: var(--tarjeta-2); color: var(--texto); border: 1px solid var(--borde); }
+.boton.peligro { background: linear-gradient(135deg, #f87171, #dc2626); color: #fff; }
+.boton:disabled { opacity: 0.45; cursor: default; transform: none; }
 
-input, select, textarea { font: inherit; padding: 10px; border: 1px solid var(--borde); border-radius: 8px; width: 100%; background: #fff; }
-label { font-size: 13px; color: var(--texto2); display: block; margin: 10px 0 4px; }
+/* Formularios */
+input, select, textarea {
+  font: inherit; color: var(--texto);
+  padding: 11px 12px; border: 1px solid var(--borde); border-radius: var(--radio-s);
+  width: 100%; background: var(--fondo-2);
+  transition: border-color var(--transicion);
+}
+input:focus, select:focus, textarea:focus { border-color: var(--primario); outline: none; }
+input::placeholder, textarea::placeholder { color: var(--texto2); opacity: 0.7; }
+input[type="checkbox"] { accent-color: var(--primario); }
+label {
+  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--texto2); display: block; margin: 12px 0 5px;
+}
 .fila-form { display: flex; gap: 8px; }
 .fila-form > * { flex: 1; }
 
-.segmentado { display: flex; gap: 4px; background: #e2e8f0; border-radius: 10px; padding: 4px; margin-bottom: 12px; }
-.segmentado button { flex: 1; border: none; background: transparent; padding: 8px 2px; border-radius: 8px; font-size: 14px; }
-.segmentado button.activo { background: #fff; font-weight: 600; }
+/* Segmentado */
+.segmentado {
+  display: flex; gap: 4px; background: var(--fondo-2);
+  border: 1px solid var(--borde-suave); border-radius: 12px; padding: 4px; margin-bottom: 14px;
+}
+.segmentado button {
+  flex: 1; border: none; background: transparent; color: var(--texto2);
+  padding: 9px 2px; border-radius: 9px; font-size: 14px; font-weight: 600;
+  transition: background var(--transicion), color var(--transicion);
+}
+.segmentado button.activo { background: var(--tarjeta-2); color: var(--texto); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); }
 
-.monto-display { text-align: center; font-size: 40px; font-weight: 700; padding: 12px 0; min-height: 66px; }
+/* Registro rápido */
+.monto-display {
+  text-align: center; font-size: 44px; font-weight: 800; letter-spacing: -0.03em;
+  padding: 14px 0; min-height: 72px;
+  transition: color var(--transicion);
+}
 .monto-display.gasto { color: var(--gasto); }
 .monto-display.ingreso { color: var(--ingreso); }
 
-.teclado { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
-.teclado button { padding: 14px 0; font-size: 22px; border: 1px solid var(--borde); border-radius: 10px; background: #fff; }
+.teclado { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }
+.teclado button {
+  padding: 16px 0; font-size: 24px; font-weight: 600;
+  border: 1px solid var(--borde-suave); border-radius: 14px;
+  background: var(--tarjeta);
+  transition: transform 90ms ease, background var(--transicion);
+}
+.teclado button:active { transform: scale(0.94); background: var(--tarjeta-2); }
 
 .grid-categorias { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; }
 .grid-categorias button {
-  border: 1px solid var(--borde); border-radius: 10px; background: #fff;
-  padding: 8px 2px; font-size: 11px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  border: 1px solid var(--borde-suave); border-radius: 14px; background: var(--tarjeta);
+  padding: 10px 2px 8px; font-size: 11px; font-weight: 600; color: var(--texto2);
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  transition: transform 90ms ease, border-color var(--transicion), background var(--transicion);
 }
-.grid-categorias .icono { font-size: 22px; }
+.grid-categorias button:active {
+  transform: scale(0.94); border-color: var(--primario);
+  background: var(--primario-tinta); color: var(--texto);
+}
+.grid-categorias .icono { font-size: 24px; }
 
+/* Filas de movimientos */
 .fila-mov {
-  display: flex; align-items: center; gap: 10px; padding: 10px 4px;
-  border: none; border-bottom: 1px solid var(--borde); width: 100%;
-  background: none; text-align: left; font-size: 14px;
+  display: flex; align-items: center; gap: 12px; padding: 12px 4px;
+  border: none; border-bottom: 1px solid var(--borde-suave); width: 100%;
+  background: none; text-align: left; font-size: 14px; color: var(--texto);
+  transition: background var(--transicion);
 }
+.fila-mov:active { background: var(--fondo-2); }
 .fila-mov .detalle { flex: 1; min-width: 0; }
-.fila-mov .nota { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fila-mov .nota { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
 .fila-mov .meta { font-size: 12px; color: var(--texto2); }
-.monto-pos { color: var(--ingreso); font-weight: 600; white-space: nowrap; }
-.monto-neg { color: var(--gasto); font-weight: 600; white-space: nowrap; }
+.monto-pos { color: var(--ingreso); font-weight: 700; white-space: nowrap; }
+.monto-neg { color: var(--gasto); font-weight: 700; white-space: nowrap; }
 
+/* Toast */
 .toast {
-  position: fixed; bottom: 96px; left: 50%; transform: translateX(-50%);
-  background: #111827; color: #fff; padding: 10px 18px; border-radius: 999px;
-  font-size: 14px; z-index: 50; white-space: nowrap;
+  position: fixed; bottom: 104px; left: 50%; transform: translateX(-50%);
+  background: var(--tarjeta-2); color: var(--texto);
+  border: 1px solid var(--borde); border-radius: 999px;
+  padding: 10px 20px; font-size: 14px; font-weight: 600; z-index: 50; white-space: nowrap;
+  box-shadow: var(--sombra);
+  animation: brotar 200ms ease both;
+}
+@keyframes brotar {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
 }
 
-.banner { border-radius: 10px; padding: 10px 12px; font-size: 14px; margin: 8px 0; }
-.banner.aviso { background: #fef3c7; color: #92400e; }
-.banner.error { background: #fee2e2; color: #991b1b; }
-.banner.ok { background: #dcfce7; color: #166534; }
+/* Banners */
+.banner { border-radius: var(--radio-s); padding: 11px 13px; font-size: 14px; margin: 10px 0; border: 1px solid; }
+.banner.aviso { background: var(--aviso-tinta); color: var(--aviso); border-color: rgba(251, 191, 36, 0.3); }
+.banner.error { background: var(--gasto-tinta); color: var(--gasto); border-color: rgba(248, 113, 113, 0.3); }
+.banner.ok { background: var(--ingreso-tinta); color: var(--ingreso); border-color: rgba(52, 211, 153, 0.3); }
 
-.modal-fondo { position: fixed; inset: 0; background: rgb(0 0 0 / 0.4); display: flex; align-items: flex-end; justify-content: center; z-index: 40; }
-.modal { background: #fff; border-radius: 16px 16px 0 0; padding: 16px; width: 100%; max-width: 480px; max-height: 85vh; overflow: auto; }
+/* Modal tipo hoja inferior */
+.modal-fondo {
+  position: fixed; inset: 0; background: rgba(4, 8, 16, 0.65);
+  backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+  display: flex; align-items: flex-end; justify-content: center; z-index: 40;
+}
+.modal {
+  background: var(--tarjeta-2); border: 1px solid var(--borde); border-bottom: none;
+  border-radius: 20px 20px 0 0;
+  padding: 20px 16px calc(16px + env(safe-area-inset-bottom));
+  width: 100%; max-width: 480px; max-height: 85vh; overflow: auto;
+  animation: subir 240ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+.modal::before {
+  content: ''; display: block; width: 40px; height: 4px; border-radius: 999px;
+  background: var(--borde); margin: -6px auto 12px;
+}
+@keyframes subir {
+  from { transform: translateY(40px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
 
+/* Tablas, progreso, chips */
 .tabla { width: 100%; border-collapse: collapse; font-size: 13px; }
-.tabla th, .tabla td { border-bottom: 1px solid var(--borde); padding: 6px 4px; text-align: left; vertical-align: top; }
+.tabla th { color: var(--texto2); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+.tabla th, .tabla td { border-bottom: 1px solid var(--borde-suave); padding: 8px 4px; text-align: left; vertical-align: top; }
 
-.progreso { background: #e5e7eb; border-radius: 999px; height: 8px; overflow: hidden; }
-.progreso > div { height: 100%; background: var(--primario); }
-.chip { display: inline-block; background: #e2e8f0; border-radius: 999px; padding: 2px 10px; font-size: 12px; }
+.progreso { background: var(--fondo-2); border: 1px solid var(--borde-suave); border-radius: 999px; height: 10px; overflow: hidden; }
+.progreso > div {
+  height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--primario-fuerte), var(--primario));
+  transition: width 300ms ease;
+}
+
+.chip {
+  display: inline-block; background: var(--fondo-2); color: var(--texto2);
+  border: 1px solid var(--borde-suave); border-radius: 999px;
+  padding: 2px 10px; font-size: 12px; font-weight: 600;
+}
+
+/* Estados vacíos */
+.vacio { text-align: center; color: var(--texto2); padding: 28px 12px; }
+.vacio .icono { font-size: 40px; display: block; margin-bottom: 6px; opacity: 0.8; }
+
+/* Scroll y accesibilidad de movimiento */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-thumb { background: var(--borde); border-radius: 999px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
 ```
 
-- [ ] **Paso 5: Verificar.** `npx vitest run` → todo verde. `npm run dev` → navega con la barra inferior entre las 5 rutas; el hash cambia en la URL.
+- [ ] **Paso 4: Verificación visual (bloqueante).** `npx vitest run` → verde. En `npm run dev`, recorre y confirma:
+  1. Fondo azul-negro con un halo teal muy sutil arriba; **cero flashes blancos** al cargar o recargar.
+  2. Tipografía Manrope cargada (títulos con peso 800, trazo distinto al system-ui).
+  3. Barra inferior con efecto vidrio (se trasluce el contenido al hacer scroll detrás) y FAB teal flotante con sombra de color que **se hunde** al tocarlo.
+  4. Navegar entre las 5 rutas cambia el hash y el contenido aparece con una transición suave de entrada.
+  5. Al tabular con el teclado, el foco se ve (anillo teal).
 
-- [ ] **Paso 6: Commit.**
+- [ ] **Paso 5: Commit.**
 
 ```powershell
 git add src/ui
-git commit -m "Shell de la app: navegación por hash, barra inferior, toast y estilos base
+git commit -m "Sistema de diseño oscuro premium: tokens, tipografía, shell y navegación
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 ```
@@ -1367,7 +1497,7 @@ Flujo objetivo: FAB `+` (toque 1) → dígitos en teclado grande → toque en la
 **Files:**
 - Create: `src/domain/builders.ts`, `src/ui/componentes/Teclado.tsx`, `src/ui/componentes/CategoriaGrid.tsx`
 - Modify: `src/ui/paginas/NuevoPage.tsx` (reemplazar el stub)
-- Test: `src/domain/builders.test.ts`, `src/ui/paginas/NuevoPage.test.tsx`
+- Test: `src/domain/builders.test.ts` (la UI se verifica manualmente)
 
 **Interfaces:**
 - Consumes: `parseVenezuelanAmount`, `formatMoney` (Tarea 3); `todayIso` (Tarea 3); `db`, `getSettings`, `saveSettings` (Tarea 5); `avisar`, `navigate` (Tarea 7).
@@ -1431,65 +1561,7 @@ export function buildManualTx(opts: {
 
 `npx vitest run src/domain/builders.test.ts` → PASS.
 
-- [ ] **Paso 2: Test del componente** — `src/ui/paginas/NuevoPage.test.tsx`:
-
-```tsx
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { NuevoPage } from './NuevoPage';
-import { db } from '../../db/db';
-import { limpiarDb } from '../../test/utils';
-
-beforeEach(async () => { await limpiarDb(); });
-
-test('registra un gasto: dígitos + toque en categoría', async () => {
-  const user = userEvent.setup();
-  render(<NuevoPage params={new URLSearchParams('tipo=gasto')} />);
-  await screen.findByText('Supermercado');
-  await user.click(screen.getByRole('button', { name: '3' }));
-  await user.click(screen.getByRole('button', { name: '5' }));
-  await user.click(screen.getByRole('button', { name: ',' }));
-  await user.click(screen.getByRole('button', { name: '5' }));
-  await user.click(screen.getByText('Supermercado'));
-  await waitFor(async () => expect(await db.transactions.count()).toBe(1));
-  const tx = (await db.transactions.toArray())[0];
-  expect(tx).toMatchObject({
-    type: 'expense', amountMinor: 3550, accountId: 'acc-bnc',
-    categoryId: 'cat-supermercado', source: 'manual',
-  });
-});
-
-test('sin monto, tocar categoría no guarda nada', async () => {
-  const user = userEvent.setup();
-  render(<NuevoPage params={new URLSearchParams('tipo=gasto')} />);
-  await user.click(await screen.findByText('Supermercado'));
-  expect(await db.transactions.count()).toBe(0);
-});
-
-test('el modo ingreso muestra categorías de ingreso', async () => {
-  const user = userEvent.setup();
-  render(<NuevoPage params={new URLSearchParams('tipo=gasto')} />);
-  await user.click(await screen.findByRole('button', { name: 'Ingreso' }));
-  expect(await screen.findByText('Sueldo/Pagos')).toBeInTheDocument();
-  expect(screen.queryByText('Supermercado')).not.toBeInTheDocument();
-});
-
-test('la tecla ⌫ borra y la coma no se duplica', async () => {
-  const user = userEvent.setup();
-  render(<NuevoPage params={new URLSearchParams('tipo=gasto')} />);
-  await screen.findByText('Supermercado');
-  for (const tecla of ['1', ',', ',', '5', '0']) {
-    await user.click(screen.getByRole('button', { name: tecla === ',' ? 'coma' : tecla }));
-  }
-  await user.click(screen.getByRole('button', { name: 'borrar' }));
-  // entrada queda "1,5" → Bs -1,50 en el display
-  expect(screen.getByText(/1,50/)).toBeInTheDocument();
-});
-```
-
-Verifica que falla: `npx vitest run src/ui/paginas/NuevoPage.test.tsx` → FAIL.
-
-- [ ] **Paso 3: Implementar componentes.** `src/ui/componentes/Teclado.tsx`:
+- [ ] **Paso 2: Implementar componentes.** `src/ui/componentes/Teclado.tsx`:
 
 ```tsx
 const TECLAS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', ',', '0', '⌫'] as const;
@@ -1620,9 +1692,16 @@ export function NuevoPage({ params }: { params: URLSearchParams }) {
 }
 ```
 
-- [ ] **Paso 4: Verificar.** `npx vitest run` → todo verde. Prueba manual en `npm run dev`: FAB → `35,5` → tocar "Supermercado" → toast "Guardado ✓" y vuelve al inicio.
+- [ ] **Paso 3: Verificación manual (bloqueante).** `npx vitest run` → verde. En `npm run dev`:
+  1. FAB → teclea `35,5` → el display muestra `Bs -35,50` grande, rojo y con dígitos tabulares.
+  2. Tocar "Supermercado" → toast "Guardado ✓" y vuelve al inicio (2 toques + dígitos ✓).
+  3. Modo "Ingreso" → aparecen las categorías de ingreso y el display pasa a verde.
+  4. Sin monto, tocar una categoría NO guarda nada.
+  5. `⌫` borra; la coma no se duplica; máximo 2 decimales.
+  6. Al volver a entrar, la cuenta preseleccionada es la última usada.
+  7. Sensación táctil: teclas y categorías se hunden al pulsarlas (`:active`).
 
-- [ ] **Paso 5: Commit.**
+- [ ] **Paso 4: Commit.**
 
 ```powershell
 git add src/domain/builders.ts src/domain/builders.test.ts src/ui
@@ -1636,7 +1715,7 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 **Files:**
 - Create: `src/ui/componentes/TransferForm.tsx`, `src/ui/componentes/AjusteForm.tsx`
 - Modify: `src/domain/builders.ts`, `src/ui/paginas/NuevoPage.tsx` (segmentado pasa a 4 modos)
-- Test: `src/domain/builders.test.ts` (ampliar), `src/ui/componentes/AjusteForm.test.tsx`
+- Test: `src/domain/builders.test.ts` (ampliar — los builders son dinero; la UI se verifica manualmente)
 
 **Interfaces:**
 - Consumes: `convertMinor`, `effectiveRate` (Tarea 4); `accountBalanceMinor` (Tarea 6); resto igual que Tarea 8.
@@ -1939,30 +2018,13 @@ return (
 );
 ```
 
-- [ ] **Paso 4: Test de integración del ajuste** — `src/ui/componentes/AjusteForm.test.tsx`:
+- [ ] **Paso 4: Verificación manual (bloqueante).** `npx vitest run` → verde. En `npm run dev`, desde el FAB:
+  1. **Transferir** con misma moneda (Efectivo → Efectivo ahorro, `50`): guarda y ambos saldos se mueven $50.00.
+  2. **Transferir** cruzando moneda (Efectivo → BNC, `10`): aparece el campo Tasa con la propuesta del día (si no hay tasa aún, ponla a mano), el banner verde dice cuántos Bs recibirá el destino, y al editar la tasa el monto destino se recalcula.
+  3. **Ajustar** Binance escribiendo `250,75` de saldo real: muestra "Variación/rendimiento" y al guardar el saldo de Binance queda en $250.75.
+  4. Origen = destino es imposible de seleccionar; sin diferencia, el botón Ajustar queda deshabilitado.
 
-```tsx
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { AjusteForm } from './AjusteForm';
-import { db } from '../../db/db';
-import { limpiarDb } from '../../test/utils';
-
-beforeEach(async () => { await limpiarDb(); });
-
-test('ajusta Binance introduciendo el saldo real', async () => {
-  const user = userEvent.setup();
-  render(<AjusteForm />);
-  const input = await screen.findByLabelText('Saldo real');
-  await user.type(input, '250,75');
-  await user.click(screen.getByRole('button', { name: 'Ajustar saldo' }));
-  await waitFor(async () => expect(await db.transactions.count()).toBe(1));
-  const tx = (await db.transactions.toArray())[0];
-  expect(tx).toMatchObject({ type: 'adjustment', accountId: 'acc-binance', amountMinor: 25075, source: 'adjust' });
-});
-```
-
-- [ ] **Paso 5: Verificar y commit.**
+- [ ] **Paso 5: Commit.**
 
 ```powershell
 npx vitest run
@@ -1977,7 +2039,7 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 **Files:**
 - Create: `src/domain/filters.ts`
 - Modify: `src/ui/paginas/MovimientosPage.tsx` (reemplazar el stub)
-- Test: `src/domain/filters.test.ts`, `src/ui/paginas/MovimientosPage.test.tsx`
+- Test: ninguno (filtrado y orden de vista — no toca dinero; verificación manual)
 
 **Interfaces:**
 - Consumes: entidades y `formatMoney`; `db`; clases CSS de la Tarea 7.
@@ -1985,42 +2047,7 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
   - `interface FiltroMovs { q?: string; accountId?: string; categoryId?: string; month?: string }`
   - `filterTxs(txs: Transaction[], f: FiltroMovs): Transaction[]` — ordena por fecha+hora descendente; el filtro de cuenta incluye transferencias donde la cuenta es destino; `q` busca substring case-insensitive en `note`.
 
-- [ ] **Paso 1: Test `src/domain/filters.test.ts`:**
-
-```ts
-import type { Transaction } from './types';
-import { filterTxs } from './filters';
-
-const tx = (t: Partial<Transaction>): Transaction => ({
-  id: Math.random().toString(36).slice(2), type: 'expense', accountId: 'bnc',
-  amountMinor: 100, date: '2026-07-01', source: 'manual', ...t,
-});
-
-const txs: Transaction[] = [
-  tx({ id: 'a', date: '2026-07-02', note: 'Farmacia Ávila' }),
-  tx({ id: 'b', date: '2026-07-02', time: '15:00:00', categoryId: 'cat-ocio' }),
-  tx({ id: 'c', date: '2026-06-15', accountId: 'efectivo' }),
-  tx({ id: 'd', date: '2026-07-01', type: 'transfer', accountId: 'efectivo', toAccountId: 'bnc', toAmountMinor: 100 }),
-];
-
-test('ordena descendente por fecha y hora', () => {
-  expect(filterTxs(txs, {}).map((t) => t.id)).toEqual(['b', 'a', 'd', 'c']);
-});
-test('filtro por mes', () => {
-  expect(filterTxs(txs, { month: '2026-06' }).map((t) => t.id)).toEqual(['c']);
-});
-test('filtro por cuenta incluye transferencias entrantes', () => {
-  expect(filterTxs(txs, { accountId: 'bnc' }).map((t) => t.id)).toEqual(['b', 'a', 'd']);
-});
-test('filtro por categoría', () => {
-  expect(filterTxs(txs, { categoryId: 'cat-ocio' }).map((t) => t.id)).toEqual(['b']);
-});
-test('búsqueda en nota, case-insensitive', () => {
-  expect(filterTxs(txs, { q: 'farmacia' }).map((t) => t.id)).toEqual(['a']);
-});
-```
-
-Verifica que falla, luego implementa `src/domain/filters.ts`:
+- [ ] **Paso 1: Implementar `src/domain/filters.ts`:**
 
 ```ts
 import type { Transaction } from './types';
@@ -2042,8 +2069,6 @@ export function filterTxs(txs: Transaction[], f: FiltroMovs): Transaction[] {
     .sort((a, b) => (b.date + (b.time ?? '')).localeCompare(a.date + (a.time ?? '')));
 }
 ```
-
-`npx vitest run src/domain/filters.test.ts` → PASS.
 
 - [ ] **Paso 2: Página** — `src/ui/paginas/MovimientosPage.tsx` (reemplazar):
 
@@ -2110,7 +2135,9 @@ export function MovimientosPage() {
         </select>
       </div>
       <div style={{ marginTop: 8 }}>
-        {visibles.length === 0 && <p style={{ color: 'var(--texto2)' }}>No hay movimientos que coincidan.</p>}
+        {visibles.length === 0 && (
+          <div className="vacio"><span className="icono">🗂️</span>No hay movimientos que coincidan.</div>
+        )}
         {visibles.map((t) => (
           <button key={t.id} className="fila-mov" onClick={() => setEditando(t)}>
             <span style={{ fontSize: 22 }}>
@@ -2190,54 +2217,19 @@ function EditorMovimiento({ tx, cerrar }: { tx: Transaction; cerrar: () => void 
 }
 ```
 
-- [ ] **Paso 3: Test del componente** — `src/ui/paginas/MovimientosPage.test.tsx`:
+- [ ] **Paso 3: Verificación manual (bloqueante).** Con 3-4 movimientos registrados (distintas cuentas y categorías):
+  1. La lista sale ordenada del más reciente al más viejo, con icono de categoría, nota, fecha·cuenta y monto coloreado (verde/rojo, dígitos tabulares).
+  2. Buscar por texto de nota filtra en vivo; los filtros de cuenta/categoría/mes combinan entre sí.
+  3. El filtro de cuenta incluye transferencias donde la cuenta es destino.
+  4. Tocar una fila abre el editor como hoja inferior (sube con animación, tiene asa): editar categoría/nota/monto/fecha y guardar actualiza la fila.
+  5. Eliminar pide confirmación y borra.
+  6. Sin resultados: se muestra el estado vacío (clase `.vacio`) con un mensaje útil, no una pantalla en blanco.
 
-```tsx
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { MovimientosPage } from './MovimientosPage';
-import { db } from '../../db/db';
-import { limpiarDb } from '../../test/utils';
-import { buildManualTx } from '../../domain/builders';
-
-beforeEach(async () => {
-  await limpiarDb();
-  await db.transactions.bulkAdd([
-    buildManualTx({ type: 'expense', accountId: 'acc-bnc', amountMinor: 5000, categoryId: 'cat-ocio', dateIso: '2026-07-01', note: 'partida' }),
-    buildManualTx({ type: 'expense', accountId: 'acc-efectivo', amountMinor: 900, categoryId: 'cat-comida-fuera', dateIso: '2026-07-02', note: 'arepas' }),
-  ]);
-});
-
-test('lista, filtra por categoría y busca por nota', async () => {
-  const user = userEvent.setup();
-  render(<MovimientosPage />);
-  expect(await screen.findByText('arepas')).toBeInTheDocument();
-  expect(screen.getByText('partida')).toBeInTheDocument();
-
-  await user.selectOptions(screen.getByLabelText('Filtrar categoría'), 'cat-ocio');
-  await waitFor(() => expect(screen.queryByText('arepas')).not.toBeInTheDocument());
-
-  await user.selectOptions(screen.getByLabelText('Filtrar categoría'), '');
-  await user.type(screen.getByLabelText('Buscar'), 'arep');
-  await waitFor(() => expect(screen.queryByText('partida')).not.toBeInTheDocument());
-  expect(screen.getByText('arepas')).toBeInTheDocument();
-});
-
-test('elimina un movimiento desde el editor', async () => {
-  vi.spyOn(window, 'confirm').mockReturnValue(true);
-  const user = userEvent.setup();
-  render(<MovimientosPage />);
-  await user.click(await screen.findByText('arepas'));
-  await user.click(screen.getByRole('button', { name: 'Eliminar' }));
-  await waitFor(async () => expect(await db.transactions.count()).toBe(1));
-});
-```
-
-- [ ] **Paso 4: Verificar y commit.**
+- [ ] **Paso 4: Commit.**
 
 ```powershell
 npx vitest run
-git add src/domain/filters.ts src/domain/filters.test.ts src/ui/paginas/MovimientosPage.tsx src/ui/paginas/MovimientosPage.test.tsx
+git add src/domain/filters.ts src/ui/paginas/MovimientosPage.tsx
 git commit -m "Movimientos: lista con búsqueda, filtros y edición/borrado
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
@@ -2254,50 +2246,13 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 **Files:**
 - Create: `src/ui/componentes/PatrimonioCard.tsx`
 - Modify: `src/ui/paginas/DashboardPage.tsx` (reemplazar el stub)
-- Test: `src/ui/paginas/DashboardPage.test.tsx`
+- Test: ninguno (los números salen de `patrimonio()` y `effectiveRate()`, ya testeados en las Tareas 4 y 6; aquí verificación manual con escenario numérico)
 
 **Interfaces:**
 - Consumes: `patrimonio`, `Patrimonio` (Tarea 6); `effectiveRate`, `usdToVesMinor` (Tarea 4); `formatMoney` (Tarea 3); `todayIso` (Tarea 3); `db`, `getSettings`, `saveSettings` (Tarea 5).
 - Produces: `<PatrimonioCard p={Patrimonio} tasa={Rate | null} viewCurrency={Currency} onToggle={() => void} />`. La Tarea 12 añadirá `<GraficasMes />` debajo dentro de `DashboardPage`.
 
-- [ ] **Paso 1: Test** — `src/ui/paginas/DashboardPage.test.tsx`:
-
-```tsx
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { DashboardPage } from './DashboardPage';
-import { db } from '../../db/db';
-import { limpiarDb } from '../../test/utils';
-import { buildManualTx } from '../../domain/builders';
-
-beforeEach(async () => {
-  await limpiarDb();
-  await db.rates.put({ date: '2026-01-01', source: 'BCV', vesPerUsd: 100 });
-  await db.transactions.bulkAdd([
-    buildManualTx({ type: 'income', accountId: 'acc-efectivo', amountMinor: 5000, categoryId: 'cat-otros-ingresos', dateIso: '2026-07-01' }), // $50.00
-    buildManualTx({ type: 'income', accountId: 'acc-bnc', amountMinor: 100000, categoryId: 'cat-otros-ingresos', dateIso: '2026-07-01' }),    // Bs 1.000,00 → $10.00
-  ]);
-});
-
-test('muestra el patrimonio total en USD con desglose disposición/ahorro', async () => {
-  render(<DashboardPage />);
-  expect(await screen.findByText('$60.00')).toBeInTheDocument();
-  expect(screen.getByText(/A disposición/)).toBeInTheDocument();
-  // La fila de BNC muestra saldo nativo y su equivalente
-  expect(screen.getByText(/Bs 1\.000,00/)).toBeInTheDocument();
-});
-
-test('el toggle cambia la vista a Bs', async () => {
-  const user = userEvent.setup();
-  render(<DashboardPage />);
-  await user.click(await screen.findByRole('button', { name: 'ver en Bs' }));
-  expect(await screen.findByText('Bs 6.000,00')).toBeInTheDocument();
-});
-```
-
-Verifica que falla: `npx vitest run src/ui/paginas/DashboardPage.test.tsx` → FAIL.
-
-- [ ] **Paso 2: Implementar.** `src/ui/componentes/PatrimonioCard.tsx`:
+- [ ] **Paso 1: Implementar.** `src/ui/componentes/PatrimonioCard.tsx`:
 
 ```tsx
 import type { Currency, Rate } from '../../domain/types';
@@ -2325,7 +2280,7 @@ export function PatrimonioCard({ p, tasa, viewCurrency, onToggle }: {
         <h3 style={{ margin: 0 }}>Patrimonio total</h3>
         <button className="chip" onClick={onToggle}>{viewCurrency === 'USD' ? 'ver en Bs' : 'ver en $'}</button>
       </div>
-      <p style={{ fontSize: 32, fontWeight: 700, margin: '8px 0' }}>{enVista(p.totalUsdMinor)}</p>
+      <p className="cifra-grande" style={{ margin: '8px 0' }}>{enVista(p.totalUsdMinor)}</p>
       <p style={{ margin: '4px 0', color: 'var(--texto2)' }}>
         A disposición: <strong>{enVista(p.disposicionUsdMinor)}</strong> · Ahorro: <strong>{enVista(p.ahorroUsdMinor)}</strong>
       </p>
@@ -2392,7 +2347,14 @@ export function DashboardPage() {
 }
 ```
 
-- [ ] **Paso 3: Verificar y commit.**
+- [ ] **Paso 2: Verificación manual con escenario numérico (bloqueante).** En `npm run dev`, partiendo de datos limpios (borra la base en DevTools → Application → IndexedDB si hace falta):
+  1. Registra ingreso de `50` en Efectivo y de `1000` en BNC; pon tasa manual de `100` en Ajustes → Tasas (llega en la Tarea 13 — mientras tanto insértala en DevTools → IndexedDB → rates: `{date: hoy, source: 'MANUAL', vesPerUsd: 100}`).
+  2. El dashboard muestra **$60.00** como cifra protagonista (50 + 1000/100), "A disposición: $60.00 · Ahorro: $0.00".
+  3. La fila de BNC muestra `Bs 1.000,00 ≈ $10.00`; las cuentas de ahorro llevan el candado 🔒.
+  4. "ver en Bs" cambia el total a **Bs 6.000,00** y el chip a "ver en $"; el ajuste persiste al recargar.
+  5. Si la tasa no es de hoy, aparece el chip "tasa vieja"; sin ninguna tasa, el banner amarillo "Sin tasa configurada".
+
+- [ ] **Paso 3: Commit.**
 
 ```powershell
 npx vitest run
@@ -2598,6 +2560,15 @@ import type { Category, Currency } from '../../domain/types';
 import type { EstadoPresupuesto, ResumenMes } from '../../domain/stats';
 import { formatMoney } from '../../domain/money';
 
+// Estilos de gráficas alineados a los tokens del sistema (Recharts no lee CSS vars en todos los props)
+const ESTILO_TOOLTIP = {
+  background: '#182338',
+  border: '1px solid #223049',
+  borderRadius: 12,
+  color: '#e8edf6',
+} as const;
+const EJE = { tick: { fill: '#8b96ab', fontSize: 11 }, axisLine: { stroke: '#223049' }, tickLine: false } as const;
+
 export function GraficasMes({ resumen, comparativa, presupuestos, categorias, viewCurrency }: {
   resumen: ResumenMes;
   comparativa: ResumenMes[];
@@ -2622,7 +2593,7 @@ export function GraficasMes({ resumen, comparativa, presupuestos, categorias, vi
           Ingresos <span className="monto-pos">+{dinero(resumen.incomeMinor)}</span>
           {' · '}Gastos <span className="monto-neg">−{dinero(resumen.expenseMinor)}</span>
         </p>
-        <p style={{ fontSize: 22, fontWeight: 700 }}>
+        <p className="cifra" style={{ fontSize: 22, fontWeight: 800 }}>
           Balance: <span className={balance >= 0 ? 'monto-pos' : 'monto-neg'}>{dinero(balance)}</span>
         </p>
         {resumen.omitidasSinTasa > 0 && (
@@ -2632,10 +2603,10 @@ export function GraficasMes({ resumen, comparativa, presupuestos, categorias, vi
           <div style={{ height: 220 }}>
             <ResponsiveContainer>
               <PieChart>
-                <Pie data={donut} dataKey="value" nameKey="name" innerRadius={55} outerRadius={85} label={(e) => e.name}>
+                <Pie data={donut} dataKey="value" nameKey="name" innerRadius={55} outerRadius={85} stroke="#0a0f1c" strokeWidth={2} label={(e) => e.name}>
                   {donut.map((d) => <Cell key={d.name} fill={d.color} />)}
                 </Pie>
-                <Tooltip formatter={(v: number) => dinero(Math.round(v * 100))} />
+                <Tooltip contentStyle={ESTILO_TOOLTIP} formatter={(v: number) => dinero(Math.round(v * 100))} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -2643,10 +2614,10 @@ export function GraficasMes({ resumen, comparativa, presupuestos, categorias, vi
         <div style={{ height: 160 }}>
           <ResponsiveContainer>
             <AreaChart data={resumen.dailyCumulative.map((d) => ({ ...d, gasto: d.acumuladoMinor / 100 }))}>
-              <XAxis dataKey="day" tickLine={false} />
-              <YAxis width={50} tickLine={false} />
-              <Tooltip formatter={(v: number) => dinero(Math.round(v * 100))} />
-              <Area type="monotone" dataKey="gasto" stroke="#0e7490" fill="#0e749033" name="Gasto acumulado" />
+              <XAxis dataKey="day" {...EJE} />
+              <YAxis width={50} {...EJE} />
+              <Tooltip contentStyle={ESTILO_TOOLTIP} formatter={(v: number) => dinero(Math.round(v * 100))} />
+              <Area type="monotone" dataKey="gasto" stroke="#2dd4bf" strokeWidth={2} fill="rgba(45, 212, 191, 0.18)" name="Gasto acumulado" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -2659,12 +2630,12 @@ export function GraficasMes({ resumen, comparativa, presupuestos, categorias, vi
             <BarChart data={comparativa.map((r) => ({
               mes: r.month.slice(5), ingresos: r.incomeMinor / 100, gastos: r.expenseMinor / 100,
             }))}>
-              <XAxis dataKey="mes" tickLine={false} />
-              <YAxis width={50} tickLine={false} />
-              <Tooltip formatter={(v: number) => dinero(Math.round(v * 100))} />
+              <XAxis dataKey="mes" {...EJE} />
+              <YAxis width={50} {...EJE} />
+              <Tooltip contentStyle={ESTILO_TOOLTIP} formatter={(v: number) => dinero(Math.round(v * 100))} />
               <Legend />
-              <Bar dataKey="ingresos" fill="#16a34a" name="Ingresos" />
-              <Bar dataKey="gastos" fill="#dc2626" name="Gastos" />
+              <Bar dataKey="ingresos" fill="#34d399" name="Ingresos" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="gastos" fill="#f87171" name="Gastos" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -2712,7 +2683,12 @@ const presupuestos = budgetStatus({ ...base, categories: categorias, month: mesA
 <GraficasMes resumen={resumen} comparativa={comparativa} presupuestos={presupuestos} categorias={categorias} viewCurrency={settings.viewCurrency} />
 ```
 
-- [ ] **Paso 5: Verificar.** `npx vitest run` → verde (los tests de la Tarea 11 siguen pasando: las gráficas Recharts renderizan vacías en jsdom sin romper). Prueba manual: registra 2-3 gastos y mira donut/curva/comparativa; ponle presupuesto a una categoría directamente en DevTools → Application → IndexedDB si quieres verlo ya (la UI de presupuestos llega en la Tarea 14).
+- [ ] **Paso 5: Verificación (suite del núcleo + visual).** `npx vitest run` → verde (stats). En `npm run dev`, con 3-4 gastos en categorías distintas y un ingreso:
+  1. Donut con los colores de las categorías bien separados sobre el fondo oscuro (borde entre porciones) y etiquetas legibles.
+  2. Curva acumulada teal con relleno translúcido; ejes y tooltips en gris legible (nada de texto negro sobre oscuro).
+  3. Comparativa con barras redondeadas verde/rojo y leyenda visible.
+  4. Balance del mes como cifra destacada con su color semántico.
+  5. Presupuestos: ponle presupuesto a una categoría en DevTools → IndexedDB (la UI llega en la Tarea 14) y verifica la barra de progreso con degradado teal (roja al pasarse).
 
 - [ ] **Paso 6: Commit.**
 
@@ -3033,49 +3009,13 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 **Files:**
 - Create: `src/ui/componentes/CuentasSection.tsx`, `src/ui/componentes/CategoriasSection.tsx`, `src/ui/componentes/ReglasSection.tsx`
 - Modify: `src/ui/paginas/AjustesPage.tsx`
-- Test: `src/ui/componentes/CuentasSection.test.tsx`
+- Test: ninguno (CRUD de vista sobre Dexie; verificación manual)
 
 **Interfaces:**
 - Consumes: `db`; entidades; `parseUsAmount`, `formatMoney` (Tarea 3); clases CSS (Tarea 7).
 - Produces: CRUD de cuentas (crear/editar/archivar — spec §3), CRUD de categorías incluyendo `monthlyBudgetMinor` en USD (spec §4.7) y listado/borrado de reglas aprendidas (spec §4.5).
 
-- [ ] **Paso 1: Test** — `src/ui/componentes/CuentasSection.test.tsx`:
-
-```tsx
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { CuentasSection } from './CuentasSection';
-import { db } from '../../db/db';
-import { limpiarDb } from '../../test/utils';
-
-beforeEach(async () => { await limpiarDb(); });
-
-test('crea una cuenta nueva', async () => {
-  const user = userEvent.setup();
-  render(<CuentasSection />);
-  await user.click(await screen.findByRole('button', { name: 'Nueva cuenta' }));
-  await user.type(screen.getByLabelText('Nombre de cuenta'), 'Zelle');
-  await user.selectOptions(screen.getByLabelText('Moneda'), 'USD');
-  await user.selectOptions(screen.getByLabelText('Tipo'), 'wallet');
-  await user.click(screen.getByRole('button', { name: 'Guardar cuenta' }));
-  await waitFor(async () => expect(await db.accounts.count()).toBe(6));
-  const zelle = (await db.accounts.toArray()).find((a) => a.name === 'Zelle');
-  expect(zelle).toMatchObject({ currency: 'USD', kind: 'wallet', isSavings: false, archived: false });
-});
-
-test('archiva una cuenta existente', async () => {
-  const user = userEvent.setup();
-  render(<CuentasSection />);
-  await user.click(await screen.findByRole('button', { name: 'Editar Efectivo ahorro' }));
-  await user.click(screen.getByLabelText('Archivada'));
-  await user.click(screen.getByRole('button', { name: 'Guardar cuenta' }));
-  await waitFor(async () => expect((await db.accounts.get('acc-efectivo-ahorro'))?.archived).toBe(true));
-});
-```
-
-Verifica que falla.
-
-- [ ] **Paso 2: Implementar.** `src/ui/componentes/CuentasSection.tsx`:
+- [ ] **Paso 1: Implementar.** `src/ui/componentes/CuentasSection.tsx`:
 
 ```tsx
 import { useState } from 'react';
@@ -3254,7 +3194,9 @@ export function ReglasSection() {
   const categorias = useLiveQuery(() => db.categories.toArray(), []) ?? [];
   const nombre = (id: string) => categorias.find((c) => c.id === id)?.name ?? '?';
 
-  if (reglas.length === 0) return <p style={{ color: 'var(--texto2)' }}>Aún no hay reglas. Se crean al categorizar en los imports.</p>;
+  if (reglas.length === 0) {
+    return <div className="vacio"><span className="icono">🪄</span>Aún no hay reglas. Se crean al categorizar en los imports.</div>;
+  }
   return (
     <div>
       {reglas.map((r) => (
@@ -3280,7 +3222,14 @@ import { ReglasSection } from '../componentes/ReglasSection';
 <div className="tarjeta"><h3>Reglas aprendidas</h3><ReglasSection /></div>
 ```
 
-- [ ] **Paso 3: Verificar y commit.**
+- [ ] **Paso 2: Verificación manual (bloqueante).** En `npm run dev` → Ajustes:
+  1. "Nueva cuenta" abre la hoja inferior; crear `Zelle` (USD, billetera) la muestra en la lista con chip `$` y aparece en los selectores de Nuevo/Transferir.
+  2. Editar "Efectivo ahorro" y marcarla Archivada la saca del dashboard y de los formularios (sigue en el filtro de Movimientos).
+  3. Nueva categoría con presupuesto `50` muestra el chip `presup. $50.00` y su barra aparece en el dashboard.
+  4. La sección Reglas vacía muestra el estado `.vacio`; tras un import con regla (Tarea 18) listará y podrá eliminar.
+  5. Todo se ve del sistema: hojas con asa y animación, chips, inputs oscuros con foco teal.
+
+- [ ] **Paso 3: Commit.**
 
 ```powershell
 npx vitest run
@@ -3869,7 +3818,7 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 **Files:**
 - Create: `src/ui/componentes/ImportBnc.tsx`
 - Modify: `src/ui/paginas/ImportarPage.tsx` (reemplazar el stub)
-- Test: `src/ui/componentes/ImportBnc.test.tsx`
+- Test: ninguno nuevo (lo crítico — parser, dedupe, pares, hueco, commit — ya quedó testeado en las Tareas 15-17; la UI se verifica manualmente con la fixture y con el TXT real)
 
 **Interfaces:**
 - Consumes: todo lo de las Tareas 15-17; `buildAdjustment` (Tarea 9); `accountBalanceMinor` (Tarea 6); `buildRule` (Tarea 15).
@@ -4132,78 +4081,18 @@ export function ImportarPage() {
 }
 ```
 
-- [ ] **Paso 2: Test de integración** — `src/ui/componentes/ImportBnc.test.tsx`:
+- [ ] **Paso 2: Verificación manual (bloqueante).** `npx vitest run` → verde. En `npm run dev` → Importar → BNC:
 
-```tsx
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { ImportBnc } from './ImportBnc';
-import { db } from '../../db/db';
-import { limpiarDb } from '../../test/utils';
-import { BNC_FIXTURE } from '../../import/bnc/fixtures/bncFixture';
+  **Con la fixture anonimizada** (imprímela una vez con `console.log(BNC_FIXTURE)` desde la consola de Vite o cópiala del archivo) pegada en el textarea → Analizar:
+  1. "9 movimientos"; las dos comisiones vienen pre-categorizadas como Comisiones bancarias y el par cargo+comisión sale con sus 2 chips "cargo+comisión".
+  2. En el crédito recibido: elige "Transferencia recibida", marca "regla" y edita el patrón a `PEREZ GOMEZ ANA` → Confirmar (9) → en Ajustes → Reglas aparece la regla.
+  3. Tras confirmar, el banner de descuadre ofrece "Crear ajuste" (faltan los 500,00 Bs previos al export): al aceptar, el saldo BNC del dashboard queda en **Bs 6.300,01**.
+  4. Reanalizar la MISMA fixture → banner "solapa…", 9 "ya importado", botón "Confirmar (0)" deshabilitado.
+  5. La vista previa se ve del sistema: filas con montos tabulares rojos/verdes, chips, banners tintados.
 
-beforeEach(async () => { await limpiarDb(); });
+  **Con el TXT real** (`TXTBNC1.txt`, local, NUNCA commitear): 25 movimientos, 0 líneas irreconocibles, pares marcados; confirmar + ajuste → el saldo BNC coincide con el saldo final del TXT real. Reimportar: 0 nuevos.
 
-test('flujo completo: analizar → confirmar → cuadrar → reimportar sin duplicados', async () => {
-  const user = userEvent.setup();
-  const { unmount } = render(<ImportBnc />);
-
-  fireEvent.change(await screen.findByLabelText('Texto del TXT'), { target: { value: BNC_FIXTURE } });
-  await user.click(screen.getByRole('button', { name: 'Analizar' }));
-
-  expect(await screen.findByText(/9 movimientos/)).toBeInTheDocument();
-  // la comisión de mantenimiento (fila 3) viene pre-categorizada
-  expect((screen.getByLabelText('Categoría fila 3') as HTMLSelectElement).value).toBe('cat-comisiones');
-  // el par cargo+comisión está señalado
-  expect(screen.getAllByText('cargo+comisión')).toHaveLength(2);
-
-  await user.click(screen.getByRole('button', { name: 'Confirmar (9)' }));
-  await waitFor(async () => expect(await db.transactions.count()).toBe(9));
-  expect((await db.accounts.get('acc-bnc'))?.bncLastSaldoMinor).toBe(630001);
-
-  // El saldo del TXT (6.300,01) no cuadra con la app (falta el saldo previo de 500,00) → ajuste
-  await user.click(await screen.findByRole('button', { name: 'Crear ajuste' }));
-  await waitFor(async () => expect(await db.transactions.count()).toBe(10));
-  const ajuste = (await db.transactions.toArray()).find((t) => t.type === 'adjustment');
-  expect(ajuste?.amountMinor).toBe(50000);
-
-  unmount();
-
-  // Reimportar el mismo TXT: solapado, todo duplicado, no se puede confirmar
-  render(<ImportBnc />);
-  fireEvent.change(await screen.findByLabelText('Texto del TXT'), { target: { value: BNC_FIXTURE } });
-  await user.click(screen.getByRole('button', { name: 'Analizar' }));
-  expect(await screen.findByText(/solapa/)).toBeInTheDocument();
-  expect(screen.getAllByText('ya importado')).toHaveLength(9);
-  expect(screen.getByRole('button', { name: 'Confirmar (0)' })).toBeDisabled();
-  expect(await db.transactions.count()).toBe(10);
-});
-
-test('crea una regla al confirmar con el checkbox marcado', async () => {
-  const user = userEvent.setup();
-  render(<ImportBnc />);
-  fireEvent.change(await screen.findByLabelText('Texto del TXT'), { target: { value: BNC_FIXTURE } });
-  await user.click(screen.getByRole('button', { name: 'Analizar' }));
-  await screen.findByText(/9 movimientos/);
-
-  // Fila 9 (crédito recibido): elegir categoría y crear regla con patrón editado
-  await user.selectOptions(screen.getByLabelText('Categoría fila 9'), 'cat-transferencia-recibida');
-  await user.click(screen.getByLabelText('Crear regla fila 9'));
-  const patron = screen.getByLabelText('Patrón fila 9');
-  await user.clear(patron);
-  await user.type(patron, 'PEREZ GOMEZ ANA');
-  await user.click(screen.getByRole('button', { name: 'Confirmar (9)' }));
-
-  await waitFor(async () => expect(await db.rules.count()).toBe(1));
-  expect((await db.rules.toArray())[0]).toMatchObject({ pattern: 'PEREZ GOMEZ ANA', categoryId: 'cat-transferencia-recibida' });
-});
-```
-
-- [ ] **Paso 3: Verificar.** `npx vitest run` → verde.
-
-- [ ] **Paso 4: Prueba manual con el TXT real** (`npm run dev`): Importar → BNC → subir `TXTBNC1.txt`. Debes ver 25 movimientos, el par cargo+comisión marcado, comisiones pre-categorizadas; confirma, acepta el ajuste, y verifica en el dashboard que el saldo BNC coincide con el saldo final del TXT real. Reimporta el mismo archivo: 0 nuevos.
-
-- [ ] **Paso 5: Commit.**
+- [ ] **Paso 3: Commit.**
 
 ```powershell
 git add src/ui
@@ -4233,9 +4122,9 @@ Contexto del formato real (verificado extrayendo el texto del PDF real de junio 
 
 **Interfaces:**
 - Consumes: `pdfjs-dist` (instalado en Tarea 1).
-- Produces: `extractPdfLines(data: ArrayBuffer): Promise<string[]>` — líneas en **orden visual** (agrupadas por coordenada Y del baseline, ordenadas de arriba a abajo, items unidos por X). Sin test unitario: pdf.js no corre en jsdom; la frontera testeable es `parseZinliLines` (Tarea 20) y esta capa se verifica manualmente aquí y offline en la Tarea 24.
+- Produces: `extractPdfLines(data: ArrayBuffer): Promise<string[]>` — líneas en **orden visual** (agrupadas por coordenada Y del baseline, ordenadas de arriba a abajo, items unidos por X). Sin test unitario: pdf.js necesita APIs de navegador que no existen en el entorno de tests (node); la frontera testeable es `parseZinliLines` (Tarea 20) y esta capa se verifica manualmente aquí y offline en la Tarea 24.
 
-- [ ] **Paso 1: Implementar `src/import/zinli/extractPdfText.ts`** (imports dinámicos para que ningún test que importe la UI cargue pdf.js en jsdom):
+- [ ] **Paso 1: Implementar `src/import/zinli/extractPdfText.ts`** (imports dinámicos: pdf.js solo se carga cuando de verdad se usa en el navegador):
 
 ```ts
 /** Reconstruye las líneas visuales del PDF agrupando items de texto por su coordenada Y. */
@@ -4566,7 +4455,7 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 **Files:**
 - Create: `src/import/zinli/mapZinli.ts`
 - Modify: `src/ui/componentes/ImportZinli.tsx` (reescribir con el flujo completo)
-- Test: `src/import/zinli/mapZinli.test.ts`, `src/ui/componentes/ImportZinli.test.tsx`
+- Test: `src/import/zinli/mapZinli.test.ts` (la UI se verifica manualmente con el PDF real)
 
 **Interfaces:**
 - Consumes: `ZinliMovement`, `parseZinliLines` (Tarea 20); `extractPdfLines` (Tarea 19); `matchCategory`, `buildRule` (Tarea 15); `commitImport` (Tarea 17).
@@ -4574,7 +4463,7 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
   - `zinliImportKey(m: ZinliMovement): string` — `` `zinli:${referencia}` `` (dedupe por referencia, spec §4.6).
   - `interface ZinliDraft { tx: Transaction; duplicate: boolean; matchedRuleId: string | null }`
   - `mapZinliMovements(movs: ZinliMovement[], opts: { accountId: string; existingKeys: Set<string>; rules: Rule[]; categories: Category[] }): ZinliDraft[]` — nota = `"{motivo}: {descripcion}"`; ingresos sin regla → `cat-transferencia-recibida` si existe.
-  - `<ImportZinli extraerLineas?: (data: ArrayBuffer) => Promise<string[]> />` — la prop inyectable (defecto `extractPdfLines`) existe para poder testear el componente sin pdf.js.
+  - `<ImportZinli />` (sin props — usa `extractPdfLines` directamente).
 
 - [ ] **Paso 1: Test `src/import/zinli/mapZinli.test.ts`:**
 
@@ -4688,9 +4577,7 @@ interface DraftUI extends ZinliDraft {
 
 const CUENTA_ZINLI = 'acc-zinli';
 
-export function ImportZinli({ extraerLineas = extractPdfLines }: {
-  extraerLineas?: (data: ArrayBuffer) => Promise<string[]>;
-}) {
+export function ImportZinli() {
   const [lineas, setLineas] = useState<string[] | null>(null);
   const [resultado, setResultado] = useState<ZinliParseResult | null>(null);
   const [drafts, setDrafts] = useState<DraftUI[] | null>(null);
@@ -4702,7 +4589,7 @@ export function ImportZinli({ extraerLineas = extractPdfLines }: {
     try {
       setError(null);
       setHecho(false);
-      const lin = await extraerLineas(await f.arrayBuffer());
+      const lin = await extractPdfLines(await f.arrayBuffer());
       const r = parseZinliLines(lin);
       if (r.movements.length === 0) {
         setError('No se reconocieron movimientos en el PDF. Revisa el texto extraído abajo.');
@@ -4861,55 +4748,14 @@ export function ImportZinli({ extraerLineas = extractPdfLines }: {
 }
 ```
 
-- [ ] **Paso 3: Test del componente** — `src/ui/componentes/ImportZinli.test.tsx` (inyecta el extractor falso; no toca pdf.js):
+- [ ] **Paso 3: Verificación manual (bloqueante).** `npx vitest run` → verde. En `npm run dev` con el **PDF real** (local, NUNCA commitear):
+  1. Subirlo muestra los movimientos del mes con su período y el banner VERDE "Cuadra: … ✓" (inicial + movimientos = final).
+  2. Los ingresos vienen propuestos como "Transferencia recibida"; las reglas aprendidas en BNC también aplican aquí.
+  3. Confirmar importa todo; el saldo Zinli del dashboard queda igual al "Saldo final del mes" del PDF.
+  4. Reimportar el mismo PDF → todos "ya importado", "Confirmar (0)" deshabilitado.
+  5. El `<details>` con el texto extraído sigue disponible para depurar rarezas del PDF.
 
-```tsx
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { ImportZinli } from './ImportZinli';
-import { db } from '../../db/db';
-import { limpiarDb } from '../../test/utils';
-import { ZINLI_LINES } from '../../import/zinli/fixtures/zinliFixture';
-
-beforeEach(async () => { await limpiarDb(); });
-
-function subirPdfFalso() {
-  const input = screen.getByLabelText('Archivo PDF');
-  fireEvent.change(input, { target: { files: [new File(['%PDF-falso'], 'resumen.pdf', { type: 'application/pdf' })] } });
-}
-
-test('importa el resumen: cuadre visible, confirmar, y reimportar deduplica', async () => {
-  const user = userEvent.setup();
-  const { unmount } = render(<ImportZinli extraerLineas={async () => ZINLI_LINES} />);
-  subirPdfFalso();
-
-  expect(await screen.findByText(/4 movimientos/)).toBeInTheDocument();
-  expect(screen.getByText(/Cuadra:/)).toBeInTheDocument();
-
-  await user.click(screen.getByRole('button', { name: 'Confirmar (4)' }));
-  await waitFor(async () => expect(await db.transactions.count()).toBe(4));
-  const txs = await db.transactions.toArray();
-  expect(txs.every((t) => t.accountId === 'acc-zinli' && t.source === 'zinli')).toBe(true);
-
-  unmount();
-  render(<ImportZinli extraerLineas={async () => ZINLI_LINES} />);
-  subirPdfFalso();
-  await screen.findByText(/4 movimientos/);
-  expect(screen.getAllByText('ya importado')).toHaveLength(4);
-  expect(screen.getByRole('button', { name: 'Confirmar (0)' })).toBeDisabled();
-});
-
-test('avisa cuando el resumen no cuadra', async () => {
-  const rotas = ZINLI_LINES.map((l) => l.replace('-$5.00', '-$6.00'));
-  render(<ImportZinli extraerLineas={async () => rotas} />);
-  subirPdfFalso();
-  expect(await screen.findByText(/NO cuadra/)).toBeInTheDocument();
-});
-```
-
-- [ ] **Paso 4: Verificar.** `npx vitest run` → verde. Prueba manual con el PDF real: 4+ movimientos del mes, banner verde de cuadre, confirmar, ver el saldo Zinli en el dashboard. Reimportar el mismo PDF → 0 nuevos.
-
-- [ ] **Paso 5: Commit.**
+- [ ] **Paso 4: Commit.**
 
 ```powershell
 git add src/import/zinli src/ui
@@ -4928,7 +4774,7 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `src/backup/backup.ts`, `src/backup/saveFile.ts`
-- Test: `src/backup/backup.test.ts`, `src/backup/saveFile.test.ts`
+- Test: `src/backup/backup.test.ts` (el round-trip es crítico; `saveFile` es glue de plataforma y se verifica manualmente en la Tarea 23 y en la 26)
 
 **Interfaces:**
 - Consumes: `CuentasDB` (Tarea 5); entidades.
@@ -4997,19 +4843,7 @@ test('backupFilename incluye la fecha', () => {
 });
 ```
 
-Y `src/backup/saveFile.test.ts`:
-
-```ts
-import { pickSaveStrategy } from './saveFile';
-
-test('elige picker > share > download según capacidades', () => {
-  expect(pickSaveStrategy({ hasPicker: true, canShareFiles: true })).toBe('picker');
-  expect(pickSaveStrategy({ hasPicker: false, canShareFiles: true })).toBe('share');
-  expect(pickSaveStrategy({ hasPicker: false, canShareFiles: false })).toBe('download');
-});
-```
-
-Verifica que fallan ambos.
+Verifica que falla.
 
 - [ ] **Paso 2: Implementar `src/backup/backup.ts`:**
 
@@ -5139,11 +4973,11 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 **Files:**
 - Create: `src/ui/componentes/RespaldoSection.tsx`
 - Modify: `src/ui/paginas/AjustesPage.tsx`
-- Test: `src/ui/componentes/RespaldoSection.test.tsx`
+- Test: ninguno (el round-trip y la validación ya están testeados en la Tarea 22; verificación manual)
 
 **Interfaces:**
 - Consumes: todo lo de la Tarea 22; `todayIso`; `avisar`.
-- Produces: `<RespaldoSection guardarArchivo?: (json: string, filename: string) => Promise<SaveStrategy> />` (prop inyectable para tests; defecto `saveJsonFile`). Flujo de restauración con confirmación y **auto-respaldo de seguridad previo** (spec §4.8).
+- Produces: `<RespaldoSection />` con flujo de restauración con confirmación y **auto-respaldo de seguridad previo** (spec §4.8).
 
 - [ ] **Paso 1: Implementar `src/ui/componentes/RespaldoSection.tsx`:**
 
@@ -5151,19 +4985,17 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 import { useState } from 'react';
 import { db } from '../../db/db';
 import { backupFilename, exportBackup, importBackup, validateBackup, type BackupFile } from '../../backup/backup';
-import { saveJsonFile, type SaveStrategy } from '../../backup/saveFile';
+import { saveJsonFile } from '../../backup/saveFile';
 import { todayIso } from '../../domain/dates';
 import { avisar } from '../Toast';
 
-export function RespaldoSection({ guardarArchivo = saveJsonFile }: {
-  guardarArchivo?: (json: string, filename: string) => Promise<SaveStrategy>;
-}) {
+export function RespaldoSection() {
   const [pendiente, setPendiente] = useState<{ backup: BackupFile; resumen: string } | null>(null);
 
   async function exportar() {
     try {
       const b = await exportBackup(db);
-      const via = await guardarArchivo(JSON.stringify(b, null, 2), backupFilename(todayIso()));
+      const via = await saveJsonFile(JSON.stringify(b, null, 2), backupFilename(todayIso()));
       avisar(via === 'download' ? 'Respaldo descargado — súbelo a tu Drive' : 'Respaldo guardado ✓');
     } catch (e) {
       const err = e as Error;
@@ -5192,7 +5024,7 @@ export function RespaldoSection({ guardarArchivo = saveJsonFile }: {
     try {
       // Auto-respaldo de seguridad ANTES de reemplazar (spec §4.8)
       const previo = await exportBackup(db);
-      await guardarArchivo(JSON.stringify(previo, null, 2), backupFilename(`previo-${todayIso()}`));
+      await saveJsonFile(JSON.stringify(previo, null, 2), backupFilename(`previo-${todayIso()}`));
       await importBackup(db, pendiente.backup);
       setPendiente(null);
       avisar('Datos restaurados ✓');
@@ -5245,81 +5077,14 @@ import { RespaldoSection } from '../componentes/RespaldoSection';
 <div className="tarjeta"><h3>Respaldo (Google Drive)</h3><RespaldoSection /></div>
 ```
 
-- [ ] **Paso 2: Test `src/ui/componentes/RespaldoSection.test.tsx`:**
+- [ ] **Paso 2: Verificación manual (bloqueante).** `npx vitest run` → verde. En Windows (`npm run dev` en Chrome/Edge):
+  1. "Exportar respaldo" abre el diálogo del sistema para elegir carpeta (elige tu carpeta local de Google Drive si la tienes sincronizada); el archivo se llama `cuentas-claras-respaldo-<fecha>.json` y contiene las tablas completas.
+  2. Elegir ese mismo archivo en "Restaurar" muestra el banner con el resumen (`N movimientos, M cuentas, exportado el …`) y el botón rojo "Sí, reemplazar todo".
+  3. Confirmar pide guardar ANTES el respaldo de seguridad (`…-previo-…`), y al terminar los datos quedan idénticos (compara el dashboard antes/después).
+  4. Un JSON que no es respaldo (p. ej. `{"nada": true}`) se rechaza con aviso y NO ofrece restaurar.
+  5. Cancelar el diálogo del respaldo de seguridad ABORTA la restauración (no se pierde nada).
 
-```tsx
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { RespaldoSection } from './RespaldoSection';
-import { db } from '../../db/db';
-import { limpiarDb } from '../../test/utils';
-import { buildManualTx } from '../../domain/builders';
-import type { BackupFile } from '../../backup/backup';
-
-beforeEach(async () => { await limpiarDb(); });
-
-test('exportar produce un JSON válido con los seeds', async () => {
-  const guardados: { json: string; nombre: string }[] = [];
-  const fake = async (json: string, nombre: string) => {
-    guardados.push({ json, nombre });
-    return 'download' as const;
-  };
-  const user = userEvent.setup();
-  render(<RespaldoSection guardarArchivo={fake} />);
-  await user.click(screen.getByRole('button', { name: 'Exportar respaldo' }));
-  await waitFor(() => expect(guardados).toHaveLength(1));
-  const backup = JSON.parse(guardados[0].json);
-  expect(backup.schemaVersion).toBe(1);
-  expect(backup.accounts).toHaveLength(5);
-  expect(guardados[0].nombre).toMatch(/^cuentas-claras-respaldo-\d{4}-\d{2}-\d{2}\.json$/);
-});
-
-test('restaurar reemplaza todo tras auto-respaldo de seguridad', async () => {
-  await db.transactions.add(
-    buildManualTx({ type: 'expense', accountId: 'acc-bnc', amountMinor: 100, categoryId: 'cat-ocio', dateIso: '2026-07-01' }),
-  );
-  const guardados: string[] = [];
-  const fake = async (json: string) => {
-    guardados.push(json);
-    return 'download' as const;
-  };
-  const user = userEvent.setup();
-  render(<RespaldoSection guardarArchivo={fake} />);
-
-  const backup: BackupFile = {
-    schemaVersion: 1,
-    exportedAt: '2026-07-01T00:00:00.000Z',
-    accounts: [{ id: 'x', name: 'Única', currency: 'USD', kind: 'cash', isSavings: false, archived: false }],
-    transactions: [],
-    categories: [],
-    rules: [],
-    rates: [],
-    settings: [{ id: 'main', viewCurrency: 'VES', rateSource: 'MANUAL' }],
-  };
-  fireEvent.change(screen.getByLabelText('Archivo de respaldo'), {
-    target: { files: [new File([JSON.stringify(backup)], 'r.json', { type: 'application/json' })] },
-  });
-  expect(await screen.findByText(/0 movimientos, 1 cuentas/)).toBeInTheDocument();
-
-  await user.click(screen.getByRole('button', { name: 'Sí, reemplazar todo' }));
-  await waitFor(async () => expect(await db.transactions.count()).toBe(0));
-  expect(guardados).toHaveLength(1); // el auto-respaldo previo
-  expect(await db.accounts.count()).toBe(1);
-  expect((await db.settings.get('main'))?.viewCurrency).toBe('VES');
-});
-
-test('un JSON inválido no ofrece restaurar', async () => {
-  render(<RespaldoSection guardarArchivo={async () => 'download' as const} />);
-  fireEvent.change(screen.getByLabelText('Archivo de respaldo'), {
-    target: { files: [new File(['{"nada": true}'], 'r.json', { type: 'application/json' })] },
-  });
-  await waitFor(() => expect(screen.queryByText(/reemplazar TODO/)).not.toBeInTheDocument());
-});
-```
-
-- [ ] **Paso 3: Verificar.** `npx vitest run` → verde. Manual en Windows (`npm run dev` en Chrome/Edge): Exportar abre el diálogo del sistema para elegir carpeta (elige tu carpeta de Google Drive si la tienes sincronizada); restaurar el mismo archivo funciona y antes te pide guardar el respaldo previo.
-
-- [ ] **Paso 4: Commit.**
+- [ ] **Paso 3: Commit.**
 
 ```powershell
 git add src/ui
@@ -5334,11 +5099,11 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 
 ## Fase 8 — PWA, deploy e instalación real
 
-### Tarea 24: PWA — manifest, iconos, shortcuts y offline
+### Tarea 24: PWA (manifest, iconos, shortcuts, offline) + pase de pulido visual
 
 **Files:**
 - Create: `scripts/generar-iconos.mjs`, `public/iconos/` (PNGs generados — sí se commitean)
-- Modify: `vite.config.ts` (reemplazar completo)
+- Modify: `vite.config.ts` (reemplazar completo), `src/ui/**` (ajustes menores que salgan del pase de pulido)
 
 **Interfaces:**
 - Consumes: `NuevoPage` ya lee `?tipo=` del hash (Tarea 8) — los shortcuts apuntan ahí.
@@ -5350,15 +5115,15 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 import { mkdirSync } from 'node:fs';
 import sharp from 'sharp';
 
-// Moneda estilizada (anillo + barra, tipo ¢) sobre teal de la app.
+// Moneda estilizada (anillo + barra, tipo ¢) en teal menta sobre el fondo oscuro de la app.
 function svg(maskable) {
   const rx = maskable ? 0 : 96;
   const escala = maskable ? 0.7 : 0.92; // zona segura para máscaras redondas
   return Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="${rx}" fill="#0e7490"/>
+  <rect width="512" height="512" rx="${rx}" fill="#0a0f1c"/>
   <g transform="translate(256 256) scale(${escala}) translate(-256 -256)">
-    <circle cx="256" cy="256" r="140" fill="none" stroke="#ffffff" stroke-width="38"/>
-    <line x1="256" y1="70" x2="256" y2="442" stroke="#ffffff" stroke-width="38" stroke-linecap="round"/>
+    <circle cx="256" cy="256" r="140" fill="none" stroke="#2dd4bf" stroke-width="38"/>
+    <line x1="256" y1="70" x2="256" y2="442" stroke="#2dd4bf" stroke-width="38" stroke-linecap="round"/>
   </g>
 </svg>`);
 }
@@ -5393,8 +5158,8 @@ export default defineConfig({
         start_url: '/',
         scope: '/',
         display: 'standalone',
-        background_color: '#f6f7f9',
-        theme_color: '#0e7490',
+        background_color: '#0a0f1c',
+        theme_color: '#0a0f1c',
         icons: [
           { src: 'iconos/icono-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'iconos/icono-512.png', sizes: '512x512', type: 'image/png' },
@@ -5424,7 +5189,7 @@ export default defineConfig({
     }),
   ],
   test: {
-    environment: 'jsdom',
+    environment: 'node', // solo se testea el núcleo (sin DOM); fake-indexeddb cubre Dexie
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
   },
@@ -5444,12 +5209,24 @@ En el navegador sobre la URL de preview:
 3. Marca **Offline** en DevTools → recarga → la app abre y funciona (registrar un gasto).
 4. Aún offline: Importar → Zinli → subir el PDF real → la extracción funciona (el worker vino del precache).
 
-- [ ] **Paso 4: Suite y commit.**
+- [ ] **Paso 4: Pase de pulido visual (recorrer TODAS las pantallas).** Con la app en `npm run preview`, revisa contra esta checklist y corrige lo que falle (tocando `estilos.css`, clases existentes y ajustes menores de JSX — sin estilos inventados fuera del sistema):
+  1. **Cero flashes blancos** al cargar, recargar o navegar (html oscuro + theme-color + color-scheme).
+  2. Jerarquía clara en cada pantalla: UNA cifra protagonista; lo secundario en `--texto2`.
+  3. Todos los montos con dígitos tabulares y color semántico (verde ingreso / rojo gasto / neutro transferencia).
+  4. Espaciado consistente (múltiplos de 4 px), tarjetas alineadas, nada pegado a los bordes.
+  5. Feedback táctil en TODO lo tocable (teclas, categorías, filas, botones, chips) y focus visible teal.
+  6. Estados vacíos con `.vacio` (icono + frase útil) en Movimientos, Reglas y las vistas previas de Importar.
+  7. Gráficas legibles sobre oscuro: ejes, tooltips y etiquetas del donut sin texto oscuro-sobre-oscuro.
+  8. Contraste razonable (AA): texto secundario legible, banners tintados sin estridencia.
+  9. Safe areas: nav y modales respetan `env(safe-area-inset-bottom)` (pruébalo con la barra de gestos de Android en modo responsive).
+  10. Manrope carga siempre (sin FOUT visible tras el precache) y los títulos usan peso 800.
+
+- [ ] **Paso 5: Suite y commit.**
 
 ```powershell
 npx vitest run
-git add scripts public/iconos vite.config.ts package.json
-git commit -m "PWA: manifest en español, iconos, atajos de nuevo gasto/ingreso y precache offline
+git add scripts public/iconos vite.config.ts package.json src/ui
+git commit -m "PWA: manifest, iconos teal, atajos, precache offline y pase de pulido visual
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 ```
@@ -5509,6 +5286,7 @@ Checklist manual **con Daniel y sus dispositivos** (el agente guía, Daniel ejec
 - [ ] **Android (Chrome):** abrir la URL → menú ⋮ → "Instalar app" → icono en el launcher → abre a pantalla completa (standalone, sin barra del navegador).
 - [ ] **Atajos:** mantener pulsado el icono → aparece "➕ Nuevo gasto" → tocarlo abre directo el teclado numérico.
 - [ ] **Registro < 5 s (cronometrado):** desde el icono/atajo: monto en efectivo → tocar categoría → guardado. La prioridad UX #1 se cumple.
+- [ ] **Se siente premium:** tema oscuro consistente en todas las pantallas, sin flashes blancos al abrir, montos tabulares alineados, feedback táctil en teclado/categorías, icono teal correcto en el launcher (también con máscara redonda).
 - [ ] **Import BNC real:** subir el TXT real → 25 movimientos, par cargo+comisión agrupado, comisiones auto-categorizadas → confirmar → aceptar el ajuste de saldo inicial → el saldo BNC del dashboard coincide con el banco. Reimportar el MISMO archivo → 0 nuevos.
 - [ ] **Import Zinli real:** subir el PDF real → banner verde "Cuadra" → confirmar → saldo Zinli correcto. Reimportar → 0 nuevos.
 - [ ] **Patrimonio:** total en USD correcto; alternar a Bs; separación "A disposición" (BNC + Zinli + Efectivo) vs "Ahorro" (Binance + Efectivo ahorro) tras registrar los saldos reales de Binance y efectivo por Ajustar.
@@ -5546,8 +5324,9 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 | §4.7 Dashboard (patrimonio, mes, presupuestos, lista) | 6, 10, 11, 12 |
 | §4.8 Respaldo JSON (picker/share, auto-export previo) | 22, 23 |
 | §5 Manejo de errores | 13, 18, 21 (unparsed/cuadre/hueco/fallback) |
-| §6 Testing | TDD en 3-6, 10, 12, 13, 15-17, 20-22 |
+| §6 Testing (solo núcleo crítico) | TDD en 3-6, 12, 13, 15-17, 20-22 · UI por verificación manual |
+| Diseño visual (pilar) | 7 (sistema de diseño), todas las tareas de UI, 24 (pulido final) |
 | Criterio de éxito global | 26 |
 
-**Notas para el ejecutor:** las tareas van en orden (la 2 puede hacerse en paralelo con la 3-6 si hace falta, pero antes de la 13). Ninguna tarea posterior puede alargar el flujo de registro rápido más allá de FAB → dígitos → categoría. Ante cualquier duda entre este plan y la spec, gana la spec; ante duda entre plan y realidad de los comprobantes reales (gitignored), gana la realidad — ajusta el código Y la fixture (anonimizada) para reflejarla.
+**Notas para el ejecutor:** las tareas van en orden (la 2 puede hacerse en paralelo con la 3-6 si hace falta, pero antes de la 13). Ninguna tarea posterior puede alargar el flujo de registro rápido más allá de FAB → dígitos → categoría, ni salirse del sistema de diseño de la Tarea 7 (tokens y clases de `estilos.css`; nada de valores sueltos). Ante cualquier duda entre este plan y la spec, gana la spec; ante duda entre plan y realidad de los comprobantes reales (gitignored), gana la realidad — ajusta el código Y la fixture (anonimizada) para reflejarla.
 

@@ -12,6 +12,7 @@ App de uso personal para controlar dinero repartido entre bolívares y dólares 
 - **Hosting**: para instalarse en Android la app debe servirse por HTTPS → hosting estático gratuito (Cloudflare Pages / GitHub Pages / Vercel). Solo se publica el código; los datos financieros nunca salen del dispositivo.
 - **Stack**: React + TypeScript + Vite · Dexie (IndexedDB) · Recharts (gráficas) · pdf.js (extracción de texto del PDF Zinli en el navegador) · vite-plugin-pwa · Vitest (tests).
 - **Moneda y formato**: importes almacenados como enteros en céntimos (nunca float). Formato visual venezolano: `Bs 13.517,75` y `$84.20`.
+- **Diseño visual (pilar del producto, junto a la facilidad UX)**: tema oscuro premium — fondo azul-negro, acentos teal/menta, tipografía Manrope con números tabulares, micro-interacciones con feedback táctil. Sistema de diseño propio en CSS puro (tokens), sin librerías de estilos. *(Añadido el 2026-07-07 a petición de Daniel.)*
 
 ## 3. Modelo de datos (Dexie/IndexedDB)
 
@@ -73,7 +74,7 @@ Export/import de **todo** como JSON versionado (`schemaVersion, exportedAt, acco
 
 ## 6. Testing
 
-Vitest para: parser BNC TXT y parser Zinli (fixtures anonimizadas derivadas de los comprobantes reales), dedupe, encadenado de saldos, motor de reglas, conversión de moneda con histórico de tasas, cálculo de saldos por cuenta y export/import JSON (round-trip).
+Vitest para: parser BNC TXT y parser Zinli (fixtures anonimizadas derivadas de los comprobantes reales), dedupe, encadenado de saldos, motor de reglas, conversión de moneda con histórico de tasas, cálculo de saldos por cuenta y export/import JSON (round-trip). **Solo ese núcleo crítico lleva tests automatizados; la UI se valida con verificación manual guiada.** *(Alcance ajustado el 2026-07-07 a petición de Daniel.)*
 
 ## 7. Fuera de alcance v1 (candidatas a v2)
 
