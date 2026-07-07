@@ -9,6 +9,7 @@ App de uso personal para controlar dinero repartido entre bolívares y dólares 
 ## 2. Plataforma y stack
 
 - **PWA instalable**: icono propio y pantalla completa en Android; instalable también en Windows desde el navegador. Funciona offline (app shell precacheada).
+- **Hosting**: para instalarse en Android la app debe servirse por HTTPS → hosting estático gratuito (Cloudflare Pages / GitHub Pages / Vercel). Solo se publica el código; los datos financieros nunca salen del dispositivo.
 - **Stack**: React + TypeScript + Vite · Dexie (IndexedDB) · Recharts (gráficas) · pdf.js (extracción de texto del PDF Zinli en el navegador) · vite-plugin-pwa · Vitest (tests).
 - **Moneda y formato**: importes almacenados como enteros en céntimos (nunca float). Formato visual venezolano: `Bs 13.517,75` y `$84.20`.
 
@@ -26,6 +27,8 @@ App de uso personal para controlar dinero repartido entre bolívares y dólares 
 
 ### 4.1 Registro rápido (prioridad UX #1)
 Botón `+` en pantalla principal → teclado numérico grande → categoría (grid de iconos) → guardar. Fecha hoy, última cuenta usada preseleccionada, nota opcional. Toggle gasto/ingreso. Objetivo: ≤ 3 toques + importe.
+
+Además, **atajos de app** (manifest `shortcuts`): toque largo sobre el icono en Android → "➕ Nuevo gasto" abre directo el teclado numérico.
 
 ### 4.2 Transferencias y depósitos
 Tipo "transferencia": cuenta origen → cuenta destino. Cubre depósito de efectivo al banco, mover efectivo disposición↔ahorro, recargas Zinli, etc. Si las monedas difieren, propone la tasa del día (editable en el momento) y guarda ambos importes.
@@ -72,9 +75,10 @@ Export/import de **todo** como JSON versionado (`schemaVersion, exportedAt, acco
 
 Vitest para: parser BNC TXT y parser Zinli (fixtures anonimizadas derivadas de los comprobantes reales), dedupe, encadenado de saldos, motor de reglas, conversión de moneda con histórico de tasas, cálculo de saldos por cuenta y export/import JSON (round-trip).
 
-## 7. Fuera de alcance v1
+## 7. Fuera de alcance v1 (candidatas a v2)
 
-- Sincronización automática con Drive API (posible v2 si el flujo manual pesa).
+- **Widget nativo de Android de botones** (acordado como v2): envolver la PWA con Bubblewrap/TWA en un APK que incluya un widget con accesos "➕ Gasto / ➕ Ingreso" con deep links a la app. Requiere Android SDK y sideload. Widget con datos en vivo (saldo) queda descartado: exigiría almacenamiento nativo.
+- Sincronización automática con Drive API (si el flujo manual pesa).
 - Import del PDF/XLS/TXT2 de BNC y CSV genérico de otros bancos.
 - Conexión directa a Binance API (el saldo se registra a mano).
-- Notificaciones push, widgets nativos de Android.
+- Notificaciones push.
