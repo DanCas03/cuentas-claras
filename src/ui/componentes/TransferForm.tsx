@@ -17,6 +17,7 @@ export function TransferForm() {
   const [montoTxt, setMontoTxt] = useState('');
   const [tasaTxt, setTasaTxt] = useState('');
   const [nota, setNota] = useState('');
+  const [guardando, setGuardando] = useState(false);
 
   const origen = cuentas.find((c) => c.id === origenId);
   const destino = cuentas.find((c) => c.id === destinoId);
@@ -30,7 +31,9 @@ export function TransferForm() {
       : null;
 
   async function guardar() {
+    if (guardando) return;
     if (!origen || !destino || monto === null || monto <= 0) return;
+    setGuardando(true);
     try {
       const tx = buildTransfer({
         fromAccount: origen, toAccount: destino, amountMinor: monto,
@@ -42,6 +45,8 @@ export function TransferForm() {
       navigate('/');
     } catch (e) {
       avisar((e as Error).message);
+    } finally {
+      setGuardando(false);
     }
   }
 
@@ -79,7 +84,7 @@ export function TransferForm() {
       )}
       <label>Nota (opcional)</label>
       <input aria-label="Nota de transferencia" value={nota} onChange={(e) => setNota(e.target.value)} />
-      <button className="boton" style={{ marginTop: 12 }} onClick={guardar} disabled={monto === null || monto <= 0 || (cruza && (!tasa || tasa <= 0))}>
+      <button className="boton" style={{ marginTop: 12 }} onClick={guardar} disabled={monto === null || monto <= 0 || (cruza && (!tasa || tasa <= 0)) || guardando}>
         Transferir
       </button>
     </div>

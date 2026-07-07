@@ -27,6 +27,7 @@ export function NuevoPage({ params }: { params: URLSearchParams }) {
 
   const cuenta = cuentas.find((c) => c.id === cuentaId) ?? cuentas[0];
   const minor = parseVenezuelanAmount(entrada.replace(/,$/, ''));
+  const [guardando, setGuardando] = useState(false);
 
   function onTecla(t: string) {
     setEntrada((e) => {
@@ -39,7 +40,9 @@ export function NuevoPage({ params }: { params: URLSearchParams }) {
   }
 
   async function guardar(categoryId: string) {
+    if (guardando) return;
     if (!cuenta || minor === null || minor <= 0) return;
+    setGuardando(true);
     try {
       const tx = buildManualTx({
         type: modo === 'gasto' ? 'expense' : 'income',
@@ -55,6 +58,8 @@ export function NuevoPage({ params }: { params: URLSearchParams }) {
       navigate('/');
     } catch (e) {
       avisar((e as Error).message);
+    } finally {
+      setGuardando(false);
     }
   }
 

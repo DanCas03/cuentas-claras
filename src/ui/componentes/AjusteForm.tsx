@@ -13,6 +13,7 @@ export function AjusteForm() {
   const txs = useLiveQuery(() => db.transactions.toArray(), []) ?? [];
   const [cuentaId, setCuentaId] = useState('acc-binance');
   const [realTxt, setRealTxt] = useState('');
+  const [guardando, setGuardando] = useState(false);
 
   const cuenta = cuentas.find((c) => c.id === cuentaId);
   const actual = cuenta ? accountBalanceMinor(cuenta.id, txs) : 0;
@@ -21,7 +22,9 @@ export function AjusteForm() {
   const esSnapshot = cuenta?.kind === 'snapshot';
 
   async function guardar() {
+    if (guardando) return;
     if (!cuenta || real === null || delta === null || delta === 0) return;
+    setGuardando(true);
     try {
       const tx = buildAdjustment({
         accountId: cuenta.id, currentBalanceMinor: actual, realBalanceMinor: real, dateIso: todayIso(),
@@ -31,6 +34,8 @@ export function AjusteForm() {
       navigate('/');
     } catch (e) {
       avisar((e as Error).message);
+    } finally {
+      setGuardando(false);
     }
   }
 
@@ -54,7 +59,7 @@ export function AjusteForm() {
           {esSnapshot ? 'Variación/rendimiento' : 'Diferencia'}: {formatMoney(delta, cuenta.currency)}
         </div>
       )}
-      <button className="boton" style={{ marginTop: 12 }} onClick={guardar} disabled={real === null || delta === null || delta === 0}>
+      <button className="boton" style={{ marginTop: 12 }} onClick={guardar} disabled={real === null || delta === null || delta === 0 || guardando}>
         Ajustar saldo
       </button>
     </div>
