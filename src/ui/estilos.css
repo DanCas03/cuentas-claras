@@ -1,0 +1,19 @@
+:root {
+  color-scheme: dark;
+  --fondo: #0a0f1c;
+  --tarjeta: #121a2b;
+  --primario: #2dd4bf;
+  --gasto: #f87171;
+  --ingreso: #34d399;
+  --texto: #e8edf6;
+  --texto2: #8b96ab;
+  --borde: #223049;
+}
+* { box-sizing: border-box; }
+html { background: var(--fondo); }
+body {
+  margin: 0;
+  font-family: 'Manrope Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  background: var(--fondo);
+  color: var(--texto);
+}

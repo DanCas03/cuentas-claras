@@ -19,3 +19,7 @@ coverage/
 # Configuracion local de agentes (no commitear)
 .claude/
 .superpowers/
+
+# PWA / build extra
+dev-dist/
+*.tsbuildinfo
