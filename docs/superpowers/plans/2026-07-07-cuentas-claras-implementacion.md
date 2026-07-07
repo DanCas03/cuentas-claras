@@ -48,7 +48,7 @@ src/
   domain/filters.ts        ← filtros y búsqueda de la lista de movimientos
   db/db.ts                 ← Dexie schema + seeds + settings
   db/commit.ts             ← commitImport transaccional
-  rates/providers.ts       ← RateProvider + pydolarve/dolarapi + fallback
+  rates/providers.ts       ← RateProvider + dolarapi/vcoud (cadena BCV) + fallback
   rates/fixtures/*.json    ← respuestas reales capturadas en el spike
   import/bnc/parseBncTxt.ts
   import/bnc/mapBnc.ts     ← mapper + dedupe + pares + detección de hueco
@@ -2733,62 +2733,66 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 - Test: `src/rates/providers.test.ts`
 
 **Interfaces:**
-- Consumes: fixtures JSON del spike (Tarea 2); `db`, `getSettings`, `saveSettings` (Tarea 5); `effectiveRate` (Tarea 4).
+- Consumes: fixtures reales del spike (Tarea 2) `src/rates/fixtures/dolarapi-oficial.json` y `src/rates/fixtures/criptodolar-vcoud.json`; `db`, `getSettings`, `saveSettings` (Tarea 5); `effectiveRate` (Tarea 4).
 - Produces:
-  - `interface FetchedRates { bcv?: number; binance?: number }`
+  - `interface FetchedRates { bcv?: number; binance?: number }` — el campo `binance` se conserva en el contrato, pero **ningún proveedor online lo rellena hoy** (ver nota IMPORTANTE): la cadena online solo trae BCV; la tasa Binance vive en el histórico vía override manual.
   - `interface RateProvider { name: string; fetch(): Promise<FetchedRates> }`
-  - `parsePyDolar(json: unknown): FetchedRates` / `parseDolarApiOficial(json: unknown): FetchedRates` (puras).
+  - `parseDolarApiOficial(json: unknown): FetchedRates` (primario, BCV en `promedio`) / `parseCriptoDolarVcoud(json: unknown): FetchedRates` (fallback, item con `slug === 'dolar-bcv'`, BCV en `price`) — ambas puras.
   - `fetchRatesWithFallback(providers?: RateProvider[]): Promise<FetchedRates>` — recorre la cadena acumulando lo que falte; los errores pasan al siguiente.
   - `storeFetchedRates(d: CuentasDB, hoyIso: string, r: FetchedRates): Promise<number>` — guarda filas BCV/BINANCE de hoy, devuelve cuántas.
-  - `refreshRatesOncePerDay(d: CuentasDB, hoyIso: string, providers?: RateProvider[]): Promise<void>` — salta si ya se hizo hoy o no hay conexión.
+  - `refreshRatesOncePerDay(d: CuentasDB, hoyIso: string, providers?: RateProvider[]): Promise<void>` — salta si ya se hizo hoy o no hay conexión; la cadena online solo obtiene BCV.
 
-**IMPORTANTE:** las URLs y paths de los parsers de abajo siguen la forma canónica esperada; el spike (Tarea 2) es la fuente de verdad. Si tu fixture capturada difiere (otro path para el precio, otra URL), ajusta parser y URL aquí — el test contra la fixture real es lo que manda. Si el spike descartó un proveedor (CORS), elimina su parser, su fixture y sus tests, y deja la cadena solo con los que funcionaron.
+**IMPORTANTE (realidad ya verificada por el spike — `docs/spikes/2026-07-07-cors-tasas.md`):** la cadena de proveedores BCV es **`dolarapi` (primario) → `vcoud` (fallback)**; ambos pasaron CORS (`Access-Control-Allow-Origin: *`, HTTP 200) y sus fixtures reales ya están en `src/rates/fixtures/` (`dolarapi-oficial.json`, `criptodolar-vcoud.json`). **pydolarve quedó excluido** (dominio muerto: sin DNS y repo 404 → sin fixture) y **ExchangeMonitor** también (exige cabecera `Authorization`). **Binance USDT/VES no tiene proveedor público con CORS a fecha de hoy:** su tasa se alimenta SOLO por override manual del usuario y la UI la presenta como estado normal, **nunca como error**. Los tests van contra las DOS fixtures reales: la de dolarapi trae el BCV en `promedio`; la de vcoud es un array de ~148 monitores donde el BCV es el item con `slug === 'dolar-bcv'` (valor en `price`, `currency: "VES"`) — no hay ahí ningún Binance USDT/VES (el único "Dólar Binance" del listado es el argentino, `currency: "ARS"`).
 
 - [ ] **Paso 1: Test `src/rates/providers.test.ts`:**
 
 ```ts
-import { parsePyDolar, parseDolarApiOficial, fetchRatesWithFallback, refreshRatesOncePerDay, type RateProvider } from './providers';
+import { parseDolarApiOficial, parseCriptoDolarVcoud, fetchRatesWithFallback, refreshRatesOncePerDay, type RateProvider } from './providers';
 import { CuentasDB, seedIfEmpty, getSettings } from '../db/db';
-import pydolarve from './fixtures/pydolarve.json';
 import dolarapi from './fixtures/dolarapi-oficial.json';
+import vcoud from './fixtures/criptodolar-vcoud.json';
 
-test('parsePyDolar extrae BCV y Binance de la fixture real', () => {
-  const r = parsePyDolar(pydolarve);
-  expect(r.bcv).toBeGreaterThan(0);
-  expect(r.binance).toBeGreaterThan(0);
-});
-
-test('parseDolarApiOficial extrae el promedio', () => {
+test('parseDolarApiOficial extrae el BCV del campo promedio (fixture real)', () => {
   const r = parseDolarApiOficial(dolarapi);
   expect(r.bcv).toBeGreaterThan(0);
 });
 
+test('parseCriptoDolarVcoud extrae el BCV del item slug "dolar-bcv" (campo price, fixture real)', () => {
+  const r = parseCriptoDolarVcoud(vcoud);
+  expect(r.bcv).toBeGreaterThan(0);
+});
+
+test('ningún parser online trae Binance: no hay proveedor USDT/VES con CORS hoy', () => {
+  expect(parseDolarApiOficial(dolarapi).binance).toBeUndefined();
+  expect(parseCriptoDolarVcoud(vcoud).binance).toBeUndefined();
+});
+
 test('parsers devuelven {} ante basura', () => {
-  expect(parsePyDolar({})).toEqual({});
   expect(parseDolarApiOficial({ promedio: 'nope' })).toEqual({});
+  expect(parseCriptoDolarVcoud({})).toEqual({});
+  expect(parseCriptoDolarVcoud([])).toEqual({});
 });
 
 const ok = (r: { bcv?: number; binance?: number }): RateProvider => ({ name: 'ok', fetch: async () => r });
 const roto: RateProvider = { name: 'roto', fetch: async () => { throw new Error('CORS'); } };
 
-test('fallback: el primero falla, el segundo responde', async () => {
+test('fallback: dolarapi falla, vcoud responde con el BCV', async () => {
   expect(await fetchRatesWithFallback([roto, ok({ bcv: 111 })])).toEqual({ bcv: 111 });
 });
 
-test('fallback acumula: el primero trae solo BCV, el segundo completa Binance', async () => {
-  expect(await fetchRatesWithFallback([ok({ bcv: 111 }), ok({ bcv: 999, binance: 130 })]))
-    .toEqual({ bcv: 111, binance: 130 });
+test('fallback: si el primario ya trajo el BCV, el fallback no lo pisa', async () => {
+  expect(await fetchRatesWithFallback([ok({ bcv: 111 }), ok({ bcv: 999 })])).toEqual({ bcv: 111 });
 });
 
 test('todos fallan: objeto vacío (la app sigue con última tasa/manual)', async () => {
   expect(await fetchRatesWithFallback([roto, roto])).toEqual({});
 });
 
-test('refreshRatesOncePerDay guarda hoy y no repite', async () => {
+test('refreshRatesOncePerDay guarda el BCV de hoy y no repite', async () => {
   const d = new CuentasDB(`test-${crypto.randomUUID()}`);
   await seedIfEmpty(d);
-  await refreshRatesOncePerDay(d, '2026-07-07', [ok({ bcv: 111, binance: 130 })]);
-  expect(await d.rates.count()).toBe(2);
+  await refreshRatesOncePerDay(d, '2026-07-07', [ok({ bcv: 111 })]);
+  expect(await d.rates.count()).toBe(1);
   expect((await getSettings(d)).lastRatesFetchDate).toBe('2026-07-07');
   await refreshRatesOncePerDay(d, '2026-07-07', [ok({ bcv: 999 })]); // mismo día: no toca nada
   expect((await d.rates.get(['2026-07-07', 'BCV']))?.vesPerUsd).toBe(111);
@@ -2805,7 +2809,7 @@ import { CuentasDB, getSettings, saveSettings } from '../db/db';
 
 export interface FetchedRates {
   bcv?: number;
-  binance?: number;
+  binance?: number; // reservado: ningún proveedor online lo trae hoy — el valor Binance sale del override manual
 }
 
 export interface RateProvider {
@@ -2813,21 +2817,18 @@ export interface RateProvider {
   fetch(): Promise<FetchedRates>;
 }
 
-/** Forma observada en el spike: { monitors: { bcv: { price }, binance: { price } } }. */
-export function parsePyDolar(json: unknown): FetchedRates {
-  const j = json as { monitors?: Record<string, { price?: unknown }> };
-  const out: FetchedRates = {};
-  const bcv = j?.monitors?.bcv?.price;
-  const binance = j?.monitors?.binance?.price;
-  if (typeof bcv === 'number' && bcv > 0) out.bcv = bcv;
-  if (typeof binance === 'number' && binance > 0) out.binance = binance;
-  return out;
-}
-
-/** Forma observada en el spike: { promedio: number, ... }. */
+/** ve.dolarapi.com/v1/dolares/oficial → BCV en `promedio` (compra/venta vienen null). */
 export function parseDolarApiOficial(json: unknown): FetchedRates {
   const j = json as { promedio?: unknown };
   return typeof j?.promedio === 'number' && j.promedio > 0 ? { bcv: j.promedio } : {};
+}
+
+/** exchange.vcoud.com/coins/latest → array de monitores; BCV = item con `slug === 'dolar-bcv'`, valor en `price`. */
+export function parseCriptoDolarVcoud(json: unknown): FetchedRates {
+  const arr = Array.isArray(json) ? (json as Array<{ slug?: unknown; price?: unknown }>) : [];
+  const bcv = arr.find((x) => x?.slug === 'dolar-bcv');
+  const price = bcv?.price;
+  return typeof price === 'number' && price > 0 ? { bcv: price } : {};
 }
 
 async function fetchJson(url: string): Promise<unknown> {
@@ -2842,24 +2843,25 @@ async function fetchJson(url: string): Promise<unknown> {
   }
 }
 
-// URLs confirmadas en docs/spikes/2026-07-07-cors-tasas.md — mantener sincronizadas.
-export const pyDolarProvider: RateProvider = {
-  name: 'pydolarve',
-  fetch: async () => parsePyDolar(await fetchJson('https://pydolarve.org/api/v2/dollar?page=criptodolar')),
-};
-
+// URLs y campos confirmados en docs/spikes/2026-07-07-cors-tasas.md — mantener sincronizadas.
+// Cadena solo-BCV: dolarapi (primario) → vcoud (fallback). Binance USDT/VES no tiene proveedor CORS público hoy.
 export const dolarApiProvider: RateProvider = {
   name: 'dolarapi',
   fetch: async () => parseDolarApiOficial(await fetchJson('https://ve.dolarapi.com/v1/dolares/oficial')),
 };
 
-export const PROVIDERS_DEFAULT: RateProvider[] = [pyDolarProvider, dolarApiProvider];
+export const criptoDolarProvider: RateProvider = {
+  name: 'vcoud',
+  fetch: async () => parseCriptoDolarVcoud(await fetchJson('https://exchange.vcoud.com/coins/latest')),
+};
+
+export const PROVIDERS_DEFAULT: RateProvider[] = [dolarApiProvider, criptoDolarProvider];
 
 /** Recorre la cadena acumulando lo que falte; errores de red/CORS pasan al siguiente. */
 export async function fetchRatesWithFallback(providers: RateProvider[] = PROVIDERS_DEFAULT): Promise<FetchedRates> {
   const out: FetchedRates = {};
   for (const p of providers) {
-    if (out.bcv !== undefined && out.binance !== undefined) break;
+    if (out.bcv !== undefined) break; // cadena solo-BCV: en cuanto un proveedor da el BCV, paramos
     try {
       const r = await p.fetch();
       out.bcv ??= r.bcv;
@@ -2913,6 +2915,7 @@ export function TasasSection() {
   const settings = useLiveQuery(() => getSettings(db), []);
   const [fecha, setFecha] = useState(todayIso());
   const [valorTxt, setValorTxt] = useState('');
+  const [fuenteManual, setFuenteManual] = useState<RateSource>('BINANCE');
   const [buscando, setBuscando] = useState(false);
   if (!settings) return null;
 
@@ -2922,7 +2925,7 @@ export function TasasSection() {
     setBuscando(true);
     try {
       const n = await storeFetchedRates(db, todayIso(), await fetchRatesWithFallback());
-      avisar(n > 0 ? `Tasas actualizadas (${n}) ✓` : 'Ningún proveedor respondió — usa la tasa manual');
+      avisar(n > 0 ? 'Tasa BCV actualizada ✓' : 'No se pudo obtener el BCV ahora — usa la tasa manual');
     } finally {
       setBuscando(false);
     }
@@ -2934,9 +2937,9 @@ export function TasasSection() {
       avisar('Tasa o fecha inválida');
       return;
     }
-    await db.rates.put({ date: fecha, source: 'MANUAL', vesPerUsd: v });
+    await db.rates.put({ date: fecha, source: fuenteManual, vesPerUsd: v });
     setValorTxt('');
-    avisar('Tasa manual guardada ✓');
+    avisar('Tasa guardada ✓');
   }
 
   return (
@@ -2955,11 +2958,24 @@ export function TasasSection() {
         <option value="MANUAL">Manual</option>
       </select>
       <button className="boton secundario" style={{ marginTop: 8 }} onClick={actualizarAhora} disabled={buscando}>
-        {buscando ? 'Buscando…' : 'Actualizar tasas ahora'}
+        {buscando ? 'Buscando…' : 'Actualizar BCV ahora'}
       </button>
-      <label>Corregir/registrar tasa manual (Bs por $)</label>
+      <p style={{ marginTop: 8 }}>
+        Solo el <strong>BCV</strong> se actualiza online. <strong>Binance USDT/VES no tiene proveedor automático</strong>:
+        fíjalo tú abajo (fuente «Binance USDT/VES») y quedará guardado en el histórico.
+      </p>
+      <label>Registrar/corregir tasa (Bs por $)</label>
       <div className="fila-form">
         <input aria-label="Fecha de tasa" type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+        <select
+          aria-label="Fuente de la tasa manual"
+          value={fuenteManual}
+          onChange={(e) => setFuenteManual(e.target.value as RateSource)}
+        >
+          <option value="BINANCE">Binance USDT/VES</option>
+          <option value="BCV">BCV</option>
+          <option value="MANUAL">Manual (override del día)</option>
+        </select>
         <input aria-label="Valor de tasa" inputMode="decimal" placeholder="ej. 111,02" value={valorTxt} onChange={(e) => setValorTxt(e.target.value)} />
         <button className="boton" onClick={guardarManual}>Guardar</button>
       </div>
@@ -3015,7 +3031,7 @@ useEffect(() => {
 }, []);
 ```
 
-- [ ] **Paso 4: Verificar.** `npx vitest run` → verde. Manual: en Ajustes → "Actualizar tasas ahora" debe traer tasas reales (spike ya confirmó CORS); registra un override manual y comprueba en el dashboard que la fuente MANUAL de hoy gana.
+- [ ] **Paso 4: Verificar.** `npx vitest run` → verde. Manual: en Ajustes → "Actualizar BCV ahora" debe traer el BCV real (el spike confirmó CORS de dolarapi y vcoud). Luego pon la fuente activa en «Binance USDT/VES» y registra abajo una tasa con fuente «Binance USDT/VES»: comprueba en el dashboard que esa tasa Binance se usa. Por último registra un override con fuente «Manual» del día y comprueba que ese gana sobre BCV/Binance.
 
 - [ ] **Paso 5: Commit.**
 
