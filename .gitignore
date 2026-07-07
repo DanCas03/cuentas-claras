@@ -1,0 +1,17 @@
+# Comprobantes personales (datos sensibles — nunca commitear)
+PDFBNC.pdf
+ExcelBNC.xls
+TXTBNC1.txt
+TXTBNC2.txt
+Resumen_de_movimientos_*_Zinli.pdf
+comprobantes/
+
+# Dependencias y builds
+node_modules/
+dist/
+coverage/
+
+# Entorno
+.env
+.env.*
+*.local
