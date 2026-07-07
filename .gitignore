@@ -15,3 +15,7 @@ coverage/
 .env
 .env.*
 *.local
+
+# Configuracion local de agentes (no commitear)
+.claude/
+.superpowers/
