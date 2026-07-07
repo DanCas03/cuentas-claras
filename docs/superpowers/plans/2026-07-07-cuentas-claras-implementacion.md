@@ -30,7 +30,7 @@ Aplican a TODAS las tareas; cada tarea las incluye implícitamente.
 ## Estructura de archivos final
 
 ```
-package.json, tsconfig.json, vite.config.ts, index.html
+package.json, tsconfig.json, vite.config.ts, index.html, wrangler.toml
 public/iconos/ (generados por scripts/generar-iconos.mjs)
 scripts/generar-iconos.mjs
 docs/spikes/2026-07-07-cors-tasas.md          ← resultado del spike CORS
@@ -45,6 +45,7 @@ src/
   domain/stats.ts          ← resumen mensual, acumulado diario, comparativa
   domain/rules.ts          ← motor de reglas de categorización
   domain/builders.ts       ← buildTransfer / buildAdjustment / buildManualTx
+  domain/filters.ts        ← filtros y búsqueda de la lista de movimientos
   db/db.ts                 ← Dexie schema + seeds + settings
   db/commit.ts             ← commitImport transaccional
   rates/providers.ts       ← RateProvider + pydolarve/dolarapi + fallback
@@ -60,11 +61,16 @@ src/
   ui/paginas/DashboardPage.tsx, NuevoPage.tsx, MovimientosPage.tsx,
      ImportarPage.tsx, AjustesPage.tsx
   ui/componentes/Teclado.tsx, CategoriaGrid.tsx, PatrimonioCard.tsx,
-     GraficasMes.tsx, ImportPreview.tsx, FormCuenta.tsx, FormCategoria.tsx,
-     TasasSection.tsx, RespaldoSection.tsx, TransferForm.tsx, AjusteForm.tsx
+     GraficasMes.tsx, TransferForm.tsx, AjusteForm.tsx,
+     CuentasSection.tsx, CategoriasSection.tsx, ReglasSection.tsx,
+     TasasSection.tsx, RespaldoSection.tsx, ImportBnc.tsx, ImportZinli.tsx
   (los módulos del núcleo — dominio/db/rates/import/backup — llevan su `*.test.ts`
    al lado; la UI NO lleva tests, se verifica manualmente. Fixtures en
    src/import/bnc/fixtures/ y src/import/zinli/fixtures/)
+
+  Nota: la vista previa de importación se implementa por separado en ImportBnc e
+  ImportZinli (duplicación parcial deliberada — los flujos difieren: fases/hueco/
+  cuadre BNC vs PDF/banner de cuadre Zinli; decisión de Daniel, 2026-07-07).
 ```
 
 Convención: los módulos de `src/domain`, `src/import`, `src/rates`, `src/backup` y `src/db` **no importan nada de React ni de `src/ui`**. Las funciones que tocan la base reciben la instancia `CuentasDB` como primer parámetro `d`; la UI usa el singleton `db`.
@@ -1646,18 +1652,22 @@ export function NuevoPage({ params }: { params: URLSearchParams }) {
 
   async function guardar(categoryId: string) {
     if (!cuenta || minor === null || minor <= 0) return;
-    const tx = buildManualTx({
-      type: modo === 'gasto' ? 'expense' : 'income',
-      accountId: cuenta.id,
-      amountMinor: minor,
-      categoryId,
-      dateIso: todayIso(),
-      note: nota.trim() || undefined,
-    });
-    await db.transactions.add(tx);
-    await saveSettings(db, { lastAccountId: cuenta.id });
-    avisar('Guardado ✓');
-    navigate('/');
+    try {
+      const tx = buildManualTx({
+        type: modo === 'gasto' ? 'expense' : 'income',
+        accountId: cuenta.id,
+        amountMinor: minor,
+        categoryId,
+        dateIso: todayIso(),
+        note: nota.trim() || undefined,
+      });
+      await db.transactions.add(tx);
+      await saveSettings(db, { lastAccountId: cuenta.id });
+      avisar('Guardado ✓');
+      navigate('/');
+    } catch (e) {
+      avisar((e as Error).message);
+    }
   }
 
   return (
@@ -1953,12 +1963,16 @@ export function AjusteForm() {
 
   async function guardar() {
     if (!cuenta || real === null || delta === null || delta === 0) return;
-    const tx = buildAdjustment({
-      accountId: cuenta.id, currentBalanceMinor: actual, realBalanceMinor: real, dateIso: todayIso(),
-    });
-    await db.transactions.add(tx);
-    avisar('Saldo ajustado ✓');
-    navigate('/');
+    try {
+      const tx = buildAdjustment({
+        accountId: cuenta.id, currentBalanceMinor: actual, realBalanceMinor: real, dateIso: todayIso(),
+      });
+      await db.transactions.add(tx);
+      avisar('Saldo ajustado ✓');
+      navigate('/');
+    } catch (e) {
+      avisar((e as Error).message);
+    }
   }
 
   return (
@@ -2173,9 +2187,13 @@ function EditorMovimiento({ tx, cerrar }: { tx: Transaction; cerrar: () => void 
       cambios.amountMinor = m;
       cambios.categoryId = categoriaId || undefined;
     }
-    await db.transactions.update(tx.id, cambios);
-    avisar('Actualizado ✓');
-    cerrar();
+    try {
+      await db.transactions.update(tx.id, cambios);
+      avisar('Actualizado ✓');
+      cerrar();
+    } catch (e) {
+      avisar((e as Error).message);
+    }
   }
 
   async function eliminar() {
@@ -2664,14 +2682,16 @@ export function GraficasMes({ resumen, comparativa, presupuestos, categorias, vi
 }
 ```
 
-- [ ] **Paso 4: Integrar en `DashboardPage`** — añadir imports y, debajo de `<PatrimonioCard …/>`, sustituir el comentario por:
+- [ ] **Paso 4: Integrar en `DashboardPage`** — añadir imports; el nuevo `useLiveQuery` de categorías va **junto a los otros `useLiveQuery`, ANTES del guard `if (!settings)`** (en la `DashboardPage` de la Tarea 11 `p` se calcula DESPUÉS del guard; un hook ahí crashea React con «Rendered more hooks than during the previous render» cuando `settings` pasa de undefined a definido — Rules of Hooks: ningún hook puede ir tras un return condicional). Las constantes derivadas (`mesActual`, `base`, `resumen`, `comparativa`, `presupuestos`) sí van DESPUÉS del guard, junto a `p`, porque dependen de `settings` ya estrechado. En el JSX se sustituye el comentario `{/* La Tarea 12 añade aquí <GraficasMes /> */}` por el componente:
 
 ```tsx
 import { monthSummary, lastMonths, budgetStatus } from '../../domain/stats';
 import { monthOf } from '../../domain/dates';
 import { GraficasMes } from '../componentes/GraficasMes';
-// ...dentro del componente, tras calcular `p`:
+// ...junto a los otros `useLiveQuery`, ANTES del guard `if (!settings)`
+// (Rules of Hooks: ningún hook puede ir tras un return condicional):
 const categorias = useLiveQuery(() => db.categories.toArray(), []) ?? [];
+// ...DESPUÉS del guard `if (!settings)`, junto a `p` (dependen de `settings` ya estrechado):
 const mesActual = monthOf(todayIso());
 const base = { txs, accounts: cuentas, rates, activeSource: settings.rateSource };
 const resumen = monthSummary({ ...base, month: mesActual, viewCurrency: settings.viewCurrency });
@@ -2679,7 +2699,7 @@ const comparativa = lastMonths(mesActual, 4)
   .map((m) => monthSummary({ ...base, month: m, viewCurrency: settings.viewCurrency }))
   .reverse();
 const presupuestos = budgetStatus({ ...base, categories: categorias, month: mesActual });
-// ...en el JSX:
+// ...en el JSX, en lugar del comentario `{/* La Tarea 12 añade aquí <GraficasMes /> */}`:
 <GraficasMes resumen={resumen} comparativa={comparativa} presupuestos={presupuestos} categorias={categorias} viewCurrency={settings.viewCurrency} />
 ```
 
@@ -2866,7 +2886,9 @@ export async function refreshRatesOncePerDay(
 ): Promise<void> {
   const s = await getSettings(d);
   if (s.lastRatesFetchDate === hoyIso) return;
-  if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+  // `=== false` explícito: en el navegador es idéntico a `!navigator.onLine`, pero
+  // en Node (test TDD) `navigator.onLine` es undefined y esto NO cortocircuita.
+  if (navigator.onLine === false) return;
   const guardadas = await storeFetchedRates(d, hoyIso, await fetchRatesWithFallback(providers));
   if (guardadas > 0) await saveSettings(d, { lastRatesFetchDate: hoyIso });
 }
@@ -3560,7 +3582,7 @@ git commit -m "Parser del TXT tabulado de BNC con fixture anonimizada y validaci
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 ```
 
-- [ ] **Paso 5 (verificación manual con datos reales, NO commitear nada de esto):** en un scratch (`node --input-type=module`) o test temporal local, pasa el contenido de `TXTBNC1.txt` real por `parseBncTxt` y comprueba: 25 filas, 0 unparsed, `validateChain` vacío. Si algo falla, corrige el parser (y refleja el caso en la fixture con datos inventados) antes de seguir.
+- [ ] **Paso 5 (verificación manual con datos reales, NO commitear nada de esto):** escribe un test temporal local con Vitest (NO commiteado) que lea el `TXTBNC1.txt` real (gitignored), pase su contenido por `parseBncTxt` y compruebe: 25 filas, 0 unparsed, `validateChain` vacío; borra el test al terminar. (No uses un scratch con `node`: el type-stripping de TS por defecto no llegó hasta Node 23.6 y los imports sin extensión fallan en la versión instalada.) Si algo falla, corrige el parser (y refleja el caso en la fixture con datos inventados) antes de seguir.
 
 ### Tarea 17: Mapper BNC — dedupe, pares, hueco y commit transaccional
 
@@ -4566,7 +4588,10 @@ import { extractPdfLines } from '../../import/zinli/extractPdfText';
 import { parseZinliLines, type ZinliParseResult } from '../../import/zinli/parseZinli';
 import { mapZinliMovements, type ZinliDraft } from '../../import/zinli/mapZinli';
 import { buildRule } from '../../domain/rules';
+import { buildAdjustment } from '../../domain/builders';
+import { accountBalanceMinor } from '../../domain/balances';
 import { formatMoney } from '../../domain/money';
+import { todayIso } from '../../domain/dates';
 import { avisar } from '../Toast';
 
 interface DraftUI extends ZinliDraft {
@@ -4583,7 +4608,9 @@ export function ImportZinli() {
   const [drafts, setDrafts] = useState<DraftUI[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [hecho, setHecho] = useState(false);
+  const [saldoFinal, setSaldoFinal] = useState<number | null>(null); // "Saldo final del mes" del PDF, para el cuadre post-import
   const categorias = useLiveQuery(() => db.categories.toArray(), []) ?? [];
+  const txs = useLiveQuery(() => db.transactions.toArray(), []) ?? [];
 
   async function analizar(f: File) {
     try {
@@ -4595,6 +4622,7 @@ export function ImportZinli() {
         setError('No se reconocieron movimientos en el PDF. Revisa el texto extraído abajo.');
         setLineas(lin);
         setResultado(null);
+        setSaldoFinal(null);
         setDrafts(null);
         return;
       }
@@ -4607,6 +4635,7 @@ export function ImportZinli() {
       });
       setLineas(lin);
       setResultado(r);
+      setSaldoFinal(r.saldoFinalMinor);
       setDrafts(mapeados.map((d) => ({ ...d, incluir: !d.duplicate, crearRegla: false, patron: d.tx.note ?? '' })));
     } catch (err) {
       setError((err as Error).message);
@@ -4636,6 +4665,23 @@ export function ImportZinli() {
     }
   }
 
+  // Cuadre post-import (mismo mecanismo que BNC): saldo calculado por la app vs
+  // "Saldo final del mes" del PDF. En la primera importación faltan los meses
+  // previos / saldo inicial y no coinciden, así que se ofrece crear un ajuste.
+  const saldoApp = accountBalanceMinor(CUENTA_ZINLI, txs);
+  const descuadre = hecho && saldoFinal !== null && saldoApp !== saldoFinal ? saldoFinal - saldoApp : null;
+
+  async function crearAjuste() {
+    if (descuadre === null || saldoFinal === null) return;
+    await db.transactions.add(
+      buildAdjustment({
+        accountId: CUENTA_ZINLI, currentBalanceMinor: saldoApp, realBalanceMinor: saldoFinal,
+        dateIso: todayIso(), note: 'Cuadre tras import Zinli',
+      }),
+    );
+    avisar('Saldo cuadrado con Zinli ✓');
+  }
+
   return (
     <div>
       <p>Sube el "Resumen de movimientos" mensual de Zinli (PDF).</p>
@@ -4650,6 +4696,13 @@ export function ImportZinli() {
       />
       {error && <div className="banner error">{error}</div>}
       {hecho && <div className="banner ok">Import terminado ✓</div>}
+      {descuadre !== null && (
+        <div className="banner aviso">
+          El PDF termina en {formatMoney(saldoFinal as number, 'USD')} pero la app calcula {formatMoney(saldoApp, 'USD')}
+          {' '}(faltan los meses previos / saldo inicial).
+          <button className="boton secundario" style={{ marginTop: 8 }} onClick={crearAjuste}>Crear ajuste</button>
+        </div>
+      )}
 
       {resultado && drafts && (
         <>
@@ -4751,7 +4804,7 @@ export function ImportZinli() {
 - [ ] **Paso 3: Verificación manual (bloqueante).** `npx vitest run` → verde. En `npm run dev` con el **PDF real** (local, NUNCA commitear):
   1. Subirlo muestra los movimientos del mes con su período y el banner VERDE "Cuadra: … ✓" (inicial + movimientos = final).
   2. Los ingresos vienen propuestos como "Transferencia recibida"; las reglas aprendidas en BNC también aplican aquí.
-  3. Confirmar importa todo; el saldo Zinli del dashboard queda igual al "Saldo final del mes" del PDF.
+  3. Confirmar importa todo; en la primera importación el saldo Zinli del dashboard aún no coincide con el "Saldo final del mes" del PDF (faltan los meses previos / saldo inicial), así que aparece el banner de cuadre con "Crear ajuste" — al aceptarlo, el saldo Zinli queda igual al "Saldo final del mes" del PDF.
   4. Reimportar el mismo PDF → todos "ya importado", "Confirmar (0)" deshabilitado.
   5. El `<details>` con el texto extraído sigue disponible para depurar rarezas del PDF.
 
@@ -5181,7 +5234,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        globPatterns: ['**/*.{js,mjs,css,html,svg,png,woff2}'], // `mjs` incluye el worker de pdf.js (Vite lo emite como .mjs)
         navigateFallback: '/index.html',
         // El worker de pdf.js pasa de 1 MB; debe quedar precacheado para importar Zinli offline
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
@@ -5205,7 +5258,7 @@ npm run preview
 
 En el navegador sobre la URL de preview:
 1. DevTools → Application → Manifest: nombre, iconos y shortcuts presentes, sin avisos de instalabilidad.
-2. Application → Service Workers: worker activo. En la lista de precache (Cache Storage) debe aparecer el asset del worker de pdf.js (busca `pdf.worker`).
+2. Application → Service Workers: worker activo. En la lista de precache (Cache Storage) debe aparecer el asset **`.mjs` de ~1.2 MB** del worker de pdf.js (busca `pdf.worker`). No basta con ver un chunk envoltorio `pdf.worker.min-<hash>.js` de ~0.06 kB: ese aparece igual SIN el fix del glob; lo que confirma el precache del worker real es el `.mjs` de ~1.2 MB.
 3. Marca **Offline** en DevTools → recarga → la app abre y funciona (registrar un gasto).
 4. Aún offline: Importar → Zinli → subir el PDF real → la extracción funciona (el worker vino del precache).
 
