@@ -2,6 +2,7 @@ import { TasasSection } from '../componentes/TasasSection';
 import { CuentasSection } from '../componentes/CuentasSection';
 import { CategoriasSection } from '../componentes/CategoriasSection';
 import { ReglasSection } from '../componentes/ReglasSection';
+import { RespaldoSection } from '../componentes/RespaldoSection';
 
 export function AjustesPage() {
   return (
@@ -23,7 +24,7 @@ export function AjustesPage() {
         <h3>Reglas aprendidas</h3>
         <ReglasSection />
       </div>
-      {/* Tarea 23: <RespaldoSection /> */}
+      <div className="tarjeta"><h3>Respaldo (Google Drive)</h3><RespaldoSection /></div>
     </div>
   );
 }
