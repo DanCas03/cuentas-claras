@@ -45,8 +45,31 @@ export function GraficasMes({ resumen, comparativa, presupuestos, categorias, vi
         {donut.length > 0 && (
           <div style={{ height: 220 }}>
             <ResponsiveContainer>
-              <PieChart>
-                <Pie data={donut} dataKey="value" nameKey="name" innerRadius={55} outerRadius={85} stroke="#0a0f1c" strokeWidth={2} label={(e) => e.name}>
+              <PieChart margin={{ top: 12, right: 10, bottom: 0, left: 10 }}>
+                <Pie
+                  data={donut}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={55}
+                  outerRadius={70}
+                  stroke="#0a0f1c"
+                  strokeWidth={2}
+                  label={(e) => {
+                    // Línea de etiqueta más corta que el offsetRadius por defecto de Recharts (20px)
+                    // y fuente en la escala de EJE.tick, para que el texto quepa dentro del viewport
+                    // del SVG en tarjetas móviles angostas — evita el recorte arriba/derecha.
+                    const RADIAN = Math.PI / 180;
+                    const midAngle = e.midAngle ?? 0;
+                    const r = e.outerRadius + 3;
+                    const x = e.cx + Math.cos(-RADIAN * midAngle) * r;
+                    const y = e.cy + Math.sin(-RADIAN * midAngle) * r;
+                    return (
+                      <text className="recharts-pie-label-text" x={x} y={y} textAnchor={e.textAnchor} alignmentBaseline="middle" fontSize={11} fill={e.fill}>
+                        {e.name}
+                      </text>
+                    );
+                  }}
+                >
                   {donut.map((d) => <Cell key={d.name} fill={d.color} />)}
                 </Pie>
                 <Tooltip contentStyle={ESTILO_TOOLTIP} formatter={(v) => dinero(Math.round(Number(v) * 100))} />
