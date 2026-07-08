@@ -8,13 +8,18 @@ import { NuevoPage } from './paginas/NuevoPage';
 import { MovimientosPage } from './paginas/MovimientosPage';
 import { ImportarPage } from './paginas/ImportarPage';
 import { AjustesPage } from './paginas/AjustesPage';
+import { refreshRatesOncePerDay } from '../rates/providers';
+import { todayIso } from '../domain/dates';
 
 export function App() {
   const [listo, setListo] = useState(false);
   const { path, params } = useHashRoute();
 
   useEffect(() => {
-    seedIfEmpty(db).then(() => setListo(true));
+    seedIfEmpty(db)
+      .then(() => setListo(true))
+      .then(() => refreshRatesOncePerDay(db, todayIso()))
+      .catch(() => {}); // sin red o sin proveedor: silencioso, la UI muestra la tasa vieja
   }, []);
 
   if (!listo) return null;
