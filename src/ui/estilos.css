@@ -63,7 +63,9 @@ button { font: inherit; cursor: pointer; color: inherit; }
 .cifra-grande { font-size: 34px; font-weight: 800; letter-spacing: -0.03em; }
 
 .app { max-width: 480px; margin: 0 auto; min-height: 100vh; min-height: 100dvh; }
-.contenido { padding: 16px 16px 104px; animation: aparecer 220ms ease both; }
+/* Sin fill-mode: un fill retenido crea un stacking context permanente que
+   atraparía el z-index de las hojas (.modal-fondo) bajo la barra de navegación. */
+.contenido { padding: 16px 16px 104px; animation: aparecer 220ms ease; }
 
 @keyframes aparecer {
   from { opacity: 0; transform: translateY(6px); }
@@ -80,6 +82,7 @@ button { font: inherit; cursor: pointer; color: inherit; }
   -webkit-backdrop-filter: blur(14px);
   border-top: 1px solid var(--borde-suave);
   padding: 6px 0 max(6px, env(safe-area-inset-bottom));
+  z-index: 30; /* capas: contenido < nav (30) < hojas (40) < toast (50) */
 }
 .nav a {
   text-align: center; text-decoration: none; color: var(--texto2);
