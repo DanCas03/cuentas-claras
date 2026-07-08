@@ -1,0 +1,18 @@
+const F = (campos: string[]) => campos.join('\t');
+
+/** 9 movimientos inventados con la estructura exacta del export BNC "25 últimos movimientos". */
+export const BNC_FIXTURE = [
+  '01910000000000001234@PEREZ RODRIGUEZ MARIA JOSE@25 ULTIMOS MOVIMIENTOS',
+  '',
+  F(['Fecha', 'Hora', 'Referencia', 'Cod. Transacción', 'Tipo Transacción', 'Tip. Operación', 'Descripción', 'Debe', 'Haber', 'Saldo', 'Referencia 2']),
+  F(['02/07/2026', '12:00:00', '', '', '', 'Saldo Inicial', '', '0', '0', '6300,01', '', '']),
+  F(['02/07/2026', '16:20:30.900', '100000007', '388', 'P2POTR', 'Abono Pago Movil BNC', 'TELF.:584160000003 BANCO:0102 CED.:V00000003 PMPP PagomóvilBDV ', '0', '1500', '6300,01', '584140000000']),
+  F(['01/07/2026', '12:34:56.789', '100000006', '377', '', 'Compra de POS DebitMC', 'PANADERIA CENTRAL C A  CCS ESTE      VEN ZONA= BANCO:0102        TERMINAL:00000002 COMER:0022222222', '-345,79', '0', '4800,0099999999998', '12345']),
+  F(['30/06/2026', '02:00:00.000', '0', '750', 'COMSAL', 'Comisión Mantenimiento Cuenta', 'Comisión Mantenimiento Cuenta Mes: Junio     - 2026  ', '-0,1', '0', '5145,8', '0']),
+  F(['24/06/2026', '10:10:10.500', '100000005', '488', 'CIPOTR', 'Credito Inmediato Recibido', 'TELF.:000000000000 CTA.: 01050000000000000001 BANCO:0105 PAGO MOVIL. EMISOR : PEREZ GOMEZ ANA', '0', '5000', '5145,9', '4140000000']),
+  F(['23/06/2026', '08:00:05.410', '100000004', '751', 'P2PCSO', 'Comisión Pago Movil', 'TELF.:584120000002 CED.:000000002 BANCO:0134 Pago Móvil BNC al Instante FARMACIA AVILA', '-3,6', '0', '145,9', '584140000000']),
+  F(['23/06/2026', '08:00:05.400', '100000004', '387', 'P2PTSO', 'Cargo Pago Movil BNC', 'TELF.:584120000002 CED.:000000002 BANCO:0134 Pago Móvil BNC al Instante FARMACIA AVILA', '-1200', '0', '149,5', '584140000000']),
+  F(['22/06/2026', '18:30:00.300', '100000003', '387', 'P2CTRO', 'Cargo Pago Movil BNC', 'TELF.:584140000001 CED.:000000001 BANCO:0169 Pago Móvil BNC al Instante JUEGAENLINEA3', '-300', '0', '1349,5', '584140000000']),
+  F(['21/06/2026', '13:05:10.200', '100000002', '377', 'MAESTR', 'Compra de POS DebitMC', 'MERCADO LA ESQUINA CA  CCS CENTRO    VEN ZONA= BANCO:0102        TERMINAL:00000001 COMER:0011111111', '-850,5', '0', '1649,5', '54321']),
+  F(['20/06/2026', '09:15:00.100', '100000001', '488', 'CIPOTR', 'Credito Inmediato Recibido', 'TELF.:000000000000 CTA.: 01050000000000000001 BANCO:0105 PAGO MOVIL. EMISOR : PEREZ GOMEZ ANA', '0', '2000', '2500', '4140000000']),
+].join('\r\n');
