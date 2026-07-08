@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ImportBnc } from '../componentes/ImportBnc';
+import { ImportZinli } from '../componentes/ImportZinli';
 
 export function ImportarPage() {
   const [tab, setTab] = useState<'bnc' | 'zinli'>('bnc');
@@ -10,7 +11,7 @@ export function ImportarPage() {
         <button className={tab === 'bnc' ? 'activo' : ''} onClick={() => setTab('bnc')}>BNC (TXT)</button>
         <button className={tab === 'zinli' ? 'activo' : ''} onClick={() => setTab('zinli')}>Zinli (PDF)</button>
       </div>
-      {tab === 'bnc' ? <ImportBnc /> : <p>El importador Zinli llega en la Fase 6.</p>}
+      {tab === 'bnc' ? <ImportBnc /> : <ImportZinli />}
     </div>
   );
 }
