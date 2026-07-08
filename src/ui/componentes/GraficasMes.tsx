@@ -23,7 +23,7 @@ export function GraficasMes({ resumen, comparativa, presupuestos, categorias, vi
   const donut = resumen.byCategory.map((b) => ({
     name: cat(b.categoryId)?.name ?? 'Sin categoría',
     value: b.expenseMinor / 100,
-    color: cat(b.categoryId)?.color ?? '#9ca3af',
+    color: cat(b.categoryId)?.color ?? '#8b96ab', // gris = --texto2 (mismo patrón que EJE: hex fijo alineado al token)
   }));
   const balance = resumen.incomeMinor - resumen.expenseMinor;
   const dinero = (minor: number) => formatMoney(minor, viewCurrency);

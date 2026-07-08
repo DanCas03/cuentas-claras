@@ -35,6 +35,7 @@ export function ImportBnc() {
   const [saldoTxt, setSaldoTxt] = useState<number | null>(null);
   const [fase, setFase] = useState<'entrada' | 'previa' | 'hecho'>('entrada');
   const [guardando, setGuardando] = useState(false);
+  const [sinResultados, setSinResultados] = useState(false);
 
   const categorias = useLiveQuery(() => db.categories.toArray(), []) ?? [];
   const cuenta = useLiveQuery(() => db.accounts.get(CUENTA_BNC), []);
@@ -43,9 +44,11 @@ export function ImportBnc() {
   async function analizar() {
     const r = parseBncTxt(texto);
     if (r.rows.length === 0) {
+      setSinResultados(true);
       avisar('No se encontraron movimientos en el texto');
       return;
     }
+    setSinResultados(false);
     const reglas = await db.rules.toArray();
     const existentes = new Set(
       (await db.transactions.filter((t) => t.importKey !== undefined).toArray()).map((t) => t.importKey as string),
@@ -93,6 +96,7 @@ export function ImportBnc() {
     setTexto('');
     setDrafts(null);
     setResultado(null);
+    setSinResultados(false);
     setFase('entrada');
   }
 
@@ -137,6 +141,12 @@ export function ImportBnc() {
         <button className="boton" style={{ marginTop: 8 }} onClick={analizar} disabled={texto.trim() === ''}>
           Analizar
         </button>
+        {sinResultados && (
+          <div className="vacio">
+            <span className="icono">🔍</span>
+            No se reconoció ningún movimiento en el texto. Revisa que sea el export completo de BNC.
+          </div>
+        )}
       </div>
     );
   }

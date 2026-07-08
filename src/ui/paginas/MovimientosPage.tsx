@@ -113,10 +113,18 @@ function EditorMovimiento({ tx, cerrar }: { tx: Transaction; cerrar: () => void 
   }
 
   async function eliminar() {
+    if (guardando) return;
     if (!window.confirm('¿Eliminar este movimiento?')) return;
-    await db.transactions.delete(tx.id);
-    avisar('Eliminado');
-    cerrar();
+    setGuardando(true);
+    try {
+      await db.transactions.delete(tx.id);
+      avisar('Eliminado');
+      cerrar();
+    } catch (e) {
+      avisar((e as Error).message);
+    } finally {
+      setGuardando(false);
+    }
   }
 
   return (
@@ -141,8 +149,8 @@ function EditorMovimiento({ tx, cerrar }: { tx: Transaction; cerrar: () => void 
         <label>Nota</label>
         <input aria-label="Editar nota" value={nota} onChange={(e) => setNota(e.target.value)} />
         <div className="fila-form" style={{ marginTop: 12 }}>
-          <button className="boton secundario" onClick={cerrar}>Cancelar</button>
-          <button className="boton peligro" onClick={eliminar}>Eliminar</button>
+          <button className="boton secundario" onClick={cerrar} disabled={guardando}>Cancelar</button>
+          <button className="boton peligro" onClick={eliminar} disabled={guardando}>Eliminar</button>
           <button className="boton" onClick={guardar} disabled={guardando}>Guardar</button>
         </div>
       </div>

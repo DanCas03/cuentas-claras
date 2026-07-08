@@ -66,8 +66,9 @@ export function RespaldoSection() {
         En Android: Exportar abre el selector/compartir — elige Drive. En Windows: elige directamente tu carpeta de Google Drive.
       </p>
       <button className="boton" onClick={exportar} disabled={guardando}>Exportar respaldo</button>
-      <label>Restaurar desde un respaldo</label>
+      <label htmlFor="respaldo-archivo">Restaurar desde un respaldo</label>
       <input
+        id="respaldo-archivo"
         aria-label="Archivo de respaldo"
         type="file"
         accept=".json,application/json"

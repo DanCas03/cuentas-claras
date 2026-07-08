@@ -2,10 +2,9 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db, getSettings, saveSettings } from '../../db/db';
 import { patrimonio } from '../../domain/balances';
 import { effectiveRate } from '../../domain/rates';
-import { todayIso } from '../../domain/dates';
+import { todayIso, monthOf } from '../../domain/dates';
 import { PatrimonioCard } from '../componentes/PatrimonioCard';
 import { monthSummary, lastMonths, budgetStatus } from '../../domain/stats';
-import { monthOf } from '../../domain/dates';
 import { GraficasMes } from '../componentes/GraficasMes';
 
 export function DashboardPage() {

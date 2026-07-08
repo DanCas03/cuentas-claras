@@ -13,15 +13,26 @@ import { todayIso } from '../domain/dates';
 
 export function App() {
   const [listo, setListo] = useState(false);
+  const [errorInicio, setErrorInicio] = useState(false);
   const { path, params } = useHashRoute();
 
   useEffect(() => {
     seedIfEmpty(db)
-      .then(() => setListo(true))
-      .then(() => refreshRatesOncePerDay(db, todayIso()))
-      .catch(() => {}); // sin red o sin proveedor: silencioso, la UI muestra la tasa vieja
+      .then(() => {
+        setListo(true);
+        return refreshRatesOncePerDay(db, todayIso()).catch(() => {}); // sin red o sin proveedor: silencioso, la UI muestra la tasa vieja
+      })
+      .catch(() => setErrorInicio(true)); // fallo real de IndexedDB al sembrar: no dejar la pantalla en blanco sin aviso
   }, []);
 
+  if (errorInicio) {
+    return (
+      <div className="vacio" style={{ paddingTop: 80 }}>
+        <span className="icono">⚠️</span>
+        No se pudo iniciar la base de datos local. Cierra y vuelve a abrir la app.
+      </div>
+    );
+  }
   if (!listo) return null;
   return (
     <div className="app">

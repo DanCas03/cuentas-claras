@@ -131,6 +131,7 @@ input, select, textarea {
   transition: border-color var(--transicion);
 }
 input:focus, select:focus, textarea:focus { border-color: var(--primario); outline: none; }
+select { text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
 input::placeholder, textarea::placeholder { color: var(--texto2); opacity: 0.7; }
 input[type="checkbox"] { accent-color: var(--primario); }
 label {
@@ -256,6 +257,8 @@ label {
   border: 1px solid var(--borde-suave); border-radius: 999px;
   padding: 2px 10px; font-size: 12px; font-weight: 600;
 }
+button.chip { transition: transform var(--transicion), background var(--transicion), color var(--transicion); }
+button.chip:active { transform: scale(0.94); background: var(--tarjeta-2); color: var(--texto); }
 
 /* Estados vacíos */
 .vacio { text-align: center; color: var(--texto2); padding: 28px 12px; }

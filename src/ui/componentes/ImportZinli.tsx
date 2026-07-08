@@ -207,6 +207,7 @@ export function ImportZinli() {
                     aria-label={`Patrón fila ${i + 1}`}
                     value={d.patron}
                     onChange={(e) => actualizar(i, { patron: e.target.value })}
+                    placeholder="texto que identifica este comercio"
                   />
                 )}
               </span>
