@@ -1,5 +1,11 @@
-import type { Account, Transaction } from './types';
+import type { Account, Debt, Transaction } from './types';
 import { accountBalanceMinor, patrimonio } from './balances';
+
+const deudaPendiente = (parcial: Partial<Debt>): Debt => ({
+  id: 'd1', direction: 'porPagar', concepto: 'x', amountMinor: 500,
+  accountId: 'usd1', status: 'pendiente', createdIso: '2026-07-22T00:00:00.000Z',
+  ...parcial,
+});
 
 const cuentas: Account[] = [
   { id: 'bnc', name: 'BNC', currency: 'VES', kind: 'bank', isSavings: false, archived: false },
@@ -53,5 +59,51 @@ describe('patrimonio', () => {
     expect(p.disposicionUsdMinor).toBeNull(); // incluye una cuenta VES sin tasa
     expect(p.ahorroUsdMinor).toBe(25000);     // solo cuentas USD → sí se puede
     expect(p.totalUsdMinor).toBeNull();
+  });
+
+  test('aDisposicionUsdMinor usa el flag enDisposicion con default !isSavings', () => {
+    const cuentasFlag: Account[] = [
+      { id: 'usd1', name: 'Efectivo', currency: 'USD', kind: 'cash', isSavings: false, archived: false },              // sin flag → cuenta
+      { id: 'usd2', name: 'Binance', currency: 'USD', kind: 'snapshot', isSavings: true, archived: false, enDisposicion: true },  // ahorro pero marcada → cuenta
+      { id: 'usd3', name: 'Guardado', currency: 'USD', kind: 'cash', isSavings: false, archived: false, enDisposicion: false }, // no-ahorro desmarcada → NO cuenta
+    ];
+    const txsFlag: Transaction[] = [
+      tx({ type: 'income', accountId: 'usd1', amountMinor: 1000 }),
+      tx({ type: 'income', accountId: 'usd2', amountMinor: 2000 }),
+      tx({ type: 'income', accountId: 'usd3', amountMinor: 4000 }),
+    ];
+    const p = patrimonio(cuentasFlag, txsFlag, null);
+    expect(p.aDisposicionUsdMinor).toBe(3000); // usd1 + usd2
+    expect(p.totalUsdMinor).toBe(7000);        // el total actual no cambia
+  });
+
+  test('netoUsdMinor descuenta las deudas por pagar convertidas con la tasa', () => {
+    const cuentasNeto: Account[] = [
+      { id: 'usd1', name: 'Efectivo', currency: 'USD', kind: 'cash', isSavings: false, archived: false },
+      { id: 'bs1', name: 'BNC', currency: 'VES', kind: 'bank', isSavings: false, archived: false },
+    ];
+    const txsNeto: Transaction[] = [
+      tx({ type: 'income', accountId: 'usd1', amountMinor: 10000 }),
+    ];
+    const deudas = [
+      deudaPendiente({ id: 'a', accountId: 'usd1', amountMinor: 500 }),        // $5.00
+      deudaPendiente({ id: 'b', accountId: 'bs1', amountMinor: 73723 }),       // Bs 737,23 → $1.00
+    ];
+    const p = patrimonio(cuentasNeto, txsNeto, 737.23, deudas);
+    expect(p.netoUsdMinor).toBe(10000 - 600);
+  });
+
+  test('netoUsdMinor: sin deudas es igual al total; deuda en Bs sin tasa → null', () => {
+    const cuentasNeto: Account[] = [
+      { id: 'usd1', name: 'Efectivo', currency: 'USD', kind: 'cash', isSavings: false, archived: false },
+      { id: 'bs1', name: 'BNC', currency: 'VES', kind: 'bank', isSavings: false, archived: false },
+    ];
+    const txsNeto: Transaction[] = [
+      tx({ type: 'income', accountId: 'usd1', amountMinor: 10000 }),
+    ];
+    const soloUsd = patrimonio([cuentasNeto[0]], txsNeto, null);
+    expect(soloUsd.netoUsdMinor).toBe(soloUsd.totalUsdMinor);
+    const conBsSinTasa = patrimonio([cuentasNeto[0]], txsNeto, null, [deudaPendiente({ accountId: 'bs1' })]);
+    expect(conBsSinTasa.netoUsdMinor).toBeNull();
   });
 });

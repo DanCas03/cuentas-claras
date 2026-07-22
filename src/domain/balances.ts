@@ -1,4 +1,4 @@
-import type { Account, Transaction } from './types';
+import type { Account, Debt, Transaction } from './types';
 import { vesToUsdMinor } from './rates';
 
 export function accountBalanceMinor(accountId: string, txs: Transaction[]): number {
@@ -28,10 +28,19 @@ export interface Patrimonio {
   disposicionUsdMinor: number | null;
   ahorroUsdMinor: number | null;
   totalUsdMinor: number | null;
+  /** v2 — vista 1 del slider: cuentas con enDisposicion (default !isSavings). */
+  aDisposicionUsdMinor: number | null;
+  /** v2 — vista 2: total − deudas por pagar pendientes (convertidas a USD). */
+  netoUsdMinor: number | null;
 }
 
 /** Patrimonio consolidado en USD. vesPerUsd null → sin tasa: lo no convertible queda null. */
-export function patrimonio(accounts: Account[], txs: Transaction[], vesPerUsd: number | null): Patrimonio {
+export function patrimonio(
+  accounts: Account[],
+  txs: Transaction[],
+  vesPerUsd: number | null,
+  deudasPorPagarPendientes: Debt[] = [],
+): Patrimonio {
   const activas = accounts.filter((a) => !a.archived);
   const lines: PatrimonioLinea[] = activas.map((account) => {
     const balanceMinor = accountBalanceMinor(account.id, txs);
@@ -56,5 +65,19 @@ export function patrimonio(accounts: Account[], txs: Transaction[], vesPerUsd: n
   const totalUsdMinor =
     disposicionUsdMinor === null || ahorroUsdMinor === null ? null : disposicionUsdMinor + ahorroUsdMinor;
 
-  return { lines, disposicionUsdMinor, ahorroUsdMinor, totalUsdMinor };
+  const aDisposicion = lines.filter((l) => l.account.enDisposicion ?? !l.account.isSavings);
+  const aDisposicionUsdMinor = suma(aDisposicion);
+
+  const monedaDe = new Map(accounts.map((a) => [a.id, a.currency]));
+  let deudasUsdMinor: number | null = 0;
+  for (const deuda of deudasPorPagarPendientes) {
+    const moneda = monedaDe.get(deuda.accountId) ?? 'VES';
+    if (moneda === 'USD') deudasUsdMinor += deuda.amountMinor;
+    else if (vesPerUsd === null) { deudasUsdMinor = null; break; }
+    else deudasUsdMinor += vesToUsdMinor(deuda.amountMinor, vesPerUsd);
+  }
+  const netoUsdMinor =
+    totalUsdMinor === null || deudasUsdMinor === null ? null : totalUsdMinor - deudasUsdMinor;
+
+  return { lines, disposicionUsdMinor, ahorroUsdMinor, totalUsdMinor, aDisposicionUsdMinor, netoUsdMinor };
 }
