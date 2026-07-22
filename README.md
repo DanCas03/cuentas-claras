@@ -14,6 +14,15 @@ Offline-first: todos los datos viven en IndexedDB del dispositivo; el hosting so
 - `npm run preview` — sirve el build (necesario para probar la PWA/offline)
 - `npm run iconos` — regenera los íconos PNG desde SVG
 
+## Deploy
+
+Producción en Cloudflare Pages (HTTPS, requisito para instalar la PWA en Android): **https://cuentas-claras-r2f.pages.dev**
+
+```powershell
+npm run build
+npx wrangler pages deploy dist --project-name cuentas-claras
+```
+
 ## Privacidad
 
 Los comprobantes reales de la raíz están gitignored y **nunca** se commitean.

@@ -2,14 +2,14 @@
 
 **Fecha:** 2026-07-07 · **Origen probado:** http://localhost:5173
 
-| Proveedor | URL exacta | ¿CORS OK? | ¿Trae BCV? | ¿Trae Binance? | Campo del valor |
-|---|---|---|---|---|---|
-| pydolarve | `https://pydolarve.org/api/v2/dollar?page=criptodolar` | No verificable: dominio caído | — | — | — |
-| ve.dolarapi.com | `https://ve.dolarapi.com/v1/dolares/oficial` | Sí (`Access-Control-Allow-Origin: *`, HTTP 200) | Sí (674,9305 Bs, coincide con BCV del día) | No (en `/v1/dolares` solo existen `oficial` y `paralelo`) | `promedio` |
-| ExchangeMonitor | `https://exchangemonitor.net/api/dolar` | Sí (`Access-Control-Allow-Origin: *`, `Access-Control-Allow-Methods: POST, GET`) pero **HTTP 400: requiere cabecera `Authorization`** — API privada, inutilizable sin key | inaccesible | inaccesible | — |
-| CriptoDolar (vcoud) | `https://exchange.vcoud.com/coins/latest` | Sí (`Access-Control-Allow-Origin: *`, HTTP 200) | Sí (item `"name": "Dólar BCV"`, `"slug": "dolar-bcv"`, 674,93) | No (el único "Dólar Binance" del listado es el argentino, `"currency": "ARS"`) | `price` del elemento del array con `slug === "dolar-bcv"` |
+| Proveedor | URL exacta | ¿CORS OK? | ¿Trae BCV? | ¿Trae Binance? | Campo del valor | ¿CORS OK desde producción? |
+|---|---|---|---|---|---|---|
+| pydolarve | `https://pydolarve.org/api/v2/dollar?page=criptodolar` | No verificable: dominio caído | — | — | — | No aplica (excluido de la cadena, dominio sigue muerto) |
+| ve.dolarapi.com | `https://ve.dolarapi.com/v1/dolares/oficial` | Sí (`Access-Control-Allow-Origin: *`, HTTP 200) | Sí (674,9305 Bs, coincide con BCV del día) | No (en `/v1/dolares` solo existen `oficial` y `paralelo`) | `promedio` | Sí. `curl` con `Origin: https://cuentas-claras-r2f.pages.dev` → HTTP 200, `Access-Control-Allow-Origin: *` (idéntico a local). `fetch` real desde la app en producción (Playwright headless contra la URL desplegada): `ok`, HTTP 200, `promedio` 737,2321 |
+| ExchangeMonitor | `https://exchangemonitor.net/api/dolar` | Sí (`Access-Control-Allow-Origin: *`, `Access-Control-Allow-Methods: POST, GET`) pero **HTTP 400: requiere cabecera `Authorization`** — API privada, inutilizable sin key | inaccesible | inaccesible | — | No aplica (excluido, sigue exigiendo API key) |
+| CriptoDolar (vcoud) | `https://exchange.vcoud.com/coins/latest` | Sí (`Access-Control-Allow-Origin: *`, HTTP 200) | Sí (item `"name": "Dólar BCV"`, `"slug": "dolar-bcv"`, 674,93) | No (el único "Dólar Binance" del listado es el argentino, `"currency": "ARS"`) | `price` del elemento del array con `slug === "dolar-bcv"` | Sí. `curl` con `Origin: https://cuentas-claras-r2f.pages.dev` → HTTP 200, `Access-Control-Allow-Origin: *` (idéntico a local). `fetch` real desde la app en producción (Playwright headless): `ok`, HTTP 200, `price` 737,23 |
 
-Método: verificado por cabeceras `Access-Control-Allow-Origin` vía HTTP directo (sin navegador, decisión de Daniel 2026-07-07); los fetch de la app son GET simples sin preflight, por lo que ACAO decide. Pendiente re-verificar desde el origen desplegado en la Tarea 24 (CORS puede diferir por dominio).
+Método: verificado por cabeceras `Access-Control-Allow-Origin` vía HTTP directo (sin navegador, decisión de Daniel 2026-07-07); los fetch de la app son GET simples sin preflight, por lo que ACAO decide. **Re-verificado en la Tarea 25** desde el origen real desplegado (`https://cuentas-claras-r2f.pages.dev`, Cloudflare Pages): mismo método `curl` + `Origin`, más un `fetch` real ejecutado dentro de la app cargada en esa URL (Playwright headless, sin extensión de Chrome). Ambos proveedores de la cadena (dolarapi, vcoud) mantienen ACAO `*` y responden 200 igual que en local — no hay diferencia por dominio, así que **no se reordena `PROVIDERS_DEFAULT`**.
 
 ## Detalle por candidato
 
@@ -48,3 +48,5 @@ pydolarve queda **excluido** (dominio muerto, sin fixture). ExchangeMonitor qued
 **Binance USDT/VES no está disponible en ningún proveedor probado con CORS público a fecha de hoy.** La tasa Binance queda cubierta por el **override manual** (que por diseño siempre existe y ya está fijado en la spec); si pydolarve resucita o aparece un proveedor público con USDT/VES, se re-evalúa. Hallazgo relacionado: según su documentación (`dolarvzla.com/dev`), DolarVZLA publica BCV como JSON estático sin key en `rates.dolarvzla.com` (el CDN existe y responde con ACAO `*`, pero la ruta exacta del JSON no se verificó en este spike), y sus endpoints de USDT/Binance (`api.dolarvzla.com`) requieren API key, así que tampoco sirve para Binance.
 
 La Tarea 13 debe tratar "sin proveedor de Binance" como estado normal, no como error.
+
+**Confirmación desde producción (Tarea 25):** el mismo orden (dolarapi → vcoud) se re-verificó contra `https://cuentas-claras-r2f.pages.dev` (ver columna «desde producción» arriba) y funciona igual que en local; la app en producción muestra el BCV del día en Ajustes sin acción manual. La cadena queda sin cambios.
