@@ -11,10 +11,10 @@
 **Spec (fuente de verdad del *qué*):** `docs/superpowers/specs/2026-07-22-cuentas-claras-v2-design.md`
 **Vigentes en todo lo no contradicho:** spec v1 (`docs/superpowers/specs/2026-07-07-finanzas-personales-design.md`) y `.superpowers/sdd/restricciones-globales.md`.
 
-## Prerrequisitos de ejecución (ANTES de la Tarea 1)
+## Prerrequisitos de ejecución (estado al 2026-07-22: TODOS RESUELTOS)
 
-1. **Cerrar la v1**: la limpieza de compat legada ya se hizo (commit `83514aa`); queda **redeploy a producción** de `main` con los fixes del fix-wave (`npm run build` + `npx wrangler pages deploy dist --project-name cuentas-claras` — wrangler ya autenticado) y `superpowers:finishing-a-development-branch`. Verifica el ledger `.superpowers/sdd/progress.md` por si ya consta.
-2. **Pedir a Daniel los 2-3 textos ANONIMIZADOS de notificaciones del BNC** (pago móvil recibido y compra con tarjeta, sin nombres/cédulas/números completos). No bloquean nada hasta la Fase 4: pídelos al arrancar y sigue trabajando.
+1. **Cierre v1: HECHO** (ver ledger §«Cierre v1»). Re-revisión aprobada («los 8 cierran, ready to merge/deploy»), compat legada eliminada (commit `83514aa`, suite 102/102), redeploy a producción verificado (hash de assets prod == dist local) y **V1 SELLADA** vía `superpowers:finishing-a-development-branch`. Respaldo remoto: repo PRIVADO https://github.com/DanCas03/cuentas-claras (`origin/main`; los comprobantes gitignored no se subieron). Nada pendiente antes de la Tarea 1.
+2. **Textos de notificaciones del BNC: ENTREGADOS** (captura de pantalla de Daniel, 2026-07-22, en la raíz del repo y gitignored — `Screenshot_*.jpg`). Las fixtures ANONIMIZADAS de la Tarea 13 ya están definidas en este plan con la estructura exacta de esos textos y datos inventados; la captura real sirve SOLO para la verificación local del parser y nunca se commitea ni se copia a código/docs.
 3. Abrir la sección «v2» en el ledger `.superpowers/sdd/progress.md`. El helper `bash .superpowers/sdd/tarea-brief.sh <RUTA-PLAN> N` existe porque los planes usan "Tarea" y el script de la skill busca "Task".
 
 ## Restricciones globales
@@ -22,7 +22,7 @@
 Aplican a TODAS las tareas; cada tarea las incluye implícitamente. Las 11 restricciones de `.superpowers/sdd/restricciones-globales.md` siguen vigentes ÍNTEGRAS (céntimos enteros, todo en español, privacidad de comprobantes reales, tests solo en núcleo con TDD, vitest verde antes de cada commit + build al cerrar fase, ≤3 toques, tokens CSS, footer de commit exacto `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`). Además, para la v2:
 
 1. **Decisiones cerradas de Daniel (NO reabrir, NO volver a preguntar)** — las 7 del spec §«Decisiones cerradas». En especial la 7: **cero retrocompatibilidad de datos**; Daniel re-ingresa/re-importa tras actualizar; ninguna tarea escribe migración de contenido ni compat con respaldos/claves v1.
-2. **«Omite las verificaciones con chrome»**: la extensión claude-in-chrome falla en esta PC. TODA verificación de UI se hace con Playwright headless (chromium YA instalado): `npx -y -p playwright node script.mjs`. Capturas a `.superpowers/sdd/capturas/task-N/`. Cada implementador levanta su propio dev server (`npm run dev`) y **lo mata al terminar** (hubo huérfanos en 5173/5174). Recharts se congela en headless → usa la Clock API de Playwright (receta en `.superpowers/sdd/task-12-report.md`).
+2. **Verificación de UI**: el estándar es Playwright headless (chromium YA instalado): `npx -y -p playwright node script.mjs`. Capturas a `.superpowers/sdd/capturas/task-N/`. Cada implementador levanta su propio dev server (`npm run dev`) y **lo mata al terminar** (hubo huérfanos en 5173/5174). Recharts se congela en headless → usa la Clock API de Playwright (receta en `.superpowers/sdd/task-12-report.md`). La extensión claude-in-chrome **volvió a estar operativa el 2026-07-22** y puede usarse como complemento para verificaciones interactivas puntuales, con una condición: debe abrir **Google Chrome** (la extensión NO está habilitada en el navegador predeterminado del sistema, que es otro). Si la extensión falla, vuelve al headless sin insistir.
 3. **Patrones obligatorios del código** (el revisor los exige): guard `guardando` en TODO guardado async (check → validación → `setGuardando(true)` → await en try con éxito-solo → catch `avisar` → finally reset; botones `disabled={guardando}`); ningún `useLiveQuery` después de un return condicional; jerarquía z contenido < nav(30) < modal(40) < toast(50); estilos SOLO por tokens/clases de `estilos.css`.
 4. **`d.transaction` con ARRAY de tablas si son >5** (el overload variádico de Dexie topa en 5; `backup.ts` ya usa array).
 5. **No tocar el contrato anti-duplicación del import**: la puerta sigue siendo el filtro de la UI (`incluir && !duplicate`) y `commitImport` conserva su backstop que revalida importKeys dentro de la transacción y aborta. No revertir tampoco los demás fixes del fix-wave (bncImportKey con fecha, «Vigente hoy» con histórico completo, guards del banner «Crear ajuste», validación de fecha en EditorMovimiento, re-match de la regla default Zinli).
@@ -133,7 +133,7 @@ Revisar por el mismo patrón el input de Zinli (`ImportZinli.tsx:134`, `accept="
 
 - [ ] **Paso 3: Verificar en desktop headless que la carga sigue intacta.** Levanta `npm run dev`, crea en el scratchpad un TXT sintético con la fixture anonimizada de `src/import/bnc/fixtures/bncFixture.ts` (NUNCA el TXT real), y con la receta de verificación: navega a `#/importar`, `setInputFiles` del TXT, comprueba que aparece la vista previa con filas, captura a `.superpowers/sdd/capturas/task-1/`. Además `expect` de que el atributo `accept` del input contiene `application/octet-stream`. Mata el dev server.
 
-- [ ] **Paso 4: Suite verde.** Run: `npx vitest run` — Expected: 104 passed (este fix no toca núcleo).
+- [ ] **Paso 4: Suite verde.** Run: `npx vitest run` — Expected: 102 passed (este fix no toca núcleo; la base quedó en 102 tras la limpieza de compat `83514aa`).
 
 - [ ] **Paso 5: Commit**
 
@@ -325,7 +325,7 @@ export async function seedIfEmpty(d: CuentasDB): Promise<void> {
   expect(await destino.categories.count()).toBe(18);
 ```
 
-Re-run: `npx vitest run` — Expected: todo verde (≈107 passed).
+Re-run: `npx vitest run` — Expected: todo verde (≈105 passed: 102 base + los 3 nuevos).
 
 - [ ] **Paso 6: Commit**
 
@@ -2160,9 +2160,14 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 
 ## Fase 4 — Captura desde notificaciones del BNC
 
-> **BLOQUEO EXTERNO:** las Tareas 13-14 requieren los 2-3 textos ANONIMIZADOS de notificaciones reales del BNC que Daniel debe entregar (pedidos en los prerrequisitos). Si no han llegado, la Tarea 15 (guía) puede escribirse igual; 13-14 esperan. NUNCA inventes los formatos ni copies textos con datos personales.
+> **Bloqueo externo RESUELTO (2026-07-22):** Daniel entregó una captura de pantalla de la app del BNC con los dos formatos (gitignored en la raíz, `Screenshot_*.jpg`). Estructura real de los textos (una sola línea cada uno):
+> - Compra: `BNC Compra POS Bs.<monto> Tarj:<4 dígitos> Dia:dd/mm/aa-HH:MM Ref:<dígitos> Llamar al 0500-2625000 si no realizo esta Operacion`
+> - Pago móvil: `BNC Pago Movil Recibido Bs.<monto> Telf.<04XX***NNNN> Dia:dd/mm/aa-HH:MM Ref:<dígitos> Llamar al 0500-2625000 si no realizo esta Operacion`
+> - El monto viene SIN separador de miles y con coma decimal (formato `NNNNNN,NN`, también con montos de 6+ cifras) → `parseVenezuelanAmount` lo cubre tal cual.
+>
+> Las fixtures de abajo reproducen esa estructura con datos INVENTADOS (privacidad). La captura real solo se usa localmente en el Paso 5 de la Tarea 13.
 
-### Tarea 13: `parseNotificacionBnc` (TDD con fixtures de Daniel)
+### Tarea 13: `parseNotificacionBnc` (TDD con fixtures anonimizadas)
 
 **REQUIRED SUB-SKILL:** `superpowers:test-driven-development`.
 
@@ -2184,13 +2189,16 @@ export interface CapturaBnc {
 export function parseNotificacionBnc(texto: string): CapturaBnc | null;
 ```
 
-- [ ] **Paso 1: Fixtures.** Crear `src/capture/fixtures/notificacionesBnc.ts` con los textos entregados por Daniel, EXACTOS pero ya anonimizados por él (verifica visualmente que no traen nombres/cédulas/números completos antes de commitear — restricción de privacidad):
+- [ ] **Paso 1: Fixtures.** Crear `src/capture/fixtures/notificacionesBnc.ts` (estructura EXACTA de las notificaciones reales de la captura de Daniel, datos INVENTADOS — restricción de privacidad):
 
 ```ts
-/** Textos reales anonimizados de notificaciones del BNC (entregados por Daniel, 2026-07).
- *  PRIVACIDAD: solo pueden contener datos inventados/enmascarados. */
-export const NOTIFICACION_PAGO_MOVIL: string = /* pegar aquí el texto entregado */;
-export const NOTIFICACION_COMPRA: string = /* pegar aquí el texto entregado */;
+/** Fixtures anonimizadas de notificaciones del BNC (estructura real de la
+ *  captura de Daniel del 2026-07-22; montos, teléfono, tarjeta y referencias INVENTADOS).
+ *  PRIVACIDAD: nunca sustituir por textos con datos reales. */
+export const NOTIFICACION_PAGO_MOVIL =
+  'BNC Pago Movil Recibido Bs.1234,56 Telf.0412***9999 Dia:15/07/26-10:31 Ref:123456789 Llamar al 0500-2625000 si no realizo esta Operacion';
+export const NOTIFICACION_COMPRA =
+  'BNC Compra POS Bs.7890,12 Tarj:9999 Dia:15/07/26-12:45 Ref:654321 Llamar al 0500-2625000 si no realizo esta Operacion';
 ```
 
 - [ ] **Paso 2: Tests en RED** — `src/capture/parseNotificacionBnc.test.ts`:
@@ -2199,23 +2207,34 @@ export const NOTIFICACION_COMPRA: string = /* pegar aquí el texto entregado */;
 import { parseNotificacionBnc } from './parseNotificacionBnc';
 import { NOTIFICACION_PAGO_MOVIL, NOTIFICACION_COMPRA } from './fixtures/notificacionesBnc';
 
-test('pago móvil recibido → ingreso en Bs con monto y referencia en la nota', () => {
+test('pago móvil recibido → ingreso en Bs con monto exacto y referencia en la nota', () => {
   const r = parseNotificacionBnc(NOTIFICACION_PAGO_MOVIL);
-  expect(r).not.toBeNull();
-  expect(r?.tipo).toBe('ingreso');
-  expect(r?.montoMinor).toBeGreaterThan(0);
-  expect(Number.isInteger(r?.montoMinor)).toBe(true);
-  // Ajustar con el monto EXACTO de la fixture al pegarla, p. ej.:
-  // expect(r?.montoMinor).toBe(1351775);
-  // expect(r?.nota).toContain('ref');  // referencia visible en la nota
+  expect(r).toEqual({
+    tipo: 'ingreso',
+    montoMinor: 123456, // Bs.1234,56
+    nota: 'Pago móvil recibido · ref 123456789',
+  });
 });
 
-test('compra con tarjeta → gasto en Bs con comercio en la nota', () => {
+test('compra POS → gasto en Bs con monto exacto y referencia en la nota', () => {
   const r = parseNotificacionBnc(NOTIFICACION_COMPRA);
-  expect(r).not.toBeNull();
-  expect(r?.tipo).toBe('gasto');
-  expect(r?.montoMinor).toBeGreaterThan(0);
-  // Ajustar con el monto y comercio EXACTOS de la fixture al pegarla.
+  expect(r).toEqual({
+    tipo: 'gasto',
+    montoMinor: 789012, // Bs.7890,12
+    nota: 'Compra POS · ref 654321',
+  });
+});
+
+test('monto sin separador de miles con muchas cifras (formato real del BNC)', () => {
+  const r = parseNotificacionBnc(
+    'BNC Pago Movil Recibido Bs.250000,00 Telf.0412***9999 Dia:15/07/26-10:31 Ref:987654321 Llamar al 0500-2625000 si no realizo esta Operacion',
+  );
+  expect(r?.montoMinor).toBe(25000000);
+});
+
+test('el texto puede llegar con saltos de línea (notificación multilínea) y se reconoce igual', () => {
+  const partido = NOTIFICACION_PAGO_MOVIL.replace(' Dia:', '\nDia:').replace(' Ref:', '\nRef:');
+  expect(parseNotificacionBnc(partido)?.montoMinor).toBe(123456);
 });
 
 test('textos no reconocidos → null', () => {
@@ -2225,33 +2244,42 @@ test('textos no reconocidos → null', () => {
 });
 ```
 
-Al pegar las fixtures reales, REEMPLAZA los comentarios «Ajustar…» por aserciones exactas de monto y nota (mismo criterio que los parsers BNC/Zinli de la v1: aserciones literales, no genéricas).
-
 - [ ] **Paso 3: RED.** Run: `npx vitest run src/capture` — Expected: FAIL.
 
-- [ ] **Paso 4: Implementación.** Estructura del módulo (los regex CONCRETOS se derivan de las fixtures reales — es la única parte que este plan no puede fijar sin los textos; escríbelos anclados al formato literal, tolerantes solo en lo variable: montos, referencias, comercios):
+- [ ] **Paso 4: Implementación** — `src/capture/parseNotificacionBnc.ts`:
 
 ```ts
 import { parseVenezuelanAmount } from '../domain/money';
-import type {} from '../domain/types';
 
 export interface CapturaBnc {
   tipo: 'ingreso' | 'gasto';
+  /** céntimos de Bs (las notificaciones del BNC siempre son en Bs). */
   montoMinor: number;
+  /** nota lista para el movimiento: tipo de operación + referencia. */
   nota: string;
 }
 
 interface Reconocedor {
   tipo: CapturaBnc['tipo'];
-  /** Debe capturar el monto en el grupo 1 y referencia/comercio en el 2 (si existe). */
+  /** Grupo 1: monto venezolano (sin miles, coma decimal). Grupo 2: referencia. */
   regex: RegExp;
-  nota: (monto: string, extra: string | undefined) => string;
+  nota: (ref: string) => string;
 }
 
-// Derivados de src/capture/fixtures/notificacionesBnc.ts (textos reales anonimizados):
+// Estructura real de las notificaciones del BNC (captura de Daniel 2026-07-22; valores enmascarados):
+//   BNC Pago Movil Recibido Bs.<monto> Telf.04XX***NNNN Dia:dd/mm/aa-HH:MM Ref:<dígitos> Llamar al …
+//   BNC Compra POS Bs.<monto> Tarj:<4 dígitos> Dia:dd/mm/aa-HH:MM Ref:<dígitos> Llamar al …
 const RECONOCEDORES: Reconocedor[] = [
-  // { tipo: 'ingreso', regex: /…pago móvil…/i, nota: (…) => `Pago móvil recibido · ref ${…}` },
-  // { tipo: 'gasto',   regex: /…compra…/i,     nota: (…) => `Compra ${comercio}` },
+  {
+    tipo: 'ingreso',
+    regex: /BNC Pago Movil Recibido Bs\.(\d+,\d{2})\b.*?\bRef:(\d+)/i,
+    nota: (ref) => `Pago móvil recibido · ref ${ref}`,
+  },
+  {
+    tipo: 'gasto',
+    regex: /BNC Compra POS Bs\.(\d+,\d{2})\b.*?\bRef:(\d+)/i,
+    nota: (ref) => `Compra POS · ref ${ref}`,
+  },
 ];
 
 /** Reconoce pago móvil recibido y compra con tarjeta del BNC. Cualquier otra cosa → null. */
@@ -2263,17 +2291,19 @@ export function parseNotificacionBnc(texto: string): CapturaBnc | null {
     if (!m) continue;
     const montoMinor = parseVenezuelanAmount(m[1]);
     if (montoMinor === null || montoMinor <= 0) continue;
-    return { tipo: r.tipo, montoMinor, nota: r.nota(m[1], m[2]) };
+    return { tipo: r.tipo, montoMinor, nota: r.nota(m[2]) };
   }
   return null;
 }
 ```
 
-Completa `RECONOCEDORES` con los dos casos reales y borra los comentarios de ejemplo. Si el monto de la notificación no viene en formato venezolano (`1.234,56`), escribe el parseo del formato real con test propio.
-
-- [ ] **Paso 5: GREEN + commit**
+- [ ] **Paso 5: GREEN + verificación real local.**
 
 Run: `npx vitest run` — Expected: verde.
+
+Verificación real programática (privacidad: NADA de esto se persiste en el repo): teclea a mano los textos de la captura real de Daniel (`Screenshot_*.jpg`, raíz, gitignored) en un script efímero del scratchpad que importe `parseNotificacionBnc`, y confirma que las 4 notificaciones visibles se reconocen con el tipo correcto, el monto exacto en céntimos y su referencia en la nota. Borra el script al terminar y reporta en el ledger SOLO el veredicto (reconocidas sí/no), sin montos ni referencias.
+
+- [ ] **Paso 6: Commit**
 
 ```bash
 git add src/capture
@@ -2468,7 +2498,7 @@ Expected: deploy OK hacia https://cuentas-claras-r2f.pages.dev
   6. Seleccionar su TXT de BNC en Android sin pelear con el selector (fix de la Tarea 1).
   7. Exportar un respaldo y restaurarlo (v2); comprobar que un respaldo v1 se rechaza con mensaje claro.
 
-- [ ] **Paso 5: Cierre.** Registrar el veredicto en el ledger; correcciones que surjan → mini-tareas con el mismo estándar (TDD si tocan núcleo, verificación visual si tocan UI). Al aprobar Daniel: `superpowers:finishing-a-development-branch`.
+- [ ] **Paso 5: Cierre.** Registrar el veredicto en el ledger; correcciones que surjan → mini-tareas con el mismo estándar (TDD si tocan núcleo, verificación visual si tocan UI). Al aprobar Daniel: `superpowers:finishing-a-development-branch` y `git push origin main` al repo privado de respaldo (https://github.com/DanCas03/cuentas-claras, creado al sellar la v1; los gitignored no se suben).
 
 ---
 
@@ -2476,4 +2506,4 @@ Expected: deploy OK hacia https://cuentas-claras-r2f.pages.dev
 
 - **Cobertura del spec:** §1 deudas → Tareas 2-6; §2 slider → 7-8; §3 transaccionales → 9-12; §4 captura → 13-15; §5 bug TXT → 1; §6 datos → 2-3; §7 testing → distribuido en cada tarea TDD + verificaciones visuales; criterio de éxito → 16.
 - **Consistencia de firmas:** `buildDebt/buildSettleTx/debtTotals/settleDebt` (T4) se consumen tal cual en T5-T6; `patrimonio(..., deudasPorPagarPendientes)` (T7) en T8; `residuosDeGrupo/txsEfectivas` (T9) en T11-T12; `agruparTxs/anadirAGrupo/quitarDeGrupo/desagrupar` (T10) en T12; `CapturaBnc/parseNotificacionBnc` (T13) en T14.
-- **Único hueco declarado:** los regex de `RECONOCEDORES` (T13) dependen de fixtures que aún no existen — bloqueo externo explícito, no un placeholder accidental.
+- **Sin huecos:** el único bloqueo externo original (formatos de las notificaciones BNC) quedó resuelto el 2026-07-22 con la captura de Daniel; la Tarea 13 tiene fixtures anonimizadas, regex y aserciones exactas, más una verificación local contra los textos reales (que nunca entran al repo).
