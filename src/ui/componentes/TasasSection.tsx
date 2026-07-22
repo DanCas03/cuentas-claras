@@ -8,7 +8,13 @@ import { fetchRatesWithFallback, storeFetchedRates } from '../../rates/providers
 import { avisar } from '../Toast';
 
 export function TasasSection() {
-  const rates = useLiveQuery(() => db.rates.orderBy('date').reverse().limit(14).toArray(), []) ?? [];
+  // Important #4: "Vigente hoy" debe calcularse sobre el histórico COMPLETO (igual que
+  // Dashboard/stats/TransferForm) — la ventana de 14 filas es solo para la tabla de abajo.
+  // Binance solo se alimenta por override manual, así que tras ~2 semanas su fila sale de
+  // esa ventana y "vigente" caía al fallback "cualquiera" mostrando un BCV que no es la
+  // tasa con la que el resto de la app convierte.
+  const ratesRecientes = useLiveQuery(() => db.rates.orderBy('date').reverse().limit(14).toArray(), []) ?? [];
+  const ratesTodas = useLiveQuery(() => db.rates.toArray(), []) ?? [];
   const settings = useLiveQuery(() => getSettings(db), []);
   const [fecha, setFecha] = useState(todayIso());
   const [valorTxt, setValorTxt] = useState('');
@@ -17,7 +23,7 @@ export function TasasSection() {
   const [guardando, setGuardando] = useState(false);
   if (!settings) return null;
 
-  const vigente = effectiveRate(todayIso(), settings.rateSource, rates);
+  const vigente = effectiveRate(todayIso(), settings.rateSource, ratesTodas);
 
   async function actualizarAhora() {
     if (buscando) return;
@@ -94,7 +100,7 @@ export function TasasSection() {
       <table className="tabla">
         <thead><tr><th>Fecha</th><th>Fuente</th><th>Bs/$</th></tr></thead>
         <tbody>
-          {rates.map((r) => (
+          {ratesRecientes.map((r) => (
             <tr key={`${r.date}-${r.source}`}>
               <td>{r.date}</td>
               <td><span className="chip">{r.source}</span></td>
