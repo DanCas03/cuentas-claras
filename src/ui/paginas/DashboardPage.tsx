@@ -7,6 +7,7 @@ import { PatrimonioCard } from '../componentes/PatrimonioCard';
 import { monthSummary, lastMonths, budgetStatus } from '../../domain/stats';
 import { GraficasMes } from '../componentes/GraficasMes';
 import { DeudasCard } from '../componentes/DeudasCard';
+import { txsEfectivas } from '../../domain/groups';
 
 export function DashboardPage() {
   const cuentas = useLiveQuery(() => db.accounts.toArray(), []) ?? [];
@@ -15,6 +16,7 @@ export function DashboardPage() {
   const settings = useLiveQuery(() => getSettings(db), []);
   const categorias = useLiveQuery(() => db.categories.toArray(), []) ?? [];
   const deudas = useLiveQuery(() => db.debts.toArray(), []) ?? [];
+  const grupos = useLiveQuery(() => db.txGroups.toArray(), []) ?? [];
 
   if (!settings) return <h2>Inicio</h2>;
   const tasa = effectiveRate(todayIso(), settings.rateSource, rates);
@@ -23,7 +25,8 @@ export function DashboardPage() {
     deudas.filter((deuda) => deuda.status === 'pendiente' && deuda.direction === 'porPagar'),
   );
   const mesActual = monthOf(todayIso());
-  const base = { txs, accounts: cuentas, rates, activeSource: settings.rateSource };
+  const efectivas = txsEfectivas(txs, cuentas, grupos);
+  const base = { txs: efectivas, accounts: cuentas, rates, activeSource: settings.rateSource };
   const resumen = monthSummary({ ...base, month: mesActual, viewCurrency: settings.viewCurrency });
   const comparativa = lastMonths(mesActual, 4)
     .map((m) => monthSummary({ ...base, month: m, viewCurrency: settings.viewCurrency }))
