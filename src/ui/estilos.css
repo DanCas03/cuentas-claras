@@ -270,3 +270,38 @@ button.chip:active { transform: scale(0.94); background: var(--tarjeta-2); color
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* Slider de patrimonio (v2): 3 vistas con scroll-snap, sin librerías */
+.slider-patrimonio {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  margin: 8px 0 4px;
+}
+.slider-patrimonio::-webkit-scrollbar { display: none; }
+.slider-patrimonio .vista {
+  flex: 0 0 100%;
+  scroll-snap-align: center;
+  text-align: center;
+}
+.slider-patrimonio .vista .titulo-vista {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--texto2);
+}
+.slider-puntos {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+.slider-puntos span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--borde);
+  transition: background var(--transicion);
+}
+.slider-puntos span.activo { background: var(--primario); }

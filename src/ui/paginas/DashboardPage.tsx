@@ -18,7 +18,10 @@ export function DashboardPage() {
 
   if (!settings) return <h2>Inicio</h2>;
   const tasa = effectiveRate(todayIso(), settings.rateSource, rates);
-  const p = patrimonio(cuentas, txs, tasa?.vesPerUsd ?? null);
+  const p = patrimonio(
+    cuentas, txs, tasa?.vesPerUsd ?? null,
+    deudas.filter((deuda) => deuda.status === 'pendiente' && deuda.direction === 'porPagar'),
+  );
   const mesActual = monthOf(todayIso());
   const base = { txs, accounts: cuentas, rates, activeSource: settings.rateSource };
   const resumen = monthSummary({ ...base, month: mesActual, viewCurrency: settings.viewCurrency });

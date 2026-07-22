@@ -5,7 +5,8 @@ import type { Account, AccountKind, Currency } from '../../domain/types';
 import { avisar } from '../Toast';
 
 const NUEVA = (): Account => ({
-  id: crypto.randomUUID(), name: '', currency: 'USD', kind: 'wallet', isSavings: false, archived: false,
+  id: crypto.randomUUID(), name: '', currency: 'USD', kind: 'wallet',
+  isSavings: false, archived: false, enDisposicion: true,
 });
 
 const TIPOS: { valor: AccountKind; texto: string }[] = [
@@ -67,6 +68,16 @@ export function CuentasSection() {
             <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <input type="checkbox" style={{ width: 'auto' }} aria-label="Es ahorro" checked={editando.isSavings} onChange={(e) => setEditando({ ...editando, isSavings: e.target.checked })} />
               Cuenta de ahorro (no cuenta como disposición)
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                type="checkbox"
+                style={{ width: 'auto' }}
+                aria-label="A disposición"
+                checked={editando.enDisposicion ?? !editando.isSavings}
+                onChange={(e) => setEditando({ ...editando, enDisposicion: e.target.checked })}
+              />
+              A disposición (cuenta en la vista «A disposición» del patrimonio)
             </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <input type="checkbox" style={{ width: 'auto' }} aria-label="Archivada" checked={editando.archived} onChange={(e) => setEditando({ ...editando, archived: e.target.checked })} />
