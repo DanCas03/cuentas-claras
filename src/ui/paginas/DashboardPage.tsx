@@ -6,6 +6,7 @@ import { todayIso, monthOf } from '../../domain/dates';
 import { PatrimonioCard } from '../componentes/PatrimonioCard';
 import { monthSummary, lastMonths, budgetStatus } from '../../domain/stats';
 import { GraficasMes } from '../componentes/GraficasMes';
+import { DeudasCard } from '../componentes/DeudasCard';
 
 export function DashboardPage() {
   const cuentas = useLiveQuery(() => db.accounts.toArray(), []) ?? [];
@@ -13,6 +14,7 @@ export function DashboardPage() {
   const rates = useLiveQuery(() => db.rates.toArray(), []) ?? [];
   const settings = useLiveQuery(() => getSettings(db), []);
   const categorias = useLiveQuery(() => db.categories.toArray(), []) ?? [];
+  const deudas = useLiveQuery(() => db.debts.toArray(), []) ?? [];
 
   if (!settings) return <h2>Inicio</h2>;
   const tasa = effectiveRate(todayIso(), settings.rateSource, rates);
@@ -34,6 +36,7 @@ export function DashboardPage() {
         viewCurrency={settings.viewCurrency}
         onToggle={() => saveSettings(db, { viewCurrency: settings.viewCurrency === 'USD' ? 'VES' : 'USD' })}
       />
+      <DeudasCard deudas={deudas} cuentas={cuentas} tasa={tasa} viewCurrency={settings.viewCurrency} />
       <GraficasMes resumen={resumen} comparativa={comparativa} presupuestos={presupuestos} categorias={categorias} viewCurrency={settings.viewCurrency} />
     </div>
   );
