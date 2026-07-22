@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie';
-import type { Account, Category, Rate, Rule, Settings, Transaction } from '../domain/types';
+import type { Account, Category, Debt, Rate, Rule, Settings, Transaction, TxGroup } from '../domain/types';
 
 export class CuentasDB extends Dexie {
   accounts!: Table<Account, string>;
@@ -8,6 +8,8 @@ export class CuentasDB extends Dexie {
   rates!: Table<Rate, [string, string]>;
   rules!: Table<Rule, string>;
   settings!: Table<Settings, string>;
+  debts!: Table<Debt, string>;
+  txGroups!: Table<TxGroup, string>;
 
   constructor(name = 'cuentas-claras') {
     super(name);
@@ -18,6 +20,12 @@ export class CuentasDB extends Dexie {
       rates: '[date+source], date',
       rules: 'id',
       settings: 'id',
+    });
+    // v2 aditiva: sin migración de contenido (decisión 7 del spec v2).
+    this.version(2).stores({
+      transactions: 'id, date, accountId, categoryId, importKey, groupId',
+      debts: 'id, status',
+      txGroups: 'id',
     });
   }
 }
@@ -50,13 +58,27 @@ const CATEGORIAS_SEED: Category[] = [
   { id: 'cat-otros-ingresos', name: 'Otros ingresos', icon: '➕', color: '#cbd5e1', kind: 'income' },
 ];
 
+/** Seeds v2: se añaden por id si faltan (DB ya sembrada) o junto al seed inicial (DB fresca). */
+const CATEGORIAS_SEED_V2: Category[] = [
+  { id: 'cat-deudas', name: 'Deudas', icon: '🤝', color: '#c084fc', kind: 'expense' },
+  { id: 'cat-vuelto-ingreso', name: 'Vuelto', icon: '↩️', color: '#34d399', kind: 'income' },
+  { id: 'cat-vuelto-gasto', name: 'Vuelto', icon: '↪️', color: '#f87171', kind: 'expense' },
+];
+
 const SETTINGS_SEED: Settings = { id: 'main', viewCurrency: 'USD', rateSource: 'BCV', lastAccountId: 'acc-bnc' };
 
-/** Crea cuentas, categorías y settings iniciales solo si la tabla está vacía. */
+/** Crea cuentas, categorías y settings iniciales solo si la tabla está vacía.
+ *  Las categorías v2 además se reponen por id si faltan (add-if-missing, nunca pisa ediciones). */
 export async function seedIfEmpty(d: CuentasDB): Promise<void> {
   await d.transaction('rw', d.accounts, d.categories, d.settings, async () => {
     if ((await d.accounts.count()) === 0) await d.accounts.bulkAdd(CUENTAS_SEED);
-    if ((await d.categories.count()) === 0) await d.categories.bulkAdd(CATEGORIAS_SEED);
+    if ((await d.categories.count()) === 0) {
+      await d.categories.bulkAdd([...CATEGORIAS_SEED, ...CATEGORIAS_SEED_V2]);
+    } else {
+      for (const c of CATEGORIAS_SEED_V2) {
+        if (!(await d.categories.get(c.id))) await d.categories.add(c);
+      }
+    }
     if ((await d.settings.count()) === 0) await d.settings.add(SETTINGS_SEED);
   });
 }

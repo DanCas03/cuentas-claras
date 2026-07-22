@@ -11,6 +11,8 @@ export interface Account {
   /** Estado del último import BNC (solo cuentas kind 'bank') para detectar huecos. */
   bncLastImportKey?: string;
   bncLastSaldoMinor?: number;
+  /** Vista 1 del slider de patrimonio. Default al leer: !isSavings (v2). */
+  enDisposicion?: boolean;
 }
 
 export type TxType = 'expense' | 'income' | 'transfer' | 'adjustment';
@@ -39,6 +41,9 @@ export interface Transaction {
   toAccountId?: string;
   toAmountMinor?: number;
   rateUsed?: number;
+  /** Grupo transaccional (v2). Con groupId, el movimiento se excluye de las
+   *  agregaciones y solo cuenta el residuo virtual del grupo. Los saldos NO cambian. */
+  groupId?: string;
 }
 
 export type CategoryKind = 'expense' | 'income';
@@ -74,4 +79,29 @@ export interface Settings {
   rateSource: RateSource;      // fuente activa (defecto BCV)
   lastAccountId?: string;
   lastRatesFetchDate?: string; // yyyy-mm-dd del último fetch exitoso
+}
+
+export type DebtDirection = 'porPagar' | 'porCobrar';
+export type DebtStatus = 'pendiente' | 'cerrada';
+
+/** Deuda o cuenta por cobrar (v2). Pendiente NO altera ningún saldo;
+ *  el movimiento real nace solo al cerrarla. amountMinor vive en la
+ *  moneda de la cuenta asignada (accountId). */
+export interface Debt {
+  id: string;
+  direction: DebtDirection;
+  concepto: string;
+  amountMinor: number;
+  accountId: string;
+  status: DebtStatus;
+  createdIso: string;
+  settledTxId?: string;
+  settledIso?: string;
+}
+
+/** Grupo de movimientos transaccionales (v2). El residuo es virtual: se deriva, no se persiste. */
+export interface TxGroup {
+  id: string;
+  nota?: string;
+  createdIso: string;
 }

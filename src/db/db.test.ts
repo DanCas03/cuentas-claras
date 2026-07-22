@@ -4,7 +4,7 @@ function nuevaDb() {
   return new CuentasDB(`test-${crypto.randomUUID()}`);
 }
 
-test('el seed crea las 5 cuentas y 15 categorías de la spec', async () => {
+test('el seed crea las 5 cuentas y 18 categorías de la spec', async () => {
   const d = nuevaDb();
   await seedIfEmpty(d);
   const cuentas = await d.accounts.toArray();
@@ -15,7 +15,7 @@ test('el seed crea las 5 cuentas y 15 categorías de la spec', async () => {
   expect(bnc).toMatchObject({ currency: 'VES', kind: 'bank', isSavings: false });
   const binance = await d.accounts.get('acc-binance');
   expect(binance).toMatchObject({ currency: 'USD', kind: 'snapshot', isSavings: true });
-  expect(await d.categories.count()).toBe(15);
+  expect(await d.categories.count()).toBe(18);
   const comisiones = await d.categories.get('cat-comisiones');
   expect(comisiones?.kind).toBe('expense');
 });
@@ -45,4 +45,38 @@ test('rates admite una entrada por fecha+fuente (clave compuesta)', async () => 
   await d.rates.put({ date: '2026-07-06', source: 'BCV', vesPerUsd: 112 }); // pisa, no duplica
   await d.rates.put({ date: '2026-07-06', source: 'BINANCE', vesPerUsd: 130 });
   expect(await d.rates.count()).toBe(2);
+});
+
+test('seeds v2: las 3 categorías nuevas existen con el kind correcto', async () => {
+  const d = nuevaDb();
+  await seedIfEmpty(d);
+  expect((await d.categories.get('cat-deudas'))?.kind).toBe('expense');
+  expect((await d.categories.get('cat-vuelto-ingreso'))?.kind).toBe('income');
+  expect((await d.categories.get('cat-vuelto-gasto'))?.kind).toBe('expense');
+});
+
+test('seeds v2: sobre una DB ya sembrada añade solo las que falten, sin pisar ediciones', async () => {
+  const d = nuevaDb();
+  await seedIfEmpty(d);
+  await d.categories.delete('cat-vuelto-gasto');
+  await d.categories.update('cat-deudas', { name: 'Deudas editada' });
+  await seedIfEmpty(d);
+  expect(await d.categories.count()).toBe(18);                       // repuso la borrada
+  expect((await d.categories.get('cat-deudas'))?.name).toBe('Deudas editada'); // no pisó la edición
+});
+
+test('esquema v2: debts y txGroups aceptan filas y el índice groupId consulta', async () => {
+  const d = nuevaDb();
+  await seedIfEmpty(d);
+  await d.debts.add({
+    id: 'd1', direction: 'porPagar', concepto: 'Juan — préstamo', amountMinor: 500,
+    accountId: 'acc-efectivo', status: 'pendiente', createdIso: '2026-07-22T10:00:00.000Z',
+  });
+  await d.txGroups.add({ id: 'g1', createdIso: '2026-07-22T10:00:00.000Z' });
+  await d.transactions.add({
+    id: 't1', type: 'expense', accountId: 'acc-efectivo', amountMinor: 100,
+    date: '2026-07-22', source: 'manual', groupId: 'g1',
+  });
+  expect(await d.debts.where('status').equals('pendiente').count()).toBe(1);
+  expect(await d.transactions.where('groupId').equals('g1').count()).toBe(1);
 });

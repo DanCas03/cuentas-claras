@@ -29,7 +29,7 @@ test('round-trip: export → texto JSON → validate → import reproduce todo',
   expect(await destino.transactions.count()).toBe(1);
   expect((await destino.transactions.toArray())[0].note).toBe('prueba');
   expect(await destino.accounts.count()).toBe(5);
-  expect(await destino.categories.count()).toBe(15);
+  expect(await destino.categories.count()).toBe(18);
   expect(await destino.rules.count()).toBe(1);
   expect(await destino.rates.count()).toBe(1);
   expect((await destino.settings.get('main'))?.viewCurrency).toBe('USD');
