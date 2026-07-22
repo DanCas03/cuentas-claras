@@ -305,3 +305,33 @@ button.chip:active { transform: scale(0.94); background: var(--tarjeta-2); color
   transition: background var(--transicion);
 }
 .slider-puntos span.activo { background: var(--primario); }
+
+/* Selección y grupos transaccionales (v2) */
+.fila-mov.seleccionada {
+  outline: 2px solid var(--primario);
+  outline-offset: -2px;
+  background: var(--primario-tinta);
+}
+.fila-mov.no-seleccionable { opacity: 0.45; }
+.barra-seleccion {
+  position: fixed;
+  bottom: calc(64px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 32px);
+  max-width: 448px;
+  display: flex;
+  gap: 8px;
+  padding: 10px;
+  background: var(--tarjeta-2);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  z-index: 30; /* bajo modales (40) */
+}
+.barra-seleccion .boton { flex: 1; margin: 0; }
+.grupo-miembros {
+  margin-left: 12px;
+  border-left: 2px solid var(--borde);
+  padding-left: 8px;
+}
