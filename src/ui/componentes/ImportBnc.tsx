@@ -141,7 +141,7 @@ export function ImportBnc() {
         <input
           aria-label="Archivo TXT"
           type="file"
-          accept=".txt,text/plain"
+          accept=".txt,text/plain,application/octet-stream"
           onChange={async (e) => {
             const f = e.target.files?.[0];
             if (f) setTexto(await f.text());
