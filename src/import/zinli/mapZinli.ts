@@ -22,7 +22,11 @@ export function mapZinliMovements(movs: ZinliMovement[], opts: {
   return movs
     .filter((m) => m.amountMinor !== 0)
     .map((m) => {
-      const regla = matchCategory(`${m.motivo} ${m.descripcion}`, opts.rules);
+      // El texto de matching debe incluir los ":" para que sea coherente con `note` (línea
+      // de abajo): el patrón por defecto que la UI siembra es el note completo con dos
+      // puntos ("Pagaste: TIENDA…"), y antes de este fix (Important #7) esa cadena nunca
+      // era substring del texto de matching (sin ":"), así que la regla nunca re-matcheaba.
+      const regla = matchCategory(`${m.motivo}: ${m.descripcion}`, opts.rules);
       const esIngreso = m.amountMinor > 0;
       let categoryId = regla?.categoryId;
       if (!categoryId && esIngreso && hayTransferencia) categoryId = 'cat-transferencia-recibida';

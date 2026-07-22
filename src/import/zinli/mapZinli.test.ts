@@ -33,3 +33,11 @@ test('dedupe por referencia', () => {
   const drafts = mapZinliMovements(movs, { ...opciones, existingKeys: existentes });
   expect(drafts.filter((d) => d.duplicate).map((d) => d.tx.importKey)).toEqual(['zinli:950100000002']);
 });
+
+test('una regla guardada con el patrón por defecto ("motivo: descripción") sí re-matchea en el siguiente import (Important #7)', () => {
+  // El patrón que la UI siembra por defecto es el note completo, con dos puntos: "Pagaste: TIENDA EJEMPLO...".
+  const reglaPorDefecto: Rule = { id: 'r2', pattern: 'Pagaste: TIENDA EJEMPLO', categoryId: 'cat-suscripciones', autoCreated: true };
+  const drafts = mapZinliMovements(movs, { ...opciones, rules: [reglaPorDefecto] });
+  const tiendaEjemplo = drafts.find((d) => d.tx.note?.startsWith('Pagaste: TIENDA EJEMPLO'));
+  expect(tiendaEjemplo?.tx.categoryId).toBe('cat-suscripciones');
+});
