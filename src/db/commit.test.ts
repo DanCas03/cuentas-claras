@@ -33,3 +33,15 @@ test('todo-o-nada: un id duplicado revierte transacciones, reglas y parche', asy
   expect(await d.rules.count()).toBe(0);
   expect((await d.accounts.get('acc-bnc'))?.bncLastSaldoMinor).toBeUndefined();
 });
+
+test('Important #3: backstop anti-duplicación — aborta si una importKey ya fue persistida por otra ventana/pestaña después del snapshot de "Analizar"', async () => {
+  const d = new CuentasDB(`test-${crypto.randomUUID()}`);
+  await seedIfEmpty(d);
+  // Simula: otra pestaña de la misma IndexedDB ya confirmó este mismo movimiento
+  // (mismo importKey) DESPUÉS de que esta sesión tomó su snapshot de existingKeys.
+  await d.transactions.add(tx('otra-ventana'));
+  await expect(
+    commitImport(d, { txs: [{ ...tx('esta-ventana'), importKey: 'bnc:otra-ventana' }] }),
+  ).rejects.toThrow();
+  expect(await d.transactions.count()).toBe(1); // nada se coló: ni la nueva ni un duplicado
+});
