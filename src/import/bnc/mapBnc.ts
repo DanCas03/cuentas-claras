@@ -6,17 +6,6 @@ export function bncImportKey(row: BncRow): string {
   return `bnc:${row.date}:${row.referencia}:${row.time}:${row.amountMinor}`;
 }
 
-/**
- * Formato de clave previo a este fix (Important #2 del informe de revisión final):
- * sin `date`, así que comisiones recurrentes idénticas de distinto mes (referencia '0',
- * hora de batch redonda, mismo monto) colisionaban y quedaban inimportables.
- * Se conserva SOLO para reconocer como "ya importado" contra dispositivos con datos reales
- * que ya persistieron transacciones con esta clave vieja — nunca para generar claves nuevas.
- */
-export function bncImportKeyLegacy(row: BncRow): string {
-  return `bnc:${row.referencia}:${row.time}:${row.amountMinor}`;
-}
-
 export interface BncDraft {
   tx: Transaction;
   saldoMinor: number;
@@ -53,7 +42,6 @@ export function mapBncRows(rows: BncRow[], opts: {
       if (!categoryId && esIngreso && idPagoMovil && /pago m[oó]vil/i.test(texto)) categoryId = idPagoMovil;
 
       const importKey = bncImportKey(r);
-      const importKeyLegacy = bncImportKeyLegacy(r);
       const tx: Transaction = {
         id: crypto.randomUUID(),
         type: esIngreso ? 'income' : 'expense',
@@ -69,9 +57,7 @@ export function mapBncRows(rows: BncRow[], opts: {
       return {
         tx,
         saldoMinor: r.saldoMinor,
-        // Compat hacia atrás (Important #2): también revisa la clave con el formato viejo,
-        // porque dispositivos con datos reales ya tienen transacciones persistidas con ella.
-        duplicate: opts.existingKeys.has(importKey) || opts.existingKeys.has(importKeyLegacy),
+        duplicate: opts.existingKeys.has(importKey),
         isCommission,
         pairRef: (porReferencia.get(r.referencia) ?? 0) >= 2 ? r.referencia : null,
         matchedRuleId: regla?.id ?? null,
@@ -84,9 +70,7 @@ export type GapStatus = 'primera-importacion' | 'solapado' | 'continuo' | 'hueco
 /** rows en orden de archivo (descendente). `previo` viene de Account.bncLastImportKey/bncLastSaldoMinor. */
 export function detectGap(rows: BncRow[], previo: { importKey?: string; saldoMinor?: number }): GapStatus {
   if (!previo.importKey || previo.saldoMinor === undefined) return 'primera-importacion';
-  // El ancla persistida (Account.bncLastImportKey) puede seguir en el formato viejo (sin
-  // fecha) en dispositivos que ya importaron antes de este fix — compat hacia atrás.
-  if (rows.some((r) => bncImportKey(r) === previo.importKey || bncImportKeyLegacy(r) === previo.importKey)) return 'solapado';
+  if (rows.some((r) => bncImportKey(r) === previo.importKey)) return 'solapado';
   const masVieja = rows[rows.length - 1];
   if (!masVieja) return 'hueco';
   const saldoAntes = masVieja.saldoMinor - masVieja.amountMinor;
