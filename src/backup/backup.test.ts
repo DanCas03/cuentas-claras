@@ -10,6 +10,11 @@ async function dbConDatos() {
   );
   await d.rates.put({ date: '2026-07-05', source: 'BCV', vesPerUsd: 111 });
   await d.rules.add({ id: 'r1', pattern: 'x', categoryId: 'cat-ocio', autoCreated: true });
+  await d.debts.add({
+    id: 'deuda-1', direction: 'porCobrar', concepto: 'Ana — almuerzo', amountMinor: 700,
+    accountId: 'acc-zinli', status: 'pendiente', createdIso: '2026-07-20T12:00:00.000Z',
+  });
+  await d.txGroups.add({ id: 'grupo-1', nota: 'leche', createdIso: '2026-07-21T09:00:00.000Z' });
   return d;
 }
 
@@ -33,16 +38,25 @@ test('round-trip: export → texto JSON → validate → import reproduce todo',
   expect(await destino.rules.count()).toBe(1);
   expect(await destino.rates.count()).toBe(1);
   expect((await destino.settings.get('main'))?.viewCurrency).toBe('USD');
+  expect(await destino.debts.count()).toBe(1);
+  expect((await destino.debts.get('deuda-1'))?.concepto).toBe('Ana — almuerzo');
+  expect(await destino.txGroups.count()).toBe(1);
 });
 
-test('validateBackup rechaza basura, versiones desconocidas y tablas faltantes', () => {
+test('validateBackup rechaza basura, versiones distintas de 2 y tablas faltantes', () => {
   expect(validateBackup(null).ok).toBe(false);
   expect(validateBackup('texto').ok).toBe(false);
   expect(validateBackup({}).ok).toBe(false);
-  const casi = { schemaVersion: 1, exportedAt: 'x', accounts: [], transactions: [], categories: [], rules: [], rates: [], settings: [] };
+  const casi = {
+    schemaVersion: 2, exportedAt: 'x', accounts: [], transactions: [], categories: [],
+    rules: [], rates: [], settings: [], debts: [], txGroups: [],
+  };
   expect(validateBackup(casi).ok).toBe(true);
-  expect(validateBackup({ ...casi, schemaVersion: 2 }).ok).toBe(false);
-  expect(validateBackup({ ...casi, rates: undefined }).ok).toBe(false);
+  expect(validateBackup({ ...casi, schemaVersion: 3 }).ok).toBe(false);
+  expect(validateBackup({ ...casi, debts: undefined }).ok).toBe(false);
+  const v1 = validateBackup({ ...casi, schemaVersion: 1 });
+  expect(v1.ok).toBe(false);
+  if (!v1.ok) expect(v1.error).toContain('versión 1');
 });
 
 test('backupFilename incluye la fecha', () => {
