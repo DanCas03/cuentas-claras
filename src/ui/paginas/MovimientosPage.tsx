@@ -93,6 +93,10 @@ function EditorMovimiento({ tx, cerrar }: { tx: Transaction; cerrar: () => void 
 
   async function guardar() {
     if (guardando) return;
+    // Important #5: el input type="date" se puede vaciar (borrado nativo / edición parcial)
+    // y sin este chequeo se persistía date:'' — la tx seguía sumando en accountBalanceMinor
+    // pero desaparecía silenciosamente de monthSummary y del filtro por mes.
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) { avisar('Fecha inválida'); return; }
     const cambios: Partial<Transaction> = { note: nota.trim() || undefined, date: fecha };
     if (montoEditable) {
       const m = parseVenezuelanAmount(montoTxt.replace(/,$/, ''));
