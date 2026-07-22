@@ -27,6 +27,8 @@ export function ImportZinli() {
   const [error, setError] = useState<string | null>(null);
   const [hecho, setHecho] = useState(false);
   const [saldoFinal, setSaldoFinal] = useState<number | null>(null); // "Saldo final del mes" del PDF, para el cuadre post-import
+  const [finPeriodoIso, setFinPeriodoIso] = useState<string | null>(null); // fecha máxima de movimientos del PDF (Important #1)
+  const [ajusteHecho, setAjusteHecho] = useState(false); // Important #6: oculta el banner tras crear el ajuste
   const [guardando, setGuardando] = useState(false);
   const categorias = useLiveQuery(() => db.categories.toArray(), []) ?? [];
   const txs = useLiveQuery(() => db.transactions.toArray(), []) ?? [];
@@ -35,6 +37,7 @@ export function ImportZinli() {
     try {
       setError(null);
       setHecho(false);
+      setAjusteHecho(false);
       const lin = await extractPdfLines(await f.arrayBuffer());
       const r = parseZinliLines(lin);
       if (r.movements.length === 0) {
@@ -42,6 +45,7 @@ export function ImportZinli() {
         setLineas(lin);
         setResultado(null);
         setSaldoFinal(null);
+        setFinPeriodoIso(null);
         setDrafts(null);
         return;
       }
@@ -55,6 +59,7 @@ export function ImportZinli() {
       setLineas(lin);
       setResultado(r);
       setSaldoFinal(r.saldoFinalMinor);
+      setFinPeriodoIso(r.movements.reduce((max, m) => (m.date > max ? m.date : max), r.movements[0].date));
       setDrafts(mapeados.map((d) => ({ ...d, incluir: !d.duplicate, crearRegla: false, patron: d.tx.note ?? '' })));
     } catch (err) {
       setError((err as Error).message);
@@ -92,7 +97,13 @@ export function ImportZinli() {
   // "Saldo final del mes" del PDF. En la primera importación faltan los meses
   // previos / saldo inicial y no coinciden, así que se ofrece crear un ajuste.
   const saldoApp = accountBalanceMinor(CUENTA_ZINLI, txs);
-  const descuadre = hecho && saldoFinal !== null && saldoApp !== saldoFinal ? saldoFinal - saldoApp : null;
+  const rawMismatch = hecho && saldoFinal !== null && saldoApp !== saldoFinal;
+  // Important #1: si ya hay movimientos posteriores al período del PDF (p. ej. se importó
+  // un mes ANTERIOR después de uno más nuevo), el delta ya no representa "saldo inicial
+  // faltante" — ofrecer "Crear ajuste" aquí corrompería el saldo. Se degrada a advertencia.
+  const hayTxsPosteriores =
+    finPeriodoIso !== null && txs.some((t) => t.accountId === CUENTA_ZINLI && t.date > finPeriodoIso);
+  const descuadre = rawMismatch && !hayTxsPosteriores ? (saldoFinal as number) - saldoApp : null;
 
   async function crearAjuste() {
     if (guardando) return;
@@ -106,6 +117,7 @@ export function ImportZinli() {
         }),
       );
       avisar('Saldo cuadrado con Zinli ✓');
+      setAjusteHecho(true); // Important #6: evita que un segundo tap duplique el ajuste
     } catch (e) {
       avisar((e as Error).message);
     } finally {
@@ -127,7 +139,13 @@ export function ImportZinli() {
       />
       {error && <div className="banner error">{error}</div>}
       {hecho && <div className="banner ok">Import terminado ✓</div>}
-      {descuadre !== null && (
+      {rawMismatch && hayTxsPosteriores && (
+        <div className="banner aviso">
+          El PDF termina en {formatMoney(saldoFinal as number, 'USD')} pero la app calcula {formatMoney(saldoApp, 'USD')}
+          {' '}— hay movimientos más recientes en esta cuenta, así que este descuadre no es fiable para crear un ajuste. Revísalo a mano si hace falta.
+        </div>
+      )}
+      {descuadre !== null && !ajusteHecho && (
         <div className="banner aviso">
           El PDF termina en {formatMoney(saldoFinal as number, 'USD')} pero la app calcula {formatMoney(saldoApp, 'USD')}
           {' '}(faltan los meses previos / saldo inicial).

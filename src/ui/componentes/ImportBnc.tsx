@@ -34,6 +34,7 @@ export function ImportBnc() {
   const [rotos, setRotos] = useState<number[]>([]);
   const [saldoTxt, setSaldoTxt] = useState<number | null>(null);
   const [fase, setFase] = useState<'entrada' | 'previa' | 'hecho'>('entrada');
+  const [ajusteHecho, setAjusteHecho] = useState(false); // Important #6: oculta el banner tras crear el ajuste
   const [guardando, setGuardando] = useState(false);
   const [sinResultados, setSinResultados] = useState(false);
 
@@ -49,6 +50,7 @@ export function ImportBnc() {
       return;
     }
     setSinResultados(false);
+    setAjusteHecho(false);
     const reglas = await db.rules.toArray();
     const existentes = new Set(
       (await db.transactions.filter((t) => t.importKey !== undefined).toArray()).map((t) => t.importKey as string),
@@ -97,12 +99,20 @@ export function ImportBnc() {
     setDrafts(null);
     setResultado(null);
     setSinResultados(false);
+    setAjusteHecho(false);
     setFase('entrada');
   }
 
   // Cuadre post-import: saldo calculado por la app vs saldo final del TXT
   const saldoApp = accountBalanceMinor(CUENTA_BNC, txs);
-  const descuadre = fase === 'hecho' && saldoTxt !== null && saldoApp !== saldoTxt ? saldoTxt - saldoApp : null;
+  const rawMismatch = fase === 'hecho' && saldoTxt !== null && saldoApp !== saldoTxt;
+  // Important #1 (aplicado también en BNC por consistencia, riesgo menor que en Zinli): si
+  // ya hay movimientos posteriores al último renglón del TXT, el delta ya no representa
+  // "movimientos previos al primer export" y ofrecer el ajuste podría corromper el saldo.
+  const finArchivoIso = resultado ? (newestRow(resultado.rows)?.date ?? null) : null;
+  const hayTxsPosteriores =
+    finArchivoIso !== null && txs.some((t) => t.accountId === CUENTA_BNC && t.date > finArchivoIso);
+  const descuadre = rawMismatch && !hayTxsPosteriores ? (saldoTxt as number) - saldoApp : null;
 
   async function crearAjuste() {
     if (guardando) return;
@@ -116,6 +126,7 @@ export function ImportBnc() {
         }),
       );
       avisar('Saldo cuadrado con el banco ✓');
+      setAjusteHecho(true); // Important #6: evita que un segundo tap duplique el ajuste
     } catch (e) {
       avisar((e as Error).message);
     } finally {
@@ -155,7 +166,13 @@ export function ImportBnc() {
     return (
       <div>
         <div className="banner ok">Import terminado. Saldo según la app: {formatMoney(saldoApp, 'VES')}.</div>
-        {descuadre !== null && (
+        {rawMismatch && hayTxsPosteriores && (
+          <div className="banner aviso">
+            El TXT termina en {formatMoney(saldoTxt as number, 'VES')} pero la app calcula {formatMoney(saldoApp, 'VES')}
+            {' '}— hay movimientos más recientes en esta cuenta, así que este descuadre no es fiable para crear un ajuste. Revísalo a mano si hace falta.
+          </div>
+        )}
+        {descuadre !== null && !ajusteHecho && (
           <div className="banner aviso">
             El TXT termina en {formatMoney(saldoTxt as number, 'VES')} pero la app calcula {formatMoney(saldoApp, 'VES')}
             {' '}(movimientos previos al primer export).
@@ -176,7 +193,7 @@ export function ImportBnc() {
       </p>
       {aviso && <div className={`banner ${aviso.clase}`}>{aviso.texto}</div>}
       {rotos.length > 0 && (
-        <div className="banner error">El encadenado de saldos no cuadra dentro del archivo (filas {rotos.join(', ')}). Revisa que el TXT esté completo.</div>
+        <div className="banner error">El encadenado de saldos no cuadra dentro del archivo (filas {rotos.map((i) => i + 1).join(', ')}). Revisa que el TXT esté completo.</div>
       )}
       {resultado && resultado.unparsed.length > 0 && (
         <div className="banner error">
