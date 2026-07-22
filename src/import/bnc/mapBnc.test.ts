@@ -1,7 +1,7 @@
 import type { Category, Rule } from '../../domain/types';
 import { parseBncTxt } from './parseBncTxt';
 import { BNC_FIXTURE } from './fixtures/bncFixture';
-import { bncImportKey, mapBncRows, detectGap, newestRow } from './mapBnc';
+import { bncImportKey, bncImportKeyLegacy, mapBncRows, detectGap, newestRow } from './mapBnc';
 
 const categorias: Category[] = [
   { id: 'cat-comisiones', name: 'Comisiones bancarias', icon: '🏦', color: '#000', kind: 'expense' },
@@ -21,7 +21,7 @@ test('mapea filas a borradores de transacción', () => {
     time: '16:20:30.900', source: 'bnc',
   });
   expect(abono.tx.note).toContain('PagomóvilBDV');
-  expect(abono.tx.importKey).toBe('bnc:100000007:16:20:30.900:150000');
+  expect(abono.tx.importKey).toBe('bnc:2026-07-02:100000007:16:20:30.900:150000');
   const gasto = drafts[1];
   expect(gasto.tx).toMatchObject({ type: 'expense', amountMinor: 34579 }); // valor absoluto
 });
@@ -60,4 +60,26 @@ test('detectGap distingue los cuatro estados', () => {
 test('newestRow es la primera fila del archivo', () => {
   expect(newestRow(rows)?.referencia).toBe('100000007');
   expect(newestRow([])).toBeNull();
+});
+
+test('Important #2: la clave incluye la fecha — comisiones recurrentes idénticas de distinto mes ya no colisionan', () => {
+  const comisionJunio = rows.find((r) => r.referencia === '0' && r.tipOperacion === 'Comisión Mantenimiento Cuenta')!;
+  const comisionJulio = { ...comisionJunio, date: '2026-07-30' };
+  expect(bncImportKey(comisionJunio)).not.toBe(bncImportKey(comisionJulio));
+  // Antes del fix, la comisión de julio se marcaba erróneamente "ya importada" contra la de junio.
+  const existentesSoloJunio = new Set([bncImportKey(comisionJunio)]);
+  const drafts = mapBncRows([comisionJulio], { ...opciones, existingKeys: existentesSoloJunio });
+  expect(drafts[0].duplicate).toBe(false);
+});
+
+test('Important #2 — compat hacia atrás: reconoce como duplicado un movimiento ya persistido con la clave vieja (sin fecha)', () => {
+  // Simula datos ya existentes en un dispositivo (importKey con el formato previo al fix).
+  const existentesFormatoViejo = new Set([bncImportKeyLegacy(rows[0])]);
+  const drafts = mapBncRows(rows, { ...opciones, existingKeys: existentesFormatoViejo });
+  expect(drafts[0].duplicate).toBe(true); // re-importar el mismo TXT ya importado antes del fix: 0 duplicados perdidos
+});
+
+test('Important #2 — detectGap reconoce solapamiento contra un ancla con el formato de clave viejo (compat)', () => {
+  const filaAncla = rows[4];
+  expect(detectGap(rows, { importKey: bncImportKeyLegacy(filaAncla), saldoMinor: 999 })).toBe('solapado');
 });
