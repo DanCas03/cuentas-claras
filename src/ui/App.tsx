@@ -8,6 +8,7 @@ import { NuevoPage } from './paginas/NuevoPage';
 import { MovimientosPage } from './paginas/MovimientosPage';
 import { ImportarPage } from './paginas/ImportarPage';
 import { AjustesPage } from './paginas/AjustesPage';
+import { DeudasPage } from './paginas/DeudasPage';
 import { refreshRatesOncePerDay } from '../rates/providers';
 import { todayIso } from '../domain/dates';
 
@@ -42,6 +43,7 @@ export function App() {
         {path === '/movimientos' && <MovimientosPage />}
         {path === '/importar' && <ImportarPage />}
         {path === '/ajustes' && <AjustesPage />}
+        {path === '/deudas' && <DeudasPage />}
       </main>
       <Nav path={path} />
       <Toast />
