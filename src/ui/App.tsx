@@ -5,6 +5,7 @@ import { Nav } from './Nav';
 import { Toast } from './Toast';
 import { DashboardPage } from './paginas/DashboardPage';
 import { NuevoPage } from './paginas/NuevoPage';
+import { CapturaPage } from './paginas/CapturaPage';
 import { MovimientosPage } from './paginas/MovimientosPage';
 import { ImportarPage } from './paginas/ImportarPage';
 import { AjustesPage } from './paginas/AjustesPage';
@@ -40,6 +41,7 @@ export function App() {
       <main className="contenido">
         {path === '/' && <DashboardPage />}
         {path === '/nuevo' && <NuevoPage params={params} />}
+        {path === '/captura' && <CapturaPage params={params} />}
         {path === '/movimientos' && <MovimientosPage />}
         {path === '/importar' && <ImportarPage />}
         {path === '/ajustes' && <AjustesPage />}

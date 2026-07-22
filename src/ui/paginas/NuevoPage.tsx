@@ -21,6 +21,19 @@ export function NuevoPage({ params }: { params: URLSearchParams }) {
   const cuentas = useLiveQuery(() => db.accounts.filter((a) => !a.archived).toArray(), []) ?? [];
   const categorias = useLiveQuery(() => db.categories.toArray(), []) ?? [];
 
+  // Prefill de captura (v2): solo al montar; lo que el usuario edite después manda.
+  useEffect(() => {
+    const monto = params.get('monto');
+    if (monto && /^\d+$/.test(monto)) {
+      setEntrada((Number(monto) / 100).toFixed(2).replace('.', ','));
+    }
+    const notaParam = params.get('nota');
+    if (notaParam) setNota(notaParam);
+    const cuentaParam = params.get('cuenta');
+    if (cuentaParam) setCuentaId(cuentaParam);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     getSettings(db).then((s) => setCuentaId((prev) => prev ?? s.lastAccountId ?? null));
   }, []);
