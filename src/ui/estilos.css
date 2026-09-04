@@ -335,3 +335,128 @@ button.chip:active { transform: scale(0.94); background: var(--tarjeta-2); color
   border-left: 2px solid var(--borde);
   padding-left: 8px;
 }
+
+/* Calendario y eventos (v3). SOLO tokens existentes; jerarquía z intacta. */
+.tarjeta-cabecera { display: flex; justify-content: space-between; align-items: center; }
+.tarjeta-cabecera h3 { margin: 0; }
+
+.nav-mes { display: flex; gap: 8px; align-items: center; }
+.nav-mes button {
+  min-width: 40px; min-height: 40px;
+  background: var(--fondo-2); color: var(--texto2);
+  border: 1px solid var(--borde-suave); border-radius: 999px;
+  font-size: 16px; font-weight: 700; padding: 0;
+  transition: transform var(--transicion), background var(--transicion), color var(--transicion);
+}
+.nav-mes button:active { transform: scale(0.94); background: var(--tarjeta-2); color: var(--texto); }
+.nav-mes button:disabled { opacity: 0.45; cursor: default; transform: none; }
+.nav-mes .titulo { flex: 1; text-align: center; margin: 0; font-size: 16px; font-weight: 700; }
+
+.chip.activo { background: var(--primario-tinta); border-color: var(--primario); color: var(--texto); }
+.ayuda { font-size: 12px; color: var(--texto2); margin: 4px 0; }
+
+/* Tira de 7 días de la tarjeta «Esta semana» */
+.semana-tira { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin: 10px 0 4px; }
+.semana-dia {
+  background: var(--fondo-2); border: 1px solid var(--borde-suave); border-radius: var(--radio-s);
+  padding: 6px 0; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  transition: transform 90ms ease, background var(--transicion);
+}
+.semana-dia:active { transform: scale(0.94); background: var(--tarjeta-2); }
+.semana-dia.hoy { border-color: var(--primario); background: var(--primario-tinta); }
+.semana-dia .letra { font-size: 11px; color: var(--texto2); }
+.semana-dia .num { font-size: 14px; font-weight: 700; }
+
+.puntos { display: flex; gap: 3px; justify-content: center; min-height: 6px; }
+.punto { width: 6px; height: 6px; border-radius: 50%; }
+.punto.hecha { opacity: 0.4; }
+.punto.vencida { outline: 1px solid var(--gasto); outline-offset: 1px; }
+
+/* Fila de ocurrencia: misma anatomía que .fila-mov */
+.fila-ocurrencia {
+  display: flex; align-items: center; gap: 12px; padding: 12px 4px;
+  border: none; border-bottom: 1px solid var(--borde-suave); width: 100%;
+  background: none; text-align: left; font-size: 14px; color: var(--texto);
+}
+.fila-ocurrencia.hecha { opacity: 0.55; }
+.fila-ocurrencia .detalle { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.fila-ocurrencia .nota { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+.fila-ocurrencia .meta { font-size: 12px; color: var(--texto2); }
+.acciones { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+
+.estado {
+  display: inline-block; border-radius: 999px; padding: 2px 10px;
+  font-size: 12px; font-weight: 600; border: 1px solid var(--borde-suave); white-space: nowrap;
+}
+.estado-pendiente { border-color: var(--borde); color: var(--texto2); }
+.estado-hecha { background: var(--ingreso-tinta); border-color: var(--ingreso); color: var(--ingreso); }
+.estado-vencida { background: var(--gasto-tinta); border-color: var(--gasto); color: var(--gasto); }
+.estado-omitida { color: var(--texto2); text-decoration: line-through; }
+
+/* Chips de evento en Nuevo: UNA fila con scroll horizontal (no desplaza la grilla) */
+.chips-eventos {
+  display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none;
+  padding: 4px 0; margin: 8px 0;
+}
+.chips-eventos::-webkit-scrollbar { display: none; }
+.chip-evento {
+  flex: 0 0 auto; min-height: 40px; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--fondo-2); color: var(--texto); border: 1px solid var(--borde-suave);
+  border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 600;
+  transition: transform 90ms ease, background var(--transicion), border-color var(--transicion);
+}
+.chip-evento:active { transform: scale(0.94); background: var(--tarjeta-2); }
+.chip-evento.activo { background: var(--primario-tinta); border-color: var(--primario); }
+.chip-evento.sugerido { outline: 1px solid var(--primario); outline-offset: 1px; }
+.chip-evento .cerrar { color: var(--texto2); font-size: 14px; font-weight: 700; }
+
+/* Rejilla mensual del calendario: 7 columnas × 6 filas fijas */
+.cal-cabecera {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  font-size: 11px; color: var(--texto2); text-transform: uppercase; text-align: center;
+  letter-spacing: 0.06em; margin-bottom: 4px;
+}
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-dia {
+  aspect-ratio: 1 / 0.9;
+  background: var(--fondo-2); border: 1px solid var(--borde-suave); border-radius: var(--radio-s);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  padding: 4px 0;
+  transition: transform 90ms ease, background var(--transicion), border-color var(--transicion);
+}
+.cal-dia:active { transform: scale(0.94); }
+.cal-dia.otro-mes { opacity: 0.35; }
+.cal-dia.hoy { border-color: var(--primario); }
+.cal-dia.seleccionado { background: var(--primario-tinta); }
+.cal-dia .num { font-size: 13px; font-weight: 600; }
+.cal-dia .mas { font-size: 10px; color: var(--texto2); }
+.cal-lista { margin-top: 8px; }
+
+/* Este mes expandible (v3) */
+.lista-categorias { margin-top: 8px; }
+.lista-categorias .subtitulo {
+  font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--texto2); margin: 10px 0 4px;
+}
+.fila-categoria {
+  display: grid; grid-template-columns: 28px 1fr auto; gap: 10px; align-items: center;
+  padding: 8px 0; border-bottom: 1px solid var(--borde-suave);
+  color: var(--texto); text-decoration: none;
+}
+.fila-categoria .icono { font-size: 20px; text-align: center; }
+.fila-categoria .nombre {
+  font-size: 14px; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.barra-categoria {
+  height: 6px; border-radius: 999px; background: var(--fondo-2);
+  margin-top: 4px; overflow: hidden;
+}
+.barra-categoria > div { height: 100%; border-radius: 999px; transition: width 300ms ease; }
+.fila-categoria .cifras { display: flex; flex-direction: column; align-items: flex-end; }
+.fila-categoria .monto {
+  font-size: 14px; font-weight: 700; text-align: right;
+  font-variant-numeric: tabular-nums; font-feature-settings: 'tnum';
+}
+.fila-categoria .pct { font-size: 12px; color: var(--texto2); text-align: right; }
