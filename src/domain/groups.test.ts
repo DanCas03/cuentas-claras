@@ -1,6 +1,6 @@
-import { residuosDeGrupo, txsEfectivas } from './groups';
+import { categoriaDelResiduo, residuosDeGrupo, txsEfectivas } from './groups';
 import { monthSummary, budgetStatus } from './stats';
-import type { Account, Transaction } from './types';
+import type { Account, Category, Transaction } from './types';
 
 const CUENTAS: Account[] = [
   { id: 'acc-efectivo', name: 'Efectivo', currency: 'USD', kind: 'cash', isSavings: false, archived: false },
@@ -113,4 +113,70 @@ test('desagrupar restaura: sin groupId todo vuelve a agregarse normal', () => {
   });
   expect(resumen.incomeMinor).toBe(500);
   expect(resumen.expenseMinor).toBe(350);
+});
+
+const CATEGORIAS: Category[] = [
+  { id: 'cat-supermercado', name: 'Supermercado', icon: '🛒', color: '#4ade80', kind: 'expense' },
+  { id: 'cat-sueldo', name: 'Sueldo/Pagos', icon: '💼', color: '#34d399', kind: 'income' },
+  { id: 'cat-vuelto-ingreso', name: 'Vuelto', icon: '↩️', color: '#34d399', kind: 'income' },
+  { id: 'cat-vuelto-gasto', name: 'Vuelto', icon: '↪️', color: '#f87171', kind: 'expense' },
+];
+const grupoCon = (categoryId?: string) => ({ id: 'g1', categoryId, createdIso: 'x' });
+
+test('categoriaDelResiduo: el kind de la categoría debe coincidir con el signo del residuo', () => {
+  expect(categoriaDelResiduo(grupoCon('cat-supermercado'), -200, CATEGORIAS)).toBe('cat-supermercado');
+  expect(categoriaDelResiduo(grupoCon('cat-supermercado'), 150, CATEGORIAS)).toBe('cat-vuelto-ingreso');
+  expect(categoriaDelResiduo(grupoCon('cat-sueldo'), 150, CATEGORIAS)).toBe('cat-sueldo');
+  expect(categoriaDelResiduo(grupoCon('cat-sueldo'), -200, CATEGORIAS)).toBe('cat-vuelto-gasto');
+  expect(categoriaDelResiduo(grupoCon('cat-borrada'), -200, CATEGORIAS)).toBe('cat-vuelto-gasto');
+  expect(categoriaDelResiduo(grupoCon(undefined), -200, CATEGORIAS)).toBe('cat-vuelto-gasto');
+  expect(categoriaDelResiduo(undefined, 150, CATEGORIAS)).toBe('cat-vuelto-ingreso');
+  expect(categoriaDelResiduo(grupoCon('cat-supermercado'), -200, [])).toBe('cat-vuelto-gasto');
+});
+
+test('txsEfectivas con categorías: el residuo negativo lleva la categoría del grupo', () => {
+  const txs = [
+    tx({ id: 'm1', type: 'income', amountMinor: 300, groupId: 'g1' }),
+    tx({ id: 'm2', type: 'expense', amountMinor: 500, groupId: 'g1' }),
+  ];
+  const [virtual] = txsEfectivas(txs, CUENTAS, [grupoCon('cat-supermercado')], CATEGORIAS);
+  expect(virtual).toMatchObject({ type: 'expense', amountMinor: 200, categoryId: 'cat-supermercado' });
+  expect(virtual.id).toBe('virtual-g1-USD'); // los virtuales siguen sin persistirse
+});
+
+test('txsEfectivas: sin el 4.º parámetro el comportamiento es EXACTAMENTE el de v2', () => {
+  const txs = [
+    tx({ id: 'm1', type: 'income', amountMinor: 300, groupId: 'g1' }),
+    tx({ id: 'm2', type: 'expense', amountMinor: 500, groupId: 'g1' }),
+  ];
+  expect(txsEfectivas(txs, CUENTAS, [grupoCon('cat-supermercado')])[0].categoryId).toBe('cat-vuelto-gasto');
+});
+
+test('txsEfectivas bimoneda: la regla se evalúa por moneda contra el signo de CADA residuo', () => {
+  const txs = [
+    tx({ id: 'm1', type: 'income', amountMinor: 500, groupId: 'g1' }),                          // +$5,00
+    tx({ id: 'm2', type: 'expense', accountId: 'acc-bnc', amountMinor: 73723, groupId: 'g1' }), // −Bs 737,23
+  ];
+  const efectivas = txsEfectivas(txs, CUENTAS, [grupoCon('cat-supermercado')], CATEGORIAS);
+  expect(efectivas.find((t) => t.id === 'virtual-g1-USD')?.categoryId).toBe('cat-vuelto-ingreso');
+  expect(efectivas.find((t) => t.id === 'virtual-g1-VES')?.categoryId).toBe('cat-supermercado');
+});
+
+test('el residuo con categoría suma en byCategory y consume presupuesto', () => {
+  const conBudget: Category[] = [
+    { ...CATEGORIAS[0], monthlyBudgetMinor: 10000 }, ...CATEGORIAS.slice(1),
+  ];
+  const txs = [
+    tx({ type: 'income', amountMinor: 300, groupId: 'g1' }),
+    tx({ type: 'expense', amountMinor: 500, categoryId: 'cat-otros-gastos', groupId: 'g1' }),
+  ];
+  const efectivas = txsEfectivas(txs, CUENTAS, [grupoCon('cat-supermercado')], conBudget);
+  const resumen = monthSummary({
+    txs: efectivas, accounts: CUENTAS, month: '2026-07', viewCurrency: 'USD', rates: [], activeSource: 'BCV',
+  });
+  expect(resumen.byCategory).toEqual([{ categoryId: 'cat-supermercado', expenseMinor: 200 }]);
+  const estados = budgetStatus({
+    txs: efectivas, accounts: CUENTAS, categories: conBudget, month: '2026-07', rates: [], activeSource: 'BCV',
+  });
+  expect(estados[0].gastoUsdMinor).toBe(200); // los $2 del residuo sí consumen Supermercado
 });

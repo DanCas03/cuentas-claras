@@ -1,5 +1,5 @@
 import { CuentasDB, seedIfEmpty } from './db';
-import { agruparTxs, anadirAGrupo, quitarDeGrupo, desagrupar } from './groupOps';
+import { agruparTxs, anadirAGrupo, quitarDeGrupo, desagrupar, actualizarGrupo } from './groupOps';
 import { buildManualTx } from '../domain/builders';
 
 async function dbConTxs() {
@@ -62,4 +62,31 @@ test('desagrupar limpia groupId de todos y borra el grupo', async () => {
   for (const id of [ids[0], ids[1]]) {
     expect((await d.transactions.get(id))?.groupId).toBeUndefined();
   }
+});
+
+test('agruparTxs acepta categoría; una categoría inexistente lanza sin crear nada', async () => {
+  const { d, ids } = await dbConTxs();
+  await expect(agruparTxs(d, [ids[0], ids[1]], 'leche', 'cat-no-existe')).rejects.toThrow('La categoría no existe');
+  expect(await d.txGroups.count()).toBe(0);
+  expect((await d.transactions.get(ids[0]))?.groupId).toBeUndefined();
+  const gid = await agruparTxs(d, [ids[0], ids[1]], 'leche', 'cat-supermercado');
+  expect(await d.txGroups.get(gid)).toMatchObject({ nota: 'leche', categoryId: 'cat-supermercado' });
+});
+
+test('actualizarGrupo: null borra la clave, undefined no la toca, categoría inexistente lanza', async () => {
+  const { d, ids } = await dbConTxs();
+  const gid = await agruparTxs(d, [ids[0], ids[1]], 'leche');
+  await actualizarGrupo(d, gid, { categoryId: 'cat-supermercado' });
+  expect((await d.txGroups.get(gid))?.categoryId).toBe('cat-supermercado');
+  expect((await d.txGroups.get(gid))?.nota).toBe('leche'); // undefined no tocó la nota
+  await actualizarGrupo(d, gid, { nota: '  pan  ' });
+  expect(await d.txGroups.get(gid)).toMatchObject({ nota: 'pan', categoryId: 'cat-supermercado' });
+  await expect(actualizarGrupo(d, gid, { categoryId: 'cat-no-existe' })).rejects.toThrow('La categoría no existe');
+  expect((await d.txGroups.get(gid))?.categoryId).toBe('cat-supermercado'); // nada a medias
+  await actualizarGrupo(d, gid, { categoryId: null });
+  const g = await d.txGroups.get(gid);
+  expect(g && 'categoryId' in g).toBe(false);
+  await actualizarGrupo(d, gid, { nota: null });
+  expect((await d.txGroups.get(gid)) && 'nota' in (await d.txGroups.get(gid))!).toBe(false);
+  await expect(actualizarGrupo(d, 'no-existe', { nota: 'x' })).rejects.toThrow('El grupo no existe');
 });
