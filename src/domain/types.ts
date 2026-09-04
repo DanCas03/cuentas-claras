@@ -44,6 +44,11 @@ export interface Transaction {
   /** Grupo transaccional (v2). Con groupId, el movimiento se excluye de las
    *  agregaciones y solo cuenta el residuo virtual del grupo. Los saldos NO cambian. */
   groupId?: string;
+  /** v3: ocurrencia (eventId, eventDate) a la que se asignó. Van juntos: ambos o ninguno.
+   *  eventDate es la fecha NOMINAL de la ocurrencia (p. ej. '2026-09-15' para la quincena),
+   *  no necesariamente = date. No altera monto/fecha/cuenta/tipo; no afecta saldos ni agregaciones. */
+  eventId?: string;
+  eventDate?: string;
 }
 
 export type CategoryKind = 'expense' | 'income';
@@ -103,5 +108,30 @@ export interface Debt {
 export interface TxGroup {
   id: string;
   nota?: string;
+  /** v3: categoría del residuo virtual. Se aplica SOLO si su kind coincide con el signo del
+   *  residuo (expense ↔ residuo < 0, income ↔ residuo > 0); si no, cae en «Vuelto». */
+  categoryId?: string;
+  createdIso: string;
+}
+
+/** Reglas de recurrencia (v3). weekly/yearly derivan el día de la semana / mes+día de startDate. */
+export type Recurrence =
+  | { kind: 'once' }
+  | { kind: 'weekly' }
+  | { kind: 'monthly'; days: number[] }   // 1..31, ordenados, sin repetidos; día > días del mes → último día
+  | { kind: 'yearly' };
+
+/** Evento de calendario (v3): fecha en que hay que pagar o cobrar algo. NO es dinero:
+ *  no altera saldos ni agregaciones. Sus ocurrencias se DERIVAN (calendar.ts). */
+export interface CalEvent {
+  id: string;
+  titulo: string;          // «Quincena», «Netflix», «Condominio»
+  categoryId: string;      // obligatoria: define pago (kind expense) o cobro (kind income) y la categoría que copia la tx asignada
+  accountId?: string;      // cuenta esperada; define la moneda de amountMinor
+  amountMinor?: number;    // monto esperado en céntimos de la moneda de accountId (REQUIERE accountId); ausente = variable
+  startDate: string;       // 'yyyy-mm-dd' local; ancla y primera fecha posible
+  endDate?: string;        // 'yyyy-mm-dd' inclusive; ausente = sin fin
+  recurrence: Recurrence;
+  omitidas?: string[];     // fechas nominales marcadas «omitida»
   createdIso: string;
 }

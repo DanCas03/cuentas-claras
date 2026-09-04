@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie';
-import type { Account, Category, Debt, Rate, Rule, Settings, Transaction, TxGroup } from '../domain/types';
+import type { Account, CalEvent, Category, Debt, Rate, Rule, Settings, Transaction, TxGroup } from '../domain/types';
 
 export class CuentasDB extends Dexie {
   accounts!: Table<Account, string>;
@@ -10,6 +10,7 @@ export class CuentasDB extends Dexie {
   settings!: Table<Settings, string>;
   debts!: Table<Debt, string>;
   txGroups!: Table<TxGroup, string>;
+  calEvents!: Table<CalEvent, string>;
 
   constructor(name = 'cuentas-claras') {
     super(name);
@@ -26,6 +27,11 @@ export class CuentasDB extends Dexie {
       transactions: 'id, date, accountId, categoryId, importKey, groupId',
       debts: 'id, status',
       txGroups: 'id',
+    });
+    // v3 aditiva: tabla de eventos e índice eventId (decisión 1 del spec v3: ocurrencias derivadas).
+    this.version(3).stores({
+      transactions: 'id, date, accountId, categoryId, importKey, groupId, eventId',
+      calEvents: 'id',
     });
   }
 }

@@ -15,6 +15,16 @@ async function dbConDatos() {
     accountId: 'acc-zinli', status: 'pendiente', createdIso: '2026-07-20T12:00:00.000Z',
   });
   await d.txGroups.add({ id: 'grupo-1', nota: 'leche', createdIso: '2026-07-21T09:00:00.000Z' });
+  await d.txGroups.update('grupo-1', { categoryId: 'cat-supermercado' });
+  await d.calEvents.add({
+    id: 'evento-1', titulo: 'Quincena', categoryId: 'cat-sueldo', accountId: 'acc-bnc',
+    startDate: '2026-01-01', recurrence: { kind: 'monthly', days: [15, 31] }, omitidas: ['2026-08-31'],
+    createdIso: '2026-09-04T10:00:00.000Z',
+  });
+  await d.transactions.add({
+    id: 'tx-quincena', type: 'income', accountId: 'acc-bnc', amountMinor: 800000, date: '2026-09-15',
+    source: 'manual', categoryId: 'cat-sueldo', eventId: 'evento-1', eventDate: '2026-09-15',
+  });
   return d;
 }
 
@@ -31,8 +41,8 @@ test('round-trip: export → texto JSON → validate → import reproduce todo',
   ); // dato previo que DEBE desaparecer
   await importBackup(destino, v.backup);
 
-  expect(await destino.transactions.count()).toBe(1);
-  expect((await destino.transactions.toArray())[0].note).toBe('prueba');
+  expect(await destino.transactions.count()).toBe(2);
+  expect((await destino.transactions.toArray()).some((t) => t.note === 'prueba')).toBe(true);
   expect(await destino.accounts.count()).toBe(5);
   expect(await destino.categories.count()).toBe(18);
   expect(await destino.rules.count()).toBe(1);
@@ -41,22 +51,59 @@ test('round-trip: export → texto JSON → validate → import reproduce todo',
   expect(await destino.debts.count()).toBe(1);
   expect((await destino.debts.get('deuda-1'))?.concepto).toBe('Ana — almuerzo');
   expect(await destino.txGroups.count()).toBe(1);
+  expect(await destino.calEvents.get('evento-1')).toEqual({
+    id: 'evento-1', titulo: 'Quincena', categoryId: 'cat-sueldo', accountId: 'acc-bnc',
+    startDate: '2026-01-01', recurrence: { kind: 'monthly', days: [15, 31] }, omitidas: ['2026-08-31'],
+    createdIso: '2026-09-04T10:00:00.000Z',
+  });
+  expect((await destino.txGroups.get('grupo-1'))?.categoryId).toBe('cat-supermercado');
+  expect(await destino.transactions.get('tx-quincena')).toMatchObject({ eventId: 'evento-1', eventDate: '2026-09-15' });
 });
 
-test('validateBackup rechaza basura, versiones distintas de 2 y tablas faltantes', () => {
+const V2 = {
+  schemaVersion: 2, exportedAt: 'x', accounts: [], transactions: [], categories: [],
+  rules: [], rates: [], settings: [], debts: [], txGroups: [],
+};
+
+test('validateBackup: v3 exige las 9 tablas; v2 se acepta normalizado; v1 y otras se rechazan', () => {
   expect(validateBackup(null).ok).toBe(false);
   expect(validateBackup('texto').ok).toBe(false);
   expect(validateBackup({}).ok).toBe(false);
-  const casi = {
-    schemaVersion: 2, exportedAt: 'x', accounts: [], transactions: [], categories: [],
-    rules: [], rates: [], settings: [], debts: [], txGroups: [],
-  };
-  expect(validateBackup(casi).ok).toBe(true);
-  expect(validateBackup({ ...casi, schemaVersion: 3 }).ok).toBe(false);
-  expect(validateBackup({ ...casi, debts: undefined }).ok).toBe(false);
-  const v1 = validateBackup({ ...casi, schemaVersion: 1 });
+  const v3 = { ...V2, schemaVersion: 3, calEvents: [] };
+  expect(validateBackup(v3).ok).toBe(true);
+  const sinCal = validateBackup({ ...V2, schemaVersion: 3 });
+  expect(sinCal.ok).toBe(false);
+  if (!sinCal.ok) expect(sinCal.error).toContain('calEvents');
+  expect(validateBackup({ ...v3, debts: undefined }).ok).toBe(false);
+  const v2 = validateBackup(V2);
+  expect(v2.ok).toBe(true);
+  if (v2.ok) {
+    expect(v2.backup.schemaVersion).toBe(3);
+    expect(v2.backup.calEvents).toEqual([]);
+  }
+  expect(validateBackup({ ...V2, txGroups: undefined }).ok).toBe(false);
+  const v1 = validateBackup({ ...V2, schemaVersion: 1 });
   expect(v1.ok).toBe(false);
   if (!v1.ok) expect(v1.error).toContain('versión 1');
+  expect(validateBackup({ ...v3, schemaVersion: 4 }).ok).toBe(false);
+});
+
+test('un respaldo v2 se importa en una base v3 sin error', async () => {
+  const v = validateBackup({ ...V2, settings: [{ id: 'main', viewCurrency: 'USD', rateSource: 'BCV' }] });
+  expect(v.ok).toBe(true);
+  if (!v.ok) return;
+  const destino = new CuentasDB(`test-${crypto.randomUUID()}`);
+  await importBackup(destino, v.backup);
+  expect(await destino.calEvents.count()).toBe(0);
+  expect(await destino.settings.count()).toBe(1);
+});
+
+test('exportBackup: las claves son exactamente TABLAS ∪ {schemaVersion, exportedAt} y la versión es 3', async () => {
+  const b = await exportBackup(await dbConDatos());
+  expect(b.schemaVersion).toBe(3);
+  expect(Object.keys(b).sort()).toEqual(
+    ['accounts', 'calEvents', 'categories', 'debts', 'exportedAt', 'rates', 'rules', 'schemaVersion', 'settings', 'transactions', 'txGroups'],
+  );
 });
 
 test('backupFilename incluye la fecha', () => {

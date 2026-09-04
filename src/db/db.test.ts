@@ -80,3 +80,34 @@ test('esquema v2: debts y txGroups aceptan filas y el índice groupId consulta',
   expect(await d.debts.where('status').equals('pendiente').count()).toBe(1);
   expect(await d.transactions.where('groupId').equals('g1').count()).toBe(1);
 });
+
+test('esquema v3: calEvents acepta filas y el índice eventId consulta', async () => {
+  const d = nuevaDb();
+  await seedIfEmpty(d);
+  await d.calEvents.add({
+    id: 'e1', titulo: 'Quincena', categoryId: 'cat-sueldo', accountId: 'acc-bnc',
+    startDate: '2026-01-01', recurrence: { kind: 'monthly', days: [15, 31] }, createdIso: '2026-09-04T10:00:00.000Z',
+  });
+  await d.transactions.add({
+    id: 't1', type: 'income', accountId: 'acc-bnc', amountMinor: 800000, date: '2026-09-15', source: 'manual',
+    categoryId: 'cat-sueldo', eventId: 'e1', eventDate: '2026-09-15',
+  });
+  await d.transactions.add({ id: 't2', type: 'expense', accountId: 'acc-bnc', amountMinor: 100, date: '2026-09-15', source: 'manual' });
+  expect(await d.calEvents.count()).toBe(1);
+  expect(await d.transactions.where('eventId').equals('e1').count()).toBe(1);
+  expect(await d.transactions.where('eventId').above('').count()).toBe(1);
+  expect(await d.categories.count()).toBe(18); // sin seeds v3
+});
+
+test('update con undefined borra la propiedad (contrato que usa EditorMovimiento para desasignar)', async () => {
+  const d = nuevaDb();
+  await d.transactions.add({
+    id: 't1', type: 'income', accountId: 'acc-bnc', amountMinor: 1, date: '2026-09-15', source: 'manual',
+    eventId: 'e1', eventDate: '2026-09-15',
+  });
+  await d.transactions.update('t1', { eventId: undefined, eventDate: undefined, note: 'x' });
+  const t = await d.transactions.get('t1');
+  expect(t && 'eventId' in t).toBe(false);
+  expect(t && 'eventDate' in t).toBe(false);
+  expect(t?.note).toBe('x');
+});
