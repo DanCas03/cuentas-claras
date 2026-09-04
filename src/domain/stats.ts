@@ -6,6 +6,8 @@ export interface ResumenMes {
   incomeMinor: number;
   expenseMinor: number;
   byCategory: { categoryId: string | null; expenseMinor: number }[];
+  /** v3: ingresos por categoría del mes, desc por monto. `byCategory` sigue siendo SOLO gastos. */
+  incomeByCategory: { categoryId: string | null; incomeMinor: number }[];
   dailyCumulative: { day: number; acumuladoMinor: number }[];
   omitidasSinTasa: number;
 }
@@ -23,6 +25,7 @@ export function monthSummary(opts: {
   let expenseMinor = 0;
   let omitidasSinTasa = 0;
   const porCategoria = new Map<string | null, number>();
+  const porCategoriaIngreso = new Map<string | null, number>();
   const porDia = new Map<number, number>();
 
   for (const t of opts.txs) {
@@ -40,6 +43,8 @@ export function monthSummary(opts: {
     }
     if (t.type === 'income') {
       incomeMinor += minor;
+      const keyIngreso = t.categoryId ?? null;
+      porCategoriaIngreso.set(keyIngreso, (porCategoriaIngreso.get(keyIngreso) ?? 0) + minor);
     } else {
       expenseMinor += minor;
       const key = t.categoryId ?? null;
@@ -61,7 +66,11 @@ export function monthSummary(opts: {
     .map(([categoryId, gasto]) => ({ categoryId, expenseMinor: gasto }))
     .sort((a, b) => b.expenseMinor - a.expenseMinor);
 
-  return { month: opts.month, incomeMinor, expenseMinor, byCategory, dailyCumulative, omitidasSinTasa };
+  const incomeByCategory = [...porCategoriaIngreso.entries()]
+    .map(([categoryId, ingreso]) => ({ categoryId, incomeMinor: ingreso }))
+    .sort((a, b) => b.incomeMinor - a.incomeMinor);
+
+  return { month: opts.month, incomeMinor, expenseMinor, byCategory, incomeByCategory, dailyCumulative, omitidasSinTasa };
 }
 
 export function lastMonths(baseMonth: string, n: number): string[] {

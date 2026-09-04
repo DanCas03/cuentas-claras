@@ -60,3 +60,29 @@ test('budgetStatus compara gasto USD contra presupuesto', () => {
   expect(r).toHaveLength(1);
   expect(r[0]).toMatchObject({ gastoUsdMinor: 1500, presupuestoMinor: 2000, ratio: 0.75 });
 });
+
+test('incomeByCategory: ingresos por categoría, desc, con null y conversión', () => {
+  const conIngresos: Transaction[] = [
+    tx({ type: 'income', amountMinor: 2000, date: '2026-07-03', categoryId: 'cat-sueldo' }),      // $20,00
+    tx({ type: 'income', amountMinor: 500, date: '2026-07-04', categoryId: 'cat-sueldo' }),       // $5,00
+    tx({ type: 'income', accountId: 'bnc', amountMinor: 100000, date: '2026-07-05', categoryId: 'cat-pm' }), // Bs 1.000 → $10,00
+    tx({ type: 'income', amountMinor: 100, date: '2026-07-06' }),                                 // sin categoría
+    tx({ type: 'expense', amountMinor: 300, date: '2026-07-07', categoryId: 'cat-a' }),           // no cuenta
+  ];
+  const r = monthSummary({ txs: conIngresos, accounts: cuentas, month: '2026-07', viewCurrency: 'USD', rates, activeSource: 'BCV' });
+  expect(r.incomeByCategory).toEqual([
+    { categoryId: 'cat-sueldo', incomeMinor: 2500 },
+    { categoryId: 'cat-pm', incomeMinor: 1000 },
+    { categoryId: null, incomeMinor: 100 },
+  ]);
+  expect(r.incomeMinor).toBe(3600);
+  expect(r.byCategory).toEqual([{ categoryId: 'cat-a', expenseMinor: 300 }]); // byCategory sigue siendo SOLO gastos
+});
+
+test('incomeByCategory está vacío si no hay ingresos y no altera el resumen v2', () => {
+  const r = monthSummary({ txs, accounts: cuentas, month: '2026-07', viewCurrency: 'USD', rates, activeSource: 'BCV' });
+  expect(r.incomeByCategory).toEqual([{ categoryId: null, incomeMinor: 2000 }]); // el ingreso del fixture no tiene categoría
+  expect(r.expenseMinor).toBe(1800);
+  const sinNada = monthSummary({ txs: [], accounts: cuentas, month: '2026-07', viewCurrency: 'USD', rates, activeSource: 'BCV' });
+  expect(sinNada.incomeByCategory).toEqual([]);
+});
