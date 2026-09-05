@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, getSettings, saveSettings } from '../../db/db';
 import { patrimonio } from '../../domain/balances';
@@ -17,6 +18,7 @@ export function DashboardPage() {
   const categorias = useLiveQuery(() => db.categories.toArray(), []) ?? [];
   const deudas = useLiveQuery(() => db.debts.toArray(), []) ?? [];
   const grupos = useLiveQuery(() => db.txGroups.toArray(), []) ?? [];
+  const [mesVisto, setMesVisto] = useState(() => monthOf(todayIso()));
 
   if (!settings) return <h2>Inicio</h2>;
   const tasa = effectiveRate(todayIso(), settings.rateSource, rates);
@@ -25,13 +27,18 @@ export function DashboardPage() {
     deudas.filter((deuda) => deuda.status === 'pendiente' && deuda.direction === 'porPagar'),
   );
   const mesActual = monthOf(todayIso());
-  const efectivas = txsEfectivas(txs, cuentas, grupos);
+  const primerMes = txs.length > 0
+    ? monthOf(txs.reduce((min, t) => (t.date < min ? t.date : min), txs[0].date))
+    : mesActual;
+  // El navegador de mes gobierna las TRES tarjetas; nunca sale del rango [primerMes, mesActual].
+  const mes = mesVisto > mesActual ? mesActual : mesVisto < primerMes ? primerMes : mesVisto;
+  const efectivas = txsEfectivas(txs, cuentas, grupos, categorias);
   const base = { txs: efectivas, accounts: cuentas, rates, activeSource: settings.rateSource };
-  const resumen = monthSummary({ ...base, month: mesActual, viewCurrency: settings.viewCurrency });
-  const comparativa = lastMonths(mesActual, 4)
+  const resumen = monthSummary({ ...base, month: mes, viewCurrency: settings.viewCurrency });
+  const comparativa = lastMonths(mes, 4)
     .map((m) => monthSummary({ ...base, month: m, viewCurrency: settings.viewCurrency }))
     .reverse();
-  const presupuestos = budgetStatus({ ...base, categories: categorias, month: mesActual });
+  const presupuestos = budgetStatus({ ...base, categories: categorias, month: mes });
 
   return (
     <div>
@@ -43,7 +50,11 @@ export function DashboardPage() {
         onToggle={() => saveSettings(db, { viewCurrency: settings.viewCurrency === 'USD' ? 'VES' : 'USD' })}
       />
       <DeudasCard deudas={deudas} cuentas={cuentas} tasa={tasa} viewCurrency={settings.viewCurrency} />
-      <GraficasMes resumen={resumen} comparativa={comparativa} presupuestos={presupuestos} categorias={categorias} viewCurrency={settings.viewCurrency} />
+      <GraficasMes
+        resumen={resumen} comparativa={comparativa} presupuestos={presupuestos}
+        categorias={categorias} viewCurrency={settings.viewCurrency}
+        mes={mes} mesActual={mesActual} primerMes={primerMes} onMes={setMesVisto}
+      />
     </div>
   );
 }

@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { Area, AreaChart, Bar, BarChart, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { Category, Currency } from '../../domain/types';
 import type { EstadoPresupuesto, ResumenMes } from '../../domain/stats';
 import { formatMoney } from '../../domain/money';
+import { mesAnterior, mesSiguiente, nombreMes } from '../../domain/dates';
 
 // Estilos de gráficas alineados a los tokens del sistema (Recharts no lee CSS vars en todos los props)
 const ESTILO_TOOLTIP = {
@@ -12,13 +14,20 @@ const ESTILO_TOOLTIP = {
 } as const;
 const EJE = { tick: { fill: '#8b96ab', fontSize: 11 }, axisLine: { stroke: '#223049' }, tickLine: false } as const;
 
-export function GraficasMes({ resumen, comparativa, presupuestos, categorias, viewCurrency }: {
+export function GraficasMes({ resumen, comparativa, presupuestos, categorias, viewCurrency, mes, mesActual, primerMes, onMes }: {
   resumen: ResumenMes;
   comparativa: ResumenMes[];
   presupuestos: EstadoPresupuesto[];
   categorias: Category[];
   viewCurrency: Currency;
+  /** Mes que gobierna las TRES tarjetas (Este mes, Comparativa, Presupuestos). */
+  mes: string;
+  mesActual: string;
+  /** Mes más antiguo con movimientos: tope del botón «‹». */
+  primerMes: string;
+  onMes: (m: string) => void;
 }) {
+  const [expandido, setExpandido] = useState(false);
   const cat = (id: string | null) => categorias.find((c) => c.id === id);
   const donut = resumen.byCategory.map((b) => ({
     name: cat(b.categoryId)?.name ?? 'Sin categoría',
@@ -27,11 +36,41 @@ export function GraficasMes({ resumen, comparativa, presupuestos, categorias, vi
   }));
   const balance = resumen.incomeMinor - resumen.expenseMinor;
   const dinero = (minor: number) => formatMoney(minor, viewCurrency);
+  const filaCategoria = (categoryId: string | null, minor: number, total: number) => {
+    const c = cat(categoryId);
+    const pct = total > 0 ? Math.round((minor / total) * 100) : 0;
+    const contenido = (
+      <>
+        <span className="icono">{c?.icon ?? '📦'}</span>
+        <span>
+          <span className="nombre">{c?.name ?? 'Sin categoría'}</span>
+          <span className="barra-categoria">
+            <span style={{ display: 'block', height: '100%', width: `${pct}%`, background: c?.color ?? '#8b96ab' }} />
+          </span>
+        </span>
+        <span className="cifras">
+          <span className="monto">{dinero(minor)}</span>
+          <span className="pct">{pct} %</span>
+        </span>
+      </>
+    );
+    // «Sin categoría» no tiene drill-down posible: se pinta gris y sin enlace.
+    return c
+      ? <a key={`${categoryId}`} className="fila-categoria" href={`#/movimientos?cat=${categoryId}&mes=${mes}`}>{contenido}</a>
+      : <div key="sin-categoria" className="fila-categoria" style={{ color: 'var(--texto2)' }}>{contenido}</div>;
+  };
 
   return (
     <>
       <div className="tarjeta">
-        <h3>Este mes ({resumen.month})</h3>
+        <div className="tarjeta-cabecera">
+          <div className="nav-mes">
+            <button aria-label="Mes anterior" disabled={mes <= primerMes} onClick={() => onMes(mesAnterior(mes))}>‹</button>
+            <h3 className="titulo">{mes === mesActual ? 'Este mes' : nombreMes(mes)}</h3>
+            <button aria-label="Mes siguiente" disabled={mes >= mesActual} onClick={() => onMes(mesSiguiente(mes))}>›</button>
+            {mes !== mesActual && <button className="chip" onClick={() => onMes(mesActual)}>hoy</button>}
+          </div>
+        </div>
         <p>
           Ingresos <span className="monto-pos">+{dinero(resumen.incomeMinor)}</span>
           {' · '}Gastos <span className="monto-neg">−{dinero(resumen.expenseMinor)}</span>
@@ -87,6 +126,17 @@ export function GraficasMes({ resumen, comparativa, presupuestos, categorias, vi
             </AreaChart>
           </ResponsiveContainer>
         </div>
+        <button className="chip" style={{ marginTop: 8 }} onClick={() => setExpandido(!expandido)}>
+          {expandido ? 'Ocultar' : 'Ver todas las categorías'}
+        </button>
+        {expandido && (
+          <div className="lista-categorias">
+            {resumen.byCategory.length > 0 && <div className="subtitulo">Gastos</div>}
+            {resumen.byCategory.map((b) => filaCategoria(b.categoryId, b.expenseMinor, resumen.expenseMinor))}
+            {resumen.incomeByCategory.length > 0 && <div className="subtitulo">Ingresos</div>}
+            {resumen.incomeByCategory.map((b) => filaCategoria(b.categoryId, b.incomeMinor, resumen.incomeMinor))}
+          </div>
+        )}
       </div>
 
       <div className="tarjeta">
@@ -109,7 +159,7 @@ export function GraficasMes({ resumen, comparativa, presupuestos, categorias, vi
 
       {presupuestos.length > 0 && (
         <div className="tarjeta">
-          <h3>Presupuestos (USD)</h3>
+          <h3>Presupuestos (USD) · {nombreMes(mes)}</h3>
           {presupuestos.map((e) => (
             <div key={e.category.id} style={{ marginBottom: 10 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
