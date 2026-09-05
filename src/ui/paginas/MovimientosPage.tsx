@@ -1,23 +1,28 @@
 import { useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db/db';
-import type { Transaction } from '../../domain/types';
+import type { Transaction, TxGroup } from '../../domain/types';
 import { filterTxs } from '../../domain/filters';
 import { formatMoney, parseVenezuelanAmount } from '../../domain/money';
-import { residuosDeGrupo } from '../../domain/groups';
-import { agruparTxs, anadirAGrupo, quitarDeGrupo, desagrupar } from '../../db/groupOps';
+import { residuosDeGrupo, type ResiduoMoneda } from '../../domain/groups';
+import { agruparTxs, anadirAGrupo, quitarDeGrupo, desagrupar, actualizarGrupo } from '../../db/groupOps';
 import { avisar } from '../Toast';
+import { todayIso } from '../../domain/dates';
+import { SelectEvento } from '../componentes/SelectEvento';
+import type { Ocurrencia } from '../../domain/calendar';
 
-export function MovimientosPage() {
+export function MovimientosPage({ params }: { params?: URLSearchParams }) {
   const [q, setQ] = useState('');
   const [cuentaId, setCuentaId] = useState('');
-  const [categoriaId, setCategoriaId] = useState('');
-  const [mes, setMes] = useState('');
+  const [categoriaId, setCategoriaId] = useState(params?.get('cat') ?? '');
+  const [mes, setMes] = useState(params?.get('mes') ?? '');
   const [editando, setEditando] = useState<Transaction | null>(null);
+  const [editandoGrupo, setEditandoGrupo] = useState<TxGroup | null>(null);
   const [seleccion, setSeleccion] = useState<Set<string> | null>(null); // null = sin modo selección
   const [destinoGrupoId, setDestinoGrupoId] = useState<string | null>(null); // añadir a grupo existente
   const [modalNota, setModalNota] = useState(false);
   const [notaGrupo, setNotaGrupo] = useState('');
+  const [categoriaGrupo, setCategoriaGrupo] = useState('');
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
   const [guardando, setGuardando] = useState(false);
   const timerRef = useRef<number | null>(null);
@@ -27,6 +32,7 @@ export function MovimientosPage() {
   const categorias = useLiveQuery(() => db.categories.toArray(), []) ?? [];
   const txs = useLiveQuery(() => db.transactions.toArray(), []) ?? [];
   const grupos = useLiveQuery(() => db.txGroups.toArray(), []) ?? [];
+  const calEvents = useLiveQuery(() => db.calEvents.toArray(), []) ?? [];
 
   const visibles = filterTxs(txs, {
     q: q || undefined,
@@ -76,6 +82,7 @@ export function MovimientosPage() {
     setDestinoGrupoId(null);
     setModalNota(false);
     setNotaGrupo('');
+    setCategoriaGrupo('');
   }
 
   function alPresionar(t: Transaction) {
@@ -104,7 +111,7 @@ export function MovimientosPage() {
         await anadirAGrupo(db, destinoGrupoId, [...seleccion]);
         avisar('Añadidos al grupo ✓');
       } else {
-        await agruparTxs(db, [...seleccion], notaGrupo);
+        await agruparTxs(db, [...seleccion], notaGrupo, categoriaGrupo || undefined);
         avisar('Grupo transaccional creado ✓');
       }
       cancelarSeleccion();
@@ -141,6 +148,19 @@ export function MovimientosPage() {
       sueltasVisibles.push(t);
     }
   }
+  // Drill-down desde «Este mes → Supermercado»: si la CATEGORÍA DEL RESIDUO del grupo es la
+  // filtrada, el grupo se muestra con sus miembros filtrados por texto/cuenta/mes (ignorando
+  // la categoría), aunque ningún miembro lleve esa categoría.
+  if (categoriaId) {
+    const sinFiltroDeCategoria = filterTxs(txs, {
+      q: q || undefined, accountId: cuentaId || undefined, month: mes || undefined,
+    });
+    for (const g of grupos) {
+      if (g.categoryId !== categoriaId || gruposVisibles.has(g.id)) continue;
+      const miembros = sinFiltroDeCategoria.filter((t) => t.groupId === g.id);
+      if (miembros.length > 0) gruposVisibles.set(g.id, miembros);
+    }
+  }
   type Item = { clave: string } & ({ tipo: 'tx'; t: Transaction } | { tipo: 'grupo'; gid: string; visibles: Transaction[] });
   const items: Item[] = [
     ...sueltasVisibles.map((t) => ({ tipo: 'tx' as const, t, clave: clave(t) })),
@@ -170,7 +190,12 @@ export function MovimientosPage() {
       </span>
       <span className="detalle">
         <span className="nota">{descripcionFila(t)}</span>
-        <span className="meta">{t.date} · {nombreCuenta(t.accountId)}{t.importKey ? ' · importado' : ''}</span>
+        <span className="meta">
+          {t.date} · {nombreCuenta(t.accountId)}{t.importKey ? ' · importado' : ''}
+          {t.eventId && calEvents.some((e) => e.id === t.eventId)
+            ? ` · 📅 ${calEvents.find((e) => e.id === t.eventId)?.titulo}`
+            : ''}
+        </span>
       </span>
       {montoFila(t)}
     </button>
@@ -179,6 +204,7 @@ export function MovimientosPage() {
   const filaGrupo = (gid: string, visiblesDelGrupo: Transaction[]) => {
     const todos = txs.filter((t) => t.groupId === gid);
     const residuos = residuosDeGrupo(todos, cuentas);
+    const grupo = grupos.find((g) => g.id === gid);
     const abierto = expandidos.has(gid);
     return (
       <div key={`grupo-${gid}`}>
@@ -190,10 +216,12 @@ export function MovimientosPage() {
             return nueva;
           })}
         >
-          <span style={{ fontSize: 22 }}>🔁</span>
+          <span style={{ fontSize: 22 }}>{cat(grupo?.categoryId)?.icon ?? '🔁'}</span>
           <span className="detalle">
             <span className="nota">{notaDeGrupo(gid) || 'Grupo transaccional'}</span>
-            <span className="meta">{todos.length} movimientos · vuelto</span>
+            <span className="meta">
+              {todos.length} movimientos · vuelto{grupo?.categoryId && cat(grupo.categoryId) ? ` · ${cat(grupo.categoryId)!.name}` : ''}
+            </span>
           </span>
           <span>
             {residuos.length === 0
@@ -221,6 +249,13 @@ export function MovimientosPage() {
               </div>
             ))}
             <div className="fila-form" style={{ margin: '8px 0' }}>
+              <button
+                className="boton secundario"
+                disabled={guardando}
+                onClick={() => grupo && setEditandoGrupo(grupo)}
+              >
+                Editar grupo
+              </button>
               <button
                 className="boton secundario"
                 disabled={guardando || seleccion !== null}
@@ -293,6 +328,21 @@ export function MovimientosPage() {
             </p>
             <label>Nota del grupo (opcional)</label>
             <input aria-label="Nota del grupo" value={notaGrupo} onChange={(e) => setNotaGrupo(e.target.value)} placeholder="me pasaron para la leche" />
+            <label>Categoría del vuelto (opcional)</label>
+            <select aria-label="Categoría del grupo" value={categoriaGrupo} onChange={(e) => setCategoriaGrupo(e.target.value)}>
+              <option value="">Sin categoría (Vuelto)</option>
+              <optgroup label="Gastos">
+                {categorias.filter((c) => c.kind === 'expense').map((c) => (
+                  <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                ))}
+              </optgroup>
+              <optgroup label="Ingresos">
+                {categorias.filter((c) => c.kind === 'income').map((c) => (
+                  <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                ))}
+              </optgroup>
+            </select>
+            <p className="ayuda">Se aplica al vuelto del grupo solo si el signo coincide; si no, cuenta como Vuelto.</p>
             <div className="fila-form" style={{ marginTop: 12 }}>
               <button className="boton secundario" onClick={() => setModalNota(false)} disabled={guardando}>Cancelar</button>
               <button className="boton" onClick={() => void confirmarAgrupar()} disabled={guardando}>Agrupar</button>
@@ -302,16 +352,30 @@ export function MovimientosPage() {
       )}
 
       {editando && <EditorMovimiento tx={editando} cerrar={() => setEditando(null)} />}
+      {editandoGrupo && (
+        <EditorGrupo
+          grupo={editandoGrupo}
+          residuos={residuosDeGrupo(txs.filter((t) => t.groupId === editandoGrupo.id), cuentas)}
+          cerrar={() => setEditandoGrupo(null)}
+        />
+      )}
     </div>
   );
 }
 
 function EditorMovimiento({ tx, cerrar }: { tx: Transaction; cerrar: () => void }) {
   const categorias = useLiveQuery(() => db.categories.toArray(), []) ?? [];
+  const cuentas = useLiveQuery(() => db.accounts.toArray(), []) ?? [];
+  const calEvents = useLiveQuery(() => db.calEvents.toArray(), []) ?? [];
+  const txsAsignadas = useLiveQuery(() => db.transactions.where('eventId').above('').toArray(), []) ?? [];
+  const [hoy] = useState(todayIso);
   const [categoriaId, setCategoriaId] = useState(tx.categoryId ?? '');
   const [nota, setNota] = useState(tx.note ?? '');
   const [fecha, setFecha] = useState(tx.date);
   const [montoTxt, setMontoTxt] = useState((tx.amountMinor / 100).toFixed(2).replace('.', ','));
+  const [ocurrencia, setOcurrencia] = useState<Ocurrencia | null>(
+    tx.eventId && tx.eventDate ? { eventId: tx.eventId, date: tx.eventDate } : null,
+  );
   const [guardando, setGuardando] = useState(false);
   // Transferencias y ajustes: solo nota y fecha son editables (el monto afecta dos saldos o es un delta).
   const montoEditable = tx.type === 'expense' || tx.type === 'income';
@@ -328,6 +392,8 @@ function EditorMovimiento({ tx, cerrar }: { tx: Transaction; cerrar: () => void 
       if (m === null || m <= 0) { avisar('Monto inválido'); return; }
       cambios.amountMinor = m;
       cambios.categoryId = categoriaId || undefined;
+      cambios.eventId = ocurrencia?.eventId;
+      cambios.eventDate = ocurrencia?.date;
     }
     setGuardando(true);
     try {
@@ -371,6 +437,22 @@ function EditorMovimiento({ tx, cerrar }: { tx: Transaction; cerrar: () => void 
                 <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
               ))}
             </select>
+            <SelectEvento
+              etiqueta="Evento"
+              ariaLabel="Evento del movimiento"
+              tx={{
+                type: tx.type as 'income' | 'expense',
+                date: fecha,
+                accountId: tx.accountId,
+                amountMinor: parseVenezuelanAmount(montoTxt.replace(/,$/, '')) ?? 0,
+              }}
+              actual={ocurrencia}
+              ctx={{ eventos: calEvents, txs: txsAsignadas, accounts: cuentas, categories: categorias, hoy }}
+              onChange={(o, evento) => {
+                setOcurrencia(o);
+                if (o && evento) setCategoriaId(evento.categoryId); // default editable
+              }}
+            />
           </>
         )}
         <label>Fecha</label>
@@ -380,6 +462,71 @@ function EditorMovimiento({ tx, cerrar }: { tx: Transaction; cerrar: () => void 
         <div className="fila-form" style={{ marginTop: 12 }}>
           <button className="boton secundario" onClick={cerrar} disabled={guardando}>Cancelar</button>
           <button className="boton peligro" onClick={eliminar} disabled={guardando}>Eliminar</button>
+          <button className="boton" onClick={guardar} disabled={guardando}>Guardar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditorGrupo({ grupo, residuos, cerrar }: {
+  grupo: TxGroup;
+  residuos: ResiduoMoneda[];
+  cerrar: () => void;
+}) {
+  const categorias = useLiveQuery(() => db.categories.toArray(), []) ?? [];
+  const [nota, setNota] = useState(grupo.nota ?? '');
+  const [categoriaId, setCategoriaId] = useState(grupo.categoryId ?? '');
+  const [guardando, setGuardando] = useState(false);
+
+  const elegida = categorias.find((c) => c.id === categoriaId);
+  const noAplican = elegida
+    ? residuos.filter((r) => (r.residuoMinor > 0 ? 'income' : 'expense') !== elegida.kind)
+    : [];
+
+  async function guardar() {
+    if (guardando) return;
+    setGuardando(true);
+    try {
+      await actualizarGrupo(db, grupo.id, { nota: nota.trim() || null, categoryId: categoriaId || null });
+      avisar('Grupo actualizado ✓');
+      cerrar();
+    } catch (e) {
+      avisar((e as Error).message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <div className="modal-fondo" onClick={cerrar}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <h3>Editar grupo</h3>
+        <label>Nota del grupo</label>
+        <input aria-label="Nota del grupo (editar)" value={nota} onChange={(e) => setNota(e.target.value)} placeholder="me pasaron para la leche" />
+        <label>Categoría del vuelto</label>
+        <select aria-label="Categoría del grupo (editar)" value={categoriaId} onChange={(e) => setCategoriaId(e.target.value)}>
+          <option value="">Sin categoría (Vuelto)</option>
+          <optgroup label="Gastos">
+            {categorias.filter((c) => c.kind === 'expense').map((c) => (
+              <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+            ))}
+          </optgroup>
+          <optgroup label="Ingresos">
+            {categorias.filter((c) => c.kind === 'income').map((c) => (
+              <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+            ))}
+          </optgroup>
+        </select>
+        {noAplican.map((r) => (
+          <p className="ayuda" key={r.currency}>
+            Con el residuo actual ({r.residuoMinor >= 0 ? '+' : '−'}{formatMoney(Math.abs(r.residuoMinor), r.currency)}){' '}
+            esta categoría de {elegida?.kind === 'expense' ? 'gasto' : 'ingreso'} no aplica; contará como Vuelto.
+          </p>
+        ))}
+        <p className="ayuda">Los movimientos del grupo conservan su propia categoría.</p>
+        <div className="fila-form" style={{ marginTop: 12 }}>
+          <button className="boton secundario" onClick={cerrar} disabled={guardando}>Cancelar</button>
           <button className="boton" onClick={guardar} disabled={guardando}>Guardar</button>
         </div>
       </div>
