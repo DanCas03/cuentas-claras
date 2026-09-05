@@ -36,7 +36,7 @@ export function GraficasMes({ resumen, comparativa, presupuestos, categorias, vi
   }));
   const balance = resumen.incomeMinor - resumen.expenseMinor;
   const dinero = (minor: number) => formatMoney(minor, viewCurrency);
-  const filaCategoria = (categoryId: string | null, minor: number, total: number) => {
+  const filaCategoria = (categoryId: string | null, minor: number, total: number, grupo: 'gasto' | 'ingreso') => {
     const c = cat(categoryId);
     const pct = total > 0 ? Math.round((minor / total) * 100) : 0;
     const contenido = (
@@ -45,7 +45,7 @@ export function GraficasMes({ resumen, comparativa, presupuestos, categorias, vi
         <span>
           <span className="nombre">{c?.name ?? 'Sin categoría'}</span>
           <span className="barra-categoria">
-            <span style={{ display: 'block', height: '100%', width: `${pct}%`, background: c?.color ?? '#8b96ab' }} />
+            <div style={{ height: '100%', width: `${pct}%`, background: c?.color ?? '#8b96ab' }} />
           </span>
         </span>
         <span className="cifras">
@@ -57,7 +57,7 @@ export function GraficasMes({ resumen, comparativa, presupuestos, categorias, vi
     // «Sin categoría» no tiene drill-down posible: se pinta gris y sin enlace.
     return c
       ? <a key={`${categoryId}`} className="fila-categoria" href={`#/movimientos?cat=${categoryId}&mes=${mes}`}>{contenido}</a>
-      : <div key="sin-categoria" className="fila-categoria" style={{ color: 'var(--texto2)' }}>{contenido}</div>;
+      : <div key={`sin-categoria-${grupo}`} className="fila-categoria" style={{ color: 'var(--texto2)' }}>{contenido}</div>;
   };
 
   return (
@@ -132,9 +132,9 @@ export function GraficasMes({ resumen, comparativa, presupuestos, categorias, vi
         {expandido && (
           <div className="lista-categorias">
             {resumen.byCategory.length > 0 && <div className="subtitulo">Gastos</div>}
-            {resumen.byCategory.map((b) => filaCategoria(b.categoryId, b.expenseMinor, resumen.expenseMinor))}
+            {resumen.byCategory.map((b) => filaCategoria(b.categoryId, b.expenseMinor, resumen.expenseMinor, 'gasto'))}
             {resumen.incomeByCategory.length > 0 && <div className="subtitulo">Ingresos</div>}
-            {resumen.incomeByCategory.map((b) => filaCategoria(b.categoryId, b.incomeMinor, resumen.incomeMinor))}
+            {resumen.incomeByCategory.map((b) => filaCategoria(b.categoryId, b.incomeMinor, resumen.incomeMinor, 'ingreso'))}
           </div>
         )}
       </div>
