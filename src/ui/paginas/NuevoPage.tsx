@@ -1,9 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, getSettings, saveSettings } from '../../db/db';
 import { buildManualTx } from '../../domain/builders';
 import { parseVenezuelanAmount, formatMoney } from '../../domain/money';
-import { todayIso } from '../../domain/dates';
+import { todayIso, fechaCorta } from '../../domain/dates';
+import type { CalEvent } from '../../domain/types';
+import type { Ocurrencia } from '../../domain/calendar';
+import { aplicarAsignacion, candidatasParaTx, sugerirOcurrencia } from '../../domain/eventMatch';
 import { Teclado } from '../componentes/Teclado';
 import { CategoriaGrid } from '../componentes/CategoriaGrid';
 import { TransferForm } from '../componentes/TransferForm';
@@ -20,6 +23,12 @@ export function NuevoPage({ params }: { params: URLSearchParams }) {
   const [cuentaId, setCuentaId] = useState<string | null>(null);
   const cuentas = useLiveQuery(() => db.accounts.filter((a) => !a.archived).toArray(), []) ?? [];
   const categorias = useLiveQuery(() => db.categories.toArray(), []) ?? [];
+  const calEvents = useLiveQuery(() => db.calEvents.toArray(), []) ?? [];
+  const txsAsignadas = useLiveQuery(() => db.transactions.where('eventId').above('').toArray(), []) ?? [];
+  const [hoy] = useState(todayIso);
+  const [eventoActivo, setEventoActivo] = useState<Ocurrencia | null>(null);
+  const [sugerida, setSugerida] = useState<Ocurrencia | null>(null);
+  const prefillHecho = useRef(false);
 
   // Prefill de captura (v2): solo al montar; lo que el usuario edite después manda.
   useEffect(() => {
@@ -38,9 +47,83 @@ export function NuevoPage({ params }: { params: URLSearchParams }) {
     getSettings(db).then((s) => setCuentaId((prev) => prev ?? s.lastAccountId ?? null));
   }, []);
 
+  // Deep link `?evento&fecha` (SemanaCard / Calendario) y sugerencia tras una captura.
+  // Se aplica UNA sola vez, cuando eventos y categorías ya cargaron.
+  useEffect(() => {
+    if (prefillHecho.current) return;
+    if (calEvents.length === 0 || categorias.length === 0 || cuentas.length === 0) return;
+    const eventoParam = params.get('evento');
+    const fechaParam = params.get('fecha');
+    if (eventoParam && fechaParam) {
+      const evento = calEvents.find((e) => e.id === eventoParam);
+      const kind = evento && categorias.find((c) => c.id === evento.categoryId)?.kind;
+      if (evento && kind) {
+        prefillHecho.current = true;
+        setEventoActivo({ eventId: evento.id, date: fechaParam });
+        setModo(kind === 'income' ? 'ingreso' : 'gasto');
+        if (evento.accountId) setCuentaId(evento.accountId);
+        if (!params.get('monto') && evento.amountMinor !== undefined) {
+          setEntrada((evento.amountMinor / 100).toFixed(2).replace('.', ','));
+        }
+        return;
+      }
+    }
+    // Sin `?evento`: si vino de captura con monto y cuenta, se ofrece la sugerencia (no activa).
+    const montoParam = Number(params.get('monto') ?? '0');
+    const cuentaParam = params.get('cuenta') ?? cuentas[0]?.id;
+    if (montoParam > 0 && cuentaParam) {
+      prefillHecho.current = true;
+      const o = sugerirOcurrencia(
+        {
+          type: params.get('tipo') === 'ingreso' ? 'income' : 'expense',
+          date: hoy, accountId: cuentaParam, amountMinor: montoParam,
+        },
+        { eventos: calEvents, txs: txsAsignadas, accounts: cuentas, categories: categorias, hoy },
+      );
+      if (o) setSugerida({ eventId: o.eventId, date: o.date });
+    }
+  }, [calEvents, categorias, cuentas, txsAsignadas, params, hoy]);
+
   const cuenta = cuentas.find((c) => c.id === cuentaId) ?? cuentas[0];
   const minor = parseVenezuelanAmount(entrada.replace(/,$/, ''));
   const [guardando, setGuardando] = useState(false);
+
+  const ctxEventos = useMemo(
+    () => ({ eventos: calEvents, txs: txsAsignadas, accounts: cuentas, categories: categorias, hoy }),
+    [calEvents, txsAsignadas, cuentas, categorias, hoy],
+  );
+
+  const candidatas = useMemo(() => {
+    if (!cuenta || (modo !== 'gasto' && modo !== 'ingreso')) return [];
+    return candidatasParaTx(
+      { type: modo === 'gasto' ? 'expense' : 'income', date: hoy, accountId: cuenta.id, amountMinor: minor ?? 0 },
+      ctxEventos,
+    ).slice(0, 4);
+  }, [cuenta, modo, hoy, minor, ctxEventos]);
+
+  const mismaOcurrencia = (a: Ocurrencia | null, b: Ocurrencia | null) =>
+    a !== null && b !== null && a.eventId === b.eventId && a.date === b.date;
+
+  /** Chips a pintar: la sugerida/activa primero, luego las candidatas. Máximo 4 + la activa. */
+  const chips = useMemo(() => {
+    const lista = candidatas.map((c) => ({
+      o: { eventId: c.ocurrencia.eventId, date: c.ocurrencia.date } as Ocurrencia,
+      evento: c.ocurrencia.evento,
+      vencida: c.ocurrencia.estado === 'vencida',
+    }));
+    for (const fijada of [sugerida, eventoActivo]) {
+      if (!fijada || lista.some((x) => mismaOcurrencia(x.o, fijada))) continue;
+      const evento = calEvents.find((e) => e.id === fijada.eventId);
+      if (evento) lista.unshift({ o: fijada, evento, vencida: fijada.date < hoy });
+    }
+    // la sugerida (o la activa) siempre primera
+    const primera = eventoActivo ?? sugerida;
+    if (primera) {
+      const i = lista.findIndex((x) => mismaOcurrencia(x.o, primera));
+      if (i > 0) lista.unshift(...lista.splice(i, 1));
+    }
+    return lista;
+  }, [candidatas, sugerida, eventoActivo, calEvents, hoy]);
 
   function onTecla(t: string) {
     setEntrada((e) => {
@@ -52,12 +135,12 @@ export function NuevoPage({ params }: { params: URLSearchParams }) {
     });
   }
 
-  async function guardar(categoryId: string) {
+  async function guardar(categoryId: string, o?: Ocurrencia | null, evento?: CalEvent | null) {
     if (guardando) return;
     if (!cuenta || minor === null || minor <= 0) return;
     setGuardando(true);
     try {
-      const tx = buildManualTx({
+      const base = buildManualTx({
         type: modo === 'gasto' ? 'expense' : 'income',
         accountId: cuenta.id,
         amountMinor: minor,
@@ -65,6 +148,8 @@ export function NuevoPage({ params }: { params: URLSearchParams }) {
         dateIso: todayIso(),
         note: nota.trim() || undefined,
       });
+      // La asignación NO altera monto, fecha, cuenta ni tipo.
+      const tx = o && evento ? { ...aplicarAsignacion(base, o, evento), categoryId } : base;
       await db.transactions.add(tx);
       await saveSettings(db, { lastAccountId: cuenta.id });
       avisar('Guardado ✓');
@@ -104,10 +189,41 @@ export function NuevoPage({ params }: { params: URLSearchParams }) {
           <Teclado onTecla={onTecla} />
           <label>Nota (opcional)</label>
           <input aria-label="Nota" value={nota} onChange={(e) => setNota(e.target.value)} placeholder="¿En qué fue?" />
+          {chips.length > 0 && (
+            <div className="chips-eventos">
+              {chips.map(({ o, evento, vencida }) => {
+                const activo = mismaOcurrencia(o, eventoActivo);
+                const icono = categorias.find((c) => c.id === evento.categoryId)?.icon ?? '📅';
+                return (
+                  <button
+                    key={`${o.eventId}|${o.date}`}
+                    type="button"
+                    disabled={guardando}
+                    className={['chip-evento', activo ? 'activo' : '', mismaOcurrencia(o, sugerida) && !activo ? 'sugerido' : ''].join(' ').trim()}
+                    onClick={() => {
+                      if (activo) { setEventoActivo(null); return; }        // ✕ desmarca
+                      if (minor !== null && minor > 0) {
+                        void guardar(evento.categoryId, o, evento);          // 1 toque: guarda y asigna
+                      } else {
+                        setEventoActivo(o);
+                        avisar('Escribe el monto');
+                      }
+                    }}
+                  >
+                    <span>{icono} {evento.titulo} · {fechaCorta(o.date)}{vencida ? ' · vencida' : ''}</span>
+                    {activo && <span className="cerrar">✕</span>}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <label>Toca la categoría para guardar</label>
           <CategoriaGrid
             categorias={categorias.filter((c) => c.kind === (modo === 'gasto' ? 'expense' : 'income'))}
-            onElegir={guardar}
+            onElegir={(categoryId) => {
+              const activo = eventoActivo ? chips.find((x) => mismaOcurrencia(x.o, eventoActivo)) : undefined;
+              void guardar(categoryId, activo?.o ?? null, activo?.evento ?? null);
+            }}
           />
         </>
       )}
