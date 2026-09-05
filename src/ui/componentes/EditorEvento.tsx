@@ -52,6 +52,7 @@ export function EditorEvento({ original, borrador, cerrar }: {
     // el usuario no podría borrarlo y Guardar fallaría con «El monto esperado
     // necesita una cuenta» señalando un campo que no puede tocar.
     if (!nuevaId) {
+      if (montoTxt !== '') avisar('Sin cuenta no hay monto esperado: se borró el monto escrito');
       setMontoTxt('');
       setCuentaId('');
       return;
