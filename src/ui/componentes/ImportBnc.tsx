@@ -249,7 +249,7 @@ export function ImportBnc() {
               {d.duplicate && <span className="chip" style={{ marginLeft: 4 }}>ya importado</span>}
             </span>
             {!d.duplicate && (
-              <span style={{ display: 'flex', gap: 6, marginTop: 4, alignItems: 'center' }}>
+              <span className="fila-import-controles">
                 <select
                   aria-label={`Categoría fila ${i + 1}`}
                   value={d.tx.categoryId ?? ''}

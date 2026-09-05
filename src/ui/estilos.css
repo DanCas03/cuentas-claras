@@ -450,6 +450,10 @@ button.chip:active { transform: scale(0.94); background: var(--tarjeta-2); color
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .barra-categoria {
+  /* `display: block` es OBLIGATORIO: es un <span> y `height` no aplica a cajas
+     inline no reemplazadas (CSS 2.1 §10.5), así que la barra y su relleno al
+     100 % quedaban con altura real 0 aunque getComputedStyle dijera «6px». */
+  display: block;
   height: 6px; border-radius: 999px; background: var(--fondo-2);
   margin-top: 4px; overflow: hidden;
 }
@@ -460,3 +464,12 @@ button.chip:active { transform: scale(0.94); background: var(--tarjeta-2); color
   font-variant-numeric: tabular-nums; font-feature-settings: 'tnum';
 }
 .fila-categoria .pct { font-size: 12px; color: var(--texto2); text-align: right; }
+
+/* Controles por fila de la vista previa de los imports (BNC y Zinli).
+   Los dos selects (categoría y evento) heredan `width: 100%` del bloque de
+   formularios: sin `flex-wrap` y sin `min-width: 0` se comprimían hasta la
+   flecha a 390 px. Clase compartida para no duplicar estilos inline en los dos. */
+.fila-import-controles {
+  display: flex; gap: 6px; margin-top: 4px; align-items: center; flex-wrap: wrap;
+}
+.fila-import-controles > select { flex: 1 1 140px; min-width: 0; width: auto; }

@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db/db';
 import type { CalEvent, CategoryKind, Recurrence } from '../../domain/types';
-import { buildEvent, esQuincenal, RECURRENCIA_QUINCENAL } from '../../domain/calendar';
-import { parseDias } from '../../domain/calendar';
+import { buildEvent, esQuincenal, parseDias, RECURRENCIA_QUINCENAL } from '../../domain/calendar';
 import { guardarEvento, eliminarEvento } from '../../db/eventOps';
 import { parseVenezuelanAmount } from '../../domain/money';
 import { todayIso, partsOf } from '../../domain/dates';
@@ -49,6 +48,14 @@ export function EditorEvento({ original, borrador, cerrar }: {
   }
 
   function cambiarCuenta(nuevaId: string) {
+    // Sin cuenta el input de monto queda `disabled`: si dejáramos el texto escrito
+    // el usuario no podría borrarlo y Guardar fallaría con «El monto esperado
+    // necesita una cuenta» señalando un campo que no puede tocar.
+    if (!nuevaId) {
+      setMontoTxt('');
+      setCuentaId('');
+      return;
+    }
     const monedaNueva = cuentas.find((c) => c.id === nuevaId)?.currency ?? 'USD';
     if (monedaNueva !== moneda && montoTxt !== '') {
       setMontoTxt('');
