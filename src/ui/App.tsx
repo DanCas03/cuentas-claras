@@ -10,6 +10,7 @@ import { MovimientosPage } from './paginas/MovimientosPage';
 import { ImportarPage } from './paginas/ImportarPage';
 import { AjustesPage } from './paginas/AjustesPage';
 import { DeudasPage } from './paginas/DeudasPage';
+import { CalendarioPage } from './paginas/CalendarioPage';
 import { refreshRatesOncePerDay } from '../rates/providers';
 import { todayIso } from '../domain/dates';
 
@@ -46,6 +47,7 @@ export function App() {
         {path === '/importar' && <ImportarPage />}
         {path === '/ajustes' && <AjustesPage />}
         {path === '/deudas' && <DeudasPage />}
+        {path === '/calendario' && <CalendarioPage params={params} />}
       </main>
       <Nav path={path} />
       <Toast />
