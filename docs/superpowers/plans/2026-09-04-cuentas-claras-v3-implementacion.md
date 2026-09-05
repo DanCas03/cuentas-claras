@@ -27,11 +27,11 @@ Aplican a TODAS las tareas; cada tarea las incluye implícitamente.
 11. Flujo ≤3 toques del gasto manual: intacto (la fila de chips de eventos solo existe con candidatas o evento activo).
 12. Paralelismo (directiva de Daniel): tareas de una misma oleada solo si sus archivos son disjuntos; cada implementador hace `git add` SOLO de sus archivos y su commit propio; los paquetes de revisión se generan por commits de la tarea.
 13. Entorno Windows 11; el tool Bash (Git Bash) para comandos. Cada implementador de UI levanta su dev server (`npm run dev -- --port 51NN`) y **lo mata al terminar**.
-14. Footer EXACTO de commit (dos líneas al final del mensaje):
-    ```
-    Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
-    Claude-Session: https://claude.ai/code/session_01Je1UFE9VLyAgtnzi285DuG
-    ```
+14. Footer de commit: las DOS líneas finales del mensaje son las que dicte la directiva de atribución
+    de **la sesión que hace el commit** (`Co-Authored-By:` + `Claude-Session:`). NO se hardcodean aquí:
+    esta restricción ya se reescribió tres veces porque cada sesión que retomó el plan tenía una
+    atribución distinta. Cada commit queda atribuido a quien lo hizo, así que la rama tiene footers
+    heterogéneos a propósito. El controlador se lo pasa a cada implementador en su despacho.
 
 ### Receta de verificación visual headless (para las tareas de UI)
 
@@ -413,7 +413,7 @@ export function backupFilename(dateIso: string): string {
 
 ```bash
 git add src/domain/types.ts src/db/db.ts src/db/db.test.ts src/backup/backup.ts src/backup/backup.test.ts
-git commit -m "feat(db): esquema Dexie v3 con calEvents, campos de evento y respaldo v3 que acepta v2" -m "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01EbFWGAvuqcj6BGusB5iUWL"
+git commit -m "feat(db): esquema Dexie v3 con calEvents, campos de evento y respaldo v3 que acepta v2" -m "Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01EbFWGAvuqcj6BGusB5iUWL"
 ```
 
 ---
@@ -622,7 +622,7 @@ export function celdasMes(month: string): { iso: string; enMes: boolean }[] {
 
 ```bash
 git add src/domain/dates.ts src/domain/dates.test.ts
-git commit -m "feat(dates): helpers de calendario locales sin Intl (addDays, diffDias, celdasMes, nombres en español)" -m "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01EbFWGAvuqcj6BGusB5iUWL"
+git commit -m "feat(dates): helpers de calendario locales sin Intl (addDays, diffDias, celdasMes, nombres en español)" -m "Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01EbFWGAvuqcj6BGusB5iUWL"
 ```
 
 ---
@@ -871,7 +871,7 @@ export async function actualizarGrupo(
 
 ```bash
 git add src/domain/groups.ts src/domain/groups.test.ts src/db/groupOps.ts src/db/groupOps.test.ts
-git commit -m "feat(grupos): categoría del residuo virtual y actualizarGrupo" -m "Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01Je1UFE9VLyAgtnzi285DuG"
+git commit -m "feat(grupos): categoría del residuo virtual y actualizarGrupo" -m "Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_017oWdjKjmQiA6V6rtnpGKAw"
 ```
 
 ---
@@ -963,7 +963,7 @@ Y cambiar el `return` final por:
 
 ```bash
 git add src/domain/stats.ts src/domain/stats.test.ts
-git commit -m "feat(stats): incomeByCategory aditivo en el resumen del mes" -m "Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01Je1UFE9VLyAgtnzi285DuG"
+git commit -m "feat(stats): incomeByCategory aditivo en el resumen del mes" -m "Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_017oWdjKjmQiA6V6rtnpGKAw"
 ```
 
 ---
@@ -1169,7 +1169,7 @@ Verifica DE VERDAD: (a) la consola imprime `cuentas: 5`, `categorias: 18` y `tab
 
 ```bash
 git add src/ui/estilos.css src/main.tsx
-git commit -m "feat(estilos): bloques v3 de calendario y lista de categorías; window.__db en desarrollo" -m "Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01Je1UFE9VLyAgtnzi285DuG"
+git commit -m "feat(estilos): bloques v3 de calendario y lista de categorías; window.__db en desarrollo" -m "Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_017oWdjKjmQiA6V6rtnpGKAw"
 ```
 
 ---
@@ -1661,7 +1661,7 @@ Nota: `once` NUNCA muestra el sufijo « · hasta …» porque `fechasDeEvento` i
 
 ```bash
 git add src/domain/calendar.ts src/domain/calendar.test.ts
-git commit -m "feat(calendario): expansión de recurrencias y estado de ocurrencias derivadas" -m "Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01Je1UFE9VLyAgtnzi285DuG"
+git commit -m "feat(calendario): expansión de recurrencias y estado de ocurrencias derivadas" -m "Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_017oWdjKjmQiA6V6rtnpGKAw"
 ```
 
 ---
@@ -2012,7 +2012,7 @@ export function validarAsignacion(
 
 ```bash
 git add src/domain/eventMatch.ts src/domain/eventMatch.test.ts
-git commit -m "feat(eventos): candidatas, sugerencia por lote y asignación pura" -m "Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01Je1UFE9VLyAgtnzi285DuG"
+git commit -m "feat(eventos): candidatas, sugerencia por lote y asignación pura" -m "Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_017oWdjKjmQiA6V6rtnpGKAw"
 ```
 
 ---
@@ -2271,7 +2271,7 @@ export async function reanudarOcurrencia(d: CuentasDB, eventId: string, date: st
 
 ```bash
 git add src/db/eventOps.ts src/db/eventOps.test.ts
-git commit -m "feat(eventos): operaciones de base todo-o-nada para eventos y asignaciones" -m "Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01Je1UFE9VLyAgtnzi285DuG"
+git commit -m "feat(eventos): operaciones de base todo-o-nada para eventos y asignaciones" -m "Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_017oWdjKjmQiA6V6rtnpGKAw"
 ```
 
 ---
@@ -2610,7 +2610,7 @@ Mata el dev server. `npm run build` sin errores.
 
 ```bash
 git add src/ui/componentes/SelectEvento.tsx src/ui/paginas/MovimientosPage.tsx
-git commit -m "feat(movimientos): categoría de grupo, editor de grupo y asignación de evento con SelectEvento" -m "Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01Je1UFE9VLyAgtnzi285DuG"
+git commit -m "feat(movimientos): categoría de grupo, editor de grupo y asignación de evento con SelectEvento" -m "Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_017oWdjKjmQiA6V6rtnpGKAw"
 ```
 
 ---
@@ -2803,6 +2803,8 @@ Y cambiar el `onElegir` de `CategoriaGrid` (línea 110) a:
 ```
 
 - [ ] **Paso 6: Verificación headless bloqueante.** `npm run dev -- --port 5110`. Siembra el evento «Quincena» (`cat-sueldo`, `acc-bnc`, `amountMinor: 800000`, `{ kind: 'monthly', days: [15, 31] }`, `startDate: '2026-01-01'`) igual que en T9. Capturas en `.superpowers/sdd/capturas/v3-task-10/`:
+
+> **Nota del controlador (hallazgo verificado en la revisión de T10):** la receta genérica fija el reloj falso en `2026-09-04`, pero la ventana de candidatas de la decisión 12 es `[hoy−31, hoy+7]` = `[2026-08-04, 2026-09-11]`, así que la ocurrencia `2026-09-15` NO es candidata ese día y los escenarios 2–4 («chip 15 sep») serían inalcanzables. Para esos escenarios fija el reloj del script en `2026-09-15`. Es corrección de script de verificación, nunca de la app.
 1. **Flujo ≤3 toques intacto**: con la base SIN eventos (`await d.calEvents.clear()`), ir a `#/nuevo?tipo=gasto`, escribir `12,50` → NO existe ningún `.chips-eventos` en el DOM (`await pagina.locator('.chips-eventos').count()` debe ser `0`) y la grilla de categorías se ve completa sin scroll extra → `01-sin-eventos-dom-v2.png`.
 2. Con el evento sembrado, ir a `#/nuevo?tipo=ingreso`, elegir cuenta BNC, escribir `8000,00` → aparece UNA fila de chips con «💼 Quincena · 15 sep» → `02-chip-quincena.png`. Confirma que la fila NO empuja la grilla fuera de pantalla.
 3. Tocar el chip → guarda y navega a Inicio. En `window.__db`, la última tx tiene `categoryId: 'cat-sueldo'`, `eventId: 'e-quincena'`, `eventDate: '2026-09-15'`, `amountMinor: 800000`, `type: 'income'` → `03-guardado-1-toque.png` (Inicio tras guardar).
@@ -2816,7 +2818,7 @@ Mata el dev server. `npm run build` sin errores.
 
 ```bash
 git add src/ui/paginas/NuevoPage.tsx
-git commit -m "feat(nuevo): chips de eventos con guardado en 1 toque y prefill por deep link" -m "Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01Je1UFE9VLyAgtnzi285DuG"
+git commit -m "feat(nuevo): chips de eventos con guardado en 1 toque y prefill por deep link" -m "Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_017oWdjKjmQiA6V6rtnpGKAw"
 ```
 
 ---
@@ -3053,7 +3055,7 @@ Mata el dev server. `npm run build` sin errores.
 
 ```bash
 git add src/ui/componentes/EditorEvento.tsx src/ui/componentes/SemanaCard.tsx src/ui/paginas/CalendarioPage.tsx src/ui/App.tsx
-git commit -m "feat(calendario): página #/calendario, editor de eventos y tarjeta de la semana" -m "Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01Je1UFE9VLyAgtnzi285DuG"
+git commit -m "feat(calendario): página #/calendario, editor de eventos y tarjeta de la semana" -m "Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_017oWdjKjmQiA6V6rtnpGKAw"
 ```
 
 ---
@@ -3211,7 +3213,7 @@ Mata el dev server. `npm run build` sin errores.
 
 ```bash
 git add src/ui/componentes/GraficasMes.tsx src/ui/paginas/DashboardPage.tsx
-git commit -m "feat(inicio): «Este mes» expandible con lista de categorías y navegación de mes" -m "Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01Je1UFE9VLyAgtnzi285DuG"
+git commit -m "feat(inicio): «Este mes» expandible con lista de categorías y navegación de mes" -m "Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_017oWdjKjmQiA6V6rtnpGKAw"
 ```
 
 ---
@@ -3309,7 +3311,7 @@ Mata el dev server. `npm run build` sin errores.
 
 ```bash
 git add src/ui/componentes/ImportBnc.tsx src/ui/componentes/ImportZinli.tsx
-git commit -m "feat(imports): sugerencia de evento por lote y select de evento por fila" -m "Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01Je1UFE9VLyAgtnzi285DuG"
+git commit -m "feat(imports): sugerencia de evento por lote y select de evento por fila" -m "Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_017oWdjKjmQiA6V6rtnpGKAw"
 ```
 
 ---
@@ -3364,6 +3366,8 @@ Sustituye además el `todayIso()` inline de la línea 22 (`effectiveRate(todayIs
 
 Es el ÚNICO cambio de esta tarea en `App.tsx`; la ruta `/calendario` ya la puso T11.
 
+> **Ruling del controlador, obligatorio en esta tarea (hallazgo verificado en la revisión de T10):** `App.tsx:43` monta `<NuevoPage params={params} />` SIN `key`, así que una navegación de `#/nuevo?...` a otro `#/nuevo?...` distinto NO remonta la página: el guard `prefillHecho.current` sigue en `true` de la visita anterior y el prefill del nuevo deep link nunca se aplica, dejando `modo`, `entrada`, `cuentaId` y `eventoActivo` obsoletos. Cambia esa línea a `<NuevoPage key={params.toString()} params={params} />` (una línea, misma tarea que ya toca `App.tsx`) y añade al E2E un paso que navegue de un deep link de ocurrencia A a uno de ocurrencia B sin pasar por otra pantalla, verificando que el segundo prefill sí se aplica. Esto amplía el «único cambio en App.tsx» del Paso 3 a dos líneas: la de `/movimientos` y la de `/nuevo`.
+
 - [ ] **Paso 4: E2E headless bloqueante (el criterio de éxito del spec, completo).** `npm run dev -- --port 5114`. Un solo script que recorre el guion de Daniel de principio a fin, con capturas en `.superpowers/sdd/capturas/v3-task-14/`. Parte de una base **limpia** (`indexedDB.deleteDatabase('cuentas-claras')` antes de cargar, o `d.transactions.clear()` + `d.calEvents.clear()` + `d.txGroups.clear()`), reloj congelado en `new Date(2026, 8, 4, 10, 0, 0)`.
 
 1. **Crear la Quincena por UI**: `#/calendario` → «Nuevo evento» → Cobro / Sueldo-Pagos / cuenta BNC / monto `8000,00` / fecha `2026-09-01` / Repetir «Quincenal (15 y último)» → Guardar. Cronometra: debe rondar los 20 s. → `01-quincena-creada.png`.
@@ -3385,7 +3389,7 @@ Mata el dev server.
 
 ```bash
 git add src/ui/paginas/DashboardPage.tsx src/ui/App.tsx
-git commit -m "feat(inicio): tarjeta «Esta semana» en el dashboard y filtros por URL en Movimientos" -m "Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01Je1UFE9VLyAgtnzi285DuG"
+git commit -m "feat(inicio): tarjeta «Esta semana» en el dashboard y filtros por URL en Movimientos" -m "Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_017oWdjKjmQiA6V6rtnpGKAw"
 ```
 
 ---
@@ -3467,7 +3471,7 @@ git push origin main
 
 ```bash
 git add README.md
-git commit -m "docs: documenta el calendario de eventos, la categoría de grupo y «Este mes» expandible" -m "Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_01Je1UFE9VLyAgtnzi285DuG"
+git commit -m "docs: documenta el calendario de eventos, la categoría de grupo y «Este mes» expandible" -m "Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>" -m "Claude-Session: https://claude.ai/code/session_017oWdjKjmQiA6V6rtnpGKAw"
 ```
 
 - [ ] **Paso 6: Validación de Daniel (bloqueante, con desviaciones declaradas).** Entrega el reporte con:
