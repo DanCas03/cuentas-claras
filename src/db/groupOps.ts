@@ -14,11 +14,18 @@ async function limpiarGroupId(d: CuentasDB, txIds: string[]): Promise<void> {
   await d.transactions.where('id').anyOf(txIds).modify((t) => { delete t.groupId; });
 }
 
-/** Crea un grupo transaccional con ≥2 gastos/ingresos sueltos. Todo-o-nada. */
-export async function agruparTxs(d: CuentasDB, txIds: string[], nota?: string): Promise<string> {
+/** Crea un grupo transaccional con ≥2 gastos/ingresos sueltos. Todo-o-nada.
+ *  v3: `categoryId` opcional = categoría del residuo virtual (ver categoriaDelResiduo). */
+export async function agruparTxs(d: CuentasDB, txIds: string[], nota?: string, categoryId?: string): Promise<string> {
   if (txIds.length < 2) throw new Error('Selecciona al menos 2 movimientos');
-  const grupo: TxGroup = { id: crypto.randomUUID(), nota: nota?.trim() || undefined, createdIso: new Date().toISOString() };
-  await d.transaction('rw', d.transactions, d.txGroups, async () => {
+  const grupo: TxGroup = {
+    id: crypto.randomUUID(),
+    nota: nota?.trim() || undefined,
+    createdIso: new Date().toISOString(),
+  };
+  if (categoryId) grupo.categoryId = categoryId;
+  await d.transaction('rw', d.transactions, d.txGroups, d.categories, async () => {
+    if (categoryId && !(await d.categories.get(categoryId))) throw new Error('La categoría no existe');
     await validarAgrupables(d, txIds);
     await d.txGroups.add(grupo);
     await d.transactions.where('id').anyOf(txIds).modify((t) => { t.groupId = grupo.id; });
@@ -57,5 +64,27 @@ export async function desagrupar(d: CuentasDB, groupId: string): Promise<void> {
     const miembros = await d.transactions.where('groupId').equals(groupId).primaryKeys();
     await limpiarGroupId(d, miembros);
     await d.txGroups.delete(groupId);
+  });
+}
+
+/** Edita nota y/o categoría del grupo. `null` BORRA la clave; `undefined` no la toca. */
+export async function actualizarGrupo(
+  d: CuentasDB, groupId: string, patch: { nota?: string | null; categoryId?: string | null },
+): Promise<void> {
+  await d.transaction('rw', d.txGroups, d.categories, async () => {
+    const grupo = await d.txGroups.get(groupId);
+    if (!grupo) throw new Error('El grupo no existe');
+    if (patch.categoryId && !(await d.categories.get(patch.categoryId))) throw new Error('La categoría no existe');
+    const actualizado: TxGroup = { ...grupo };
+    if (patch.nota !== undefined) {
+      const limpia = patch.nota?.trim() ?? '';
+      if (limpia === '') delete actualizado.nota;
+      else actualizado.nota = limpia;
+    }
+    if (patch.categoryId !== undefined) {
+      if (patch.categoryId) actualizado.categoryId = patch.categoryId;
+      else delete actualizado.categoryId;
+    }
+    await d.txGroups.put(actualizado);
   });
 }

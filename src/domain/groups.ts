@@ -1,4 +1,4 @@
-import type { Account, Currency, Transaction, TxGroup } from './types';
+import type { Account, Category, Currency, Transaction, TxGroup } from './types';
 
 export interface ResiduoMoneda {
   currency: Currency;
@@ -26,12 +26,24 @@ function masReciente(txs: Transaction[]): Transaction {
   return txs.reduce((a, b) => (`${b.date} ${b.time ?? ''}` > `${a.date} ${a.time ?? ''}` ? b : a));
 }
 
+/** Categoría del residuo virtual (v3). La categoría del grupo se aplica SOLO si su kind
+ *  coincide con el signo del residuo (expense ↔ residuo < 0, income ↔ residuo > 0);
+ *  si no coincide, no existe o no hay categorías, cae en «Vuelto» del signo (v2). */
+export function categoriaDelResiduo(grupo: TxGroup | undefined, residuoMinor: number, categories: Category[]): string {
+  const necesario = residuoMinor > 0 ? 'income' : 'expense';
+  const elegida = grupo?.categoryId ? categories.find((c) => c.id === grupo.categoryId) : undefined;
+  if (elegida && elegida.kind === necesario) return elegida.id;
+  return residuoMinor > 0 ? 'cat-vuelto-ingreso' : 'cat-vuelto-gasto';
+}
+
 /** Sustituye los movimientos agrupados por su residuo virtual «Vuelto».
  *  SOLO para agregaciones (mes, comparativa, gráficas, presupuestos).
  *  NUNCA para saldos: accountBalanceMinor/patrimonio usan las txs crudas.
  *  Los virtuales (`virtual-…`) jamás se persisten. */
-export function txsEfectivas(txs: Transaction[], accounts: Account[], grupos: TxGroup[] = []): Transaction[] {
-  const notaDe = new Map(grupos.map((g) => [g.id, g.nota]));
+export function txsEfectivas(
+  txs: Transaction[], accounts: Account[], grupos: TxGroup[] = [], categories: Category[] = [],
+): Transaction[] {
+  const grupoDe = new Map(grupos.map((g) => [g.id, g]));
   const monedaDe = new Map(accounts.map((a) => [a.id, a.currency]));
   const sueltas: Transaction[] = [];
   const porGrupo = new Map<string, Transaction[]>();
@@ -47,6 +59,7 @@ export function txsEfectivas(txs: Transaction[], accounts: Account[], grupos: Tx
   const virtuales: Transaction[] = [];
   for (const [groupId, miembros] of porGrupo) {
     const ultimo = masReciente(miembros);
+    const grupo = grupoDe.get(groupId);
     for (const { currency, residuoMinor } of residuosDeGrupo(miembros, accounts)) {
       const deLaMoneda = miembros.filter((t) => (monedaDe.get(t.accountId) ?? 'USD') === currency);
       virtuales.push({
@@ -56,8 +69,8 @@ export function txsEfectivas(txs: Transaction[], accounts: Account[], grupos: Tx
         amountMinor: Math.abs(residuoMinor),
         date: ultimo.date,
         time: ultimo.time,
-        categoryId: residuoMinor > 0 ? 'cat-vuelto-ingreso' : 'cat-vuelto-gasto',
-        note: notaDe.get(groupId) || 'Vuelto de grupo transaccional',
+        categoryId: categoriaDelResiduo(grupo, residuoMinor, categories),
+        note: grupo?.nota || 'Vuelto de grupo transaccional',
         source: 'manual',
         groupId,
       });

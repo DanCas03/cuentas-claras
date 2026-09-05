@@ -10,6 +10,7 @@ import { MovimientosPage } from './paginas/MovimientosPage';
 import { ImportarPage } from './paginas/ImportarPage';
 import { AjustesPage } from './paginas/AjustesPage';
 import { DeudasPage } from './paginas/DeudasPage';
+import { CalendarioPage } from './paginas/CalendarioPage';
 import { refreshRatesOncePerDay } from '../rates/providers';
 import { todayIso } from '../domain/dates';
 
@@ -40,12 +41,15 @@ export function App() {
     <div className="app">
       <main className="contenido">
         {path === '/' && <DashboardPage />}
-        {path === '/nuevo' && <NuevoPage params={params} />}
+        {/* key: un deep link de ocurrencia a otro debe REMONTAR Nuevo, si no el guard
+            `prefillHecho` de la visita anterior deja el prefill del segundo sin aplicar. */}
+        {path === '/nuevo' && <NuevoPage key={params.toString()} params={params} />}
         {path === '/captura' && <CapturaPage params={params} />}
-        {path === '/movimientos' && <MovimientosPage />}
+        {path === '/movimientos' && <MovimientosPage params={params} />}
         {path === '/importar' && <ImportarPage />}
         {path === '/ajustes' && <AjustesPage />}
         {path === '/deudas' && <DeudasPage />}
+        {path === '/calendario' && <CalendarioPage params={params} />}
       </main>
       <Nav path={path} />
       <Toast />

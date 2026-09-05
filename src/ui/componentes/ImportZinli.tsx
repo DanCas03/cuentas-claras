@@ -10,12 +10,16 @@ import { buildAdjustment } from '../../domain/builders';
 import { accountBalanceMinor } from '../../domain/balances';
 import { formatMoney } from '../../domain/money';
 import { todayIso } from '../../domain/dates';
+import { aplicarAsignacion, sugerirParaLote } from '../../domain/eventMatch';
 import { avisar } from '../Toast';
+import { SelectEvento } from './SelectEvento';
 
 interface DraftUI extends ZinliDraft {
   incluir: boolean;
   crearRegla: boolean;
   patron: string;
+  /** true si `sugerirParaLote` propuso esta asignación y el usuario no la ha cambiado. */
+  sugerido: boolean;
 }
 
 const CUENTA_ZINLI = 'acc-zinli';
@@ -32,6 +36,9 @@ export function ImportZinli() {
   const [guardando, setGuardando] = useState(false);
   const categorias = useLiveQuery(() => db.categories.toArray(), []) ?? [];
   const txs = useLiveQuery(() => db.transactions.toArray(), []) ?? [];
+  const calEvents = useLiveQuery(() => db.calEvents.toArray(), []) ?? [];
+  const cuentas = useLiveQuery(() => db.accounts.toArray(), []) ?? [];
+  const [hoy] = useState(todayIso);
 
   async function analizar(f: File) {
     try {
@@ -60,7 +67,26 @@ export function ImportZinli() {
       setResultado(r);
       setSaldoFinal(r.saldoFinalMinor);
       setFinPeriodoIso(r.movements.reduce((max, m) => (m.date > max ? m.date : max), r.movements[0].date));
-      setDrafts(mapeados.map((d) => ({ ...d, incluir: !d.duplicate, crearRegla: false, patron: d.tx.note ?? '' })));
+      // El evento sugerido GANA a la heurística por defecto y a la regla aprendida
+      // (decisión 5 del spec v3): aplicarAsignacion fija eventId/eventDate y la categoría
+      // del evento. El select de categoría sigue visible y corregible antes de confirmar.
+      const asignadas = txs.filter((t) => t.eventId !== undefined);
+      const sugerencias = sugerirParaLote(
+        mapeados.filter((d) => !d.duplicate).map((d) => d.tx),
+        { eventos: calEvents, txs: asignadas, accounts: cuentas, categories: categorias, hoy },
+      );
+      setDrafts(mapeados.map((d) => {
+        const o = sugerencias.get(d.tx.id);
+        const evento = o ? calEvents.find((e) => e.id === o.eventId) ?? null : null;
+        return {
+          ...d,
+          tx: o && evento ? aplicarAsignacion(d.tx, o, evento) : d.tx,
+          incluir: !d.duplicate,
+          crearRegla: false,
+          patron: d.tx.note ?? '',
+          sugerido: Boolean(o && evento),
+        };
+      }));
     } catch (err) {
       setError((err as Error).message);
     }
@@ -197,7 +223,7 @@ export function ImportZinli() {
                   {d.duplicate && <span className="chip" style={{ marginLeft: 4 }}>ya importado</span>}
                 </span>
                 {!d.duplicate && (
-                  <span style={{ display: 'flex', gap: 6, marginTop: 4, alignItems: 'center' }}>
+                  <span className="fila-import-controles">
                     <select
                       aria-label={`Categoría fila ${i + 1}`}
                       value={d.tx.categoryId ?? ''}
@@ -208,6 +234,19 @@ export function ImportZinli() {
                         <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
                       ))}
                     </select>
+                    <SelectEvento
+                      ariaLabel={`Evento fila ${i + 1}`}
+                      tx={{
+                        type: d.tx.type as 'income' | 'expense',
+                        date: d.tx.date,
+                        accountId: d.tx.accountId,
+                        amountMinor: d.tx.amountMinor,
+                      }}
+                      actual={d.tx.eventId && d.tx.eventDate ? { eventId: d.tx.eventId, date: d.tx.eventDate } : null}
+                      ctx={{ eventos: calEvents, txs: txs.filter((t) => t.eventId !== undefined), accounts: cuentas, categories: categorias, hoy }}
+                      onChange={(o, evento) => actualizar(i, { tx: aplicarAsignacion(d.tx, o, evento), sugerido: false })}
+                    />
+                    {d.sugerido && d.tx.eventId && <span className="chip">sugerido</span>}
                     <label style={{ display: 'flex', alignItems: 'center', gap: 4, margin: 0, whiteSpace: 'nowrap' }}>
                       <input
                         type="checkbox"
