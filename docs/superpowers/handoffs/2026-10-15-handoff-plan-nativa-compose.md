@@ -15,7 +15,7 @@ El plan se ejecutará después, probablemente en varias sesiones, con `superpowe
 
 1. Spec nativa (`2026-10-15-cuentas-claras-nativa-compose-design.md`) manda en el *cómo* y en el alcance.
 2. Specs v1/v2/v3 (`docs/superpowers/specs/2026-07-07-…`, `2026-07-22-…`, `2026-09-04-…`) mandan en el *qué* de cada función. Las «decisiones cerradas» de esos specs siguen vigentes (por ejemplo, ocurrencias derivadas y nunca persistidas; `eventDate` nominal; el evento sugerido gana a la regla en imports).
-3. **El código TypeScript de `src/` es la especificación ejecutable.** Cada regla de negocio y cada caso de test se porta de ahí. Cuando un spec y el código difieran, manda el código (es lo que Daniel usó y validó).
+3. **El código TypeScript de `src/` es la especificación ejecutable.** Cada regla de negocio se porta de ahí; los tests de Vitest son la guía de casos límite, no se portan uno a uno (ver decisión 8). Cuando un spec y el código difieran, manda el código (es lo que Daniel usó y validó).
 4. Los comprobantes reales de la raíz (`TXTBNC1.txt`, `TXTBNC2.txt`, `Screenshot_*.jpg`) están gitignored y mandan en formatos. **Privacidad estricta:** nunca copiar datos reales a fixtures, docs ni código; usar las fixtures anonimizadas de `src/**/fixtures/`.
 
 ## Decisiones de Daniel (NO reabrir, NO volver a preguntar)
@@ -27,6 +27,7 @@ El plan se ejecutará después, probablemente en varias sesiones, con `superpowe
 5. **Teléfono:** Xiaomi/Redmi/POCO. Las defensas MIUI/HyperOS (autoinicio, batería sin restricciones, bloqueo en recientes, re-enlace del listener) son alcance obligatorio de la fase 3.
 6. **Autonomía:** decide con el default razonable y documéntalo en el ledger; pregunta a Daniel SOLO bloqueos genuinos: conectar el teléfono por USB, confirmar el paquete del BNC, pasar el archivo de respaldo, validar en el dispositivo.
 7. Todo en español (UI, docs, commits). Footer exacto de commit: `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>`. No commitear `.claude/` ni `.superpowers/` (gitignorados).
+8. **Tests solo los importantes** (dicho por Daniel al cerrar el brainstorming): «no es un objetivo tener una cobertura completa sino que simplemente la app funcione bien». La lista cerrada de qué lleva tests y qué no está en el spec §9. No portes la suite de Vitest uno a uno; pocos casos por módulo (normal, límite, el que falló históricamente). Si una tarea del plan pide TDD, que sea solo para los módulos de esa lista.
 
 ## Estado del repo
 
@@ -59,7 +60,7 @@ El plan se ejecutará después, probablemente en varias sesiones, con `superpowe
 - **Respaldo** v3 exacto, v2 normalizado con `calEvents: []`, v1 rechazado con el mismo mensaje. `importBackup` reemplaza TODO en una transacción. Exportar/importar por SAF (`ActivityResultContracts.CreateDocument("application/json")` / `OpenDocument`).
 - **Tasas:** cadena dolarapi (`promedio`) → vcoud (`price` del item `slug == "dolar-bcv"`), timeout 8 s, una vez al día por `lastRatesFetchDate`. Binance solo manual. Fixtures en `src/rates/fixtures/*.json`.
 - **Patrones de UI heredados:** guard `guardando` en todo guardado; registro de gasto en ≤ 3 toques; teclado numérico propio; `lastAccountId`; chips de evento con guardado en 1 toque (fase 6); «Este mes» con navegación de mes acotada entre el mes más antiguo con movimientos y el actual.
-- **Tests JVM:** `domain/` puro con JUnit; `data/`, `backup/`, ops con Robolectric + Room en memoria (`allowMainThreadQueries` solo en tests). Copiar las fixtures anonimizadas a `android/app/src/test/resources/` (TXT del BNC como texto; notificaciones y JSON de tasas tal cual).
+- **Tests JVM, solo la lista del spec §9:** dominio de dinero/saldos/grupos/stats/calendario/eventMatch con JUnit; parsers del BNC (notificación y TXT) y respaldo con fixtures; operaciones todo-o-nada con Robolectric + Room en memoria (`allowMainThreadQueries` solo en tests). Nada de tests para `dates`, `builders`, `filters`, `rules`, seeds, ViewModels ni UI. Copiar las fixtures anonimizadas a `android/app/src/test/resources/` (TXT del BNC como texto; notificaciones y JSON de tasas tal cual).
 - **Verificación de UI por fase:** `./gradlew :app:assembleDebug` → `adb install -r` → navegar → `adb exec-out screencap -p > .superpowers/sdd/capturas/<fase>/<pantalla>.png` → inspeccionar la imagen con Read. Las capturas no se commitean.
 - **Paleta y fuente:** `src/ui/estilos.css` bloque `:root` (fondo `#0a0f1c`, tarjeta `#121a2b`, primario `#2dd4bf`, ingreso `#34d399`, gasto `#f87171`, aviso `#fbbf24`, texto `#e8edf6`, texto2 `#8b96ab`, radio 16/10). Manrope: descargar la variable OFL de Google Fonts a `res/font/` (no está en el repo; `@fontsource-variable/manrope` en `node_modules` trae los `.woff2`, que Android no lee: hace falta el `.ttf`).
 

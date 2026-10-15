@@ -23,6 +23,7 @@ Daniel eligió **Kotlin + Jetpack Compose puro** sobre Capacitor sabiendo que es
 4. **Orden de fases:** (1) dominio + datos + respaldo, (2) Inicio/Nuevo/Movimientos/Ajustes, (3) captura de notificaciones, (4) import TXT BNC, (5) deudas y grupos, (6) calendario. Cada fase termina con un APK instalable en el teléfono de Daniel.
 5. **Datos:** Daniel tiene un respaldo JSON v3 de hace ~1 mes y no le importa empezar de cero. La app importa ese formato tal cual; no hay migración de IndexedDB ni rescate de la PWA.
 6. **Teléfono objetivo:** Xiaomi/Redmi/POCO (MIUI/HyperOS). Las defensas de batería y autoinicio son parte del alcance, no un extra.
+7. **Tests solo los importantes.** La cobertura completa NO es un objetivo; el objetivo es que la app funcione bien. No se porta la suite de Vitest uno a uno. Se escriben tests únicamente donde un fallo cuesta dinero o datos (ver §9).
 
 ## 3. Decisiones de diseño (tomadas por el agente con defaults razonables; Daniel puede vetarlas)
 
@@ -35,7 +36,7 @@ Daniel eligió **Kotlin + Jetpack Compose puro** sobre Capacitor sabiendo que es
 7. **Tema oscuro fijo** con la paleta de `estilos.css` y Manrope empaquetada como `FontFamily`. Material 3 para componentes; identidad visual propia, no colores dinámicos.
 8. **Captura persistente, no un deep link.** La notificación se guarda en Room ANTES de avisar al usuario. Si la app o el sistema matan el proceso, la captura ya está en disco.
 9. **Deduplicación captura ↔ import cerrada:** la captura guarda la referencia del BNC y el import marca duplicada toda fila cuya referencia coincida con un movimiento ya registrado desde captura (ver §7.4).
-10. **Tests de dominio y datos en JVM** (JUnit + Robolectric para Room). UI sin tests automáticos; verificación por capturas de emulador o teléfono por USB.
+10. **Tests mínimos en JVM** (JUnit; Robolectric para Room solo donde haga falta), limitados a la lista de §9. UI sin tests automáticos; verificación por capturas de emulador o teléfono por USB.
 
 ## 4. Restricciones vigentes (heredadas de v1/v2/v3)
 
@@ -113,7 +114,7 @@ Un `NavHost` con rutas: `inicio`, `nuevo?tipo&monto&cuenta&nota&eventId&eventDat
 
 ### 7.1 Fase 1 — Dominio, datos y respaldo
 
-- Portar íntegro `domain/` con sus tests (`money`, `dates`, `rates`, `balances`, `stats`, `rules`, `groups`, `debts`, `calendar`, `eventMatch`, `filters`, `builders`). Cada test de Vitest tiene su equivalente JUnit con los mismos casos y valores.
+- Portar íntegro `domain/` (`money`, `dates`, `rates`, `balances`, `stats`, `rules`, `groups`, `debts`, `calendar`, `eventMatch`, `filters`, `builders`). Los tests de Vitest sirven como guía de casos límite al portar, pero solo se escriben tests para los módulos de la lista de §9.
 - Room con el esquema de §6.1, seeds, `getSettings`/`saveSettings`.
 - Operaciones todo-o-nada: `settleDebt`, `agruparTxs`/`anadirAGrupo`/`quitarDeGrupo`/`desagrupar`/`actualizarGrupo`, `guardarEvento`/`eliminarEvento`/`asignarEvento`/`desasignarEvento`/`omitirOcurrencia`/`reanudarOcurrencia`, `commitImport` con su backstop de `importKey`.
 - Respaldo: `exportBackup`, `validateBackup` (v3 exacto, v2 normalizado, v1 rechazado), `importBackup` (reemplaza TODO en una transacción), `backupFilename`. SAF para guardar y abrir.
@@ -182,9 +183,27 @@ Entregable: APK que Daniel valida en su Xiaomi con una notificación real del BN
 
 ## 9. Testing y verificación
 
-- **Dominio:** cada `*.test.ts` de `src/domain/` se porta a un test JUnit con los mismos casos. Es el contrato de la migración: si un caso no se puede portar tal cual, se documenta por qué.
-- **Datos y operaciones:** Robolectric + Room en memoria para `db`, `debtOps`, `groupOps`, `eventOps`, `commit`, `backup`.
-- **Import y captura:** fixtures copiadas de `src/import/bnc/fixtures/bncFixture.ts` y `src/capture/fixtures/notificacionesBnc.ts` a recursos de test (convertidas a texto plano o a JSON).
+**Regla (decisión cerrada 7):** la cobertura no es un objetivo. Se escriben tests solo donde un fallo cuesta dinero o datos, con pocos casos cada uno (el caso normal, el límite y el que históricamente falló). Todo lo demás se verifica usando la app.
+
+**Con tests (lista cerrada):**
+
+| Módulo | Qué se prueba | Por qué |
+|---|---|---|
+| `money` | `parseVenezuelanAmount`, `formatMoney` (Bs y USD) | Un error de coma o de miles altera montos |
+| `rates` | `convertMinor` ida y vuelta, `effectiveRate` con override | Convierte dinero |
+| `balances` | saldo por cuenta con transferencias cruzadas y ajustes; patrimonio en 3 vistas | Es el número principal de Inicio |
+| `groups` | `residuosDeGrupo`, `categoriaDelResiduo`, `txsEfectivas` excluye agrupadas | Doble conteo si falla |
+| `stats` | `monthSummary` con grupos y residuos | Alimenta «Este mes» |
+| `calendar` | `fechasDeEvento` para cada recurrencia (mensual con 31 = último día, quincenal), `estadoDe` | Fechas erróneas = pagos olvidados |
+| `eventMatch` | `sugerirOcurrencia` dentro y fuera de ventana y tolerancia | Asigna movimientos solo |
+| `parseNotificacionBnc` | las fixtures anonimizadas completas | Es la pieza nativa clave |
+| `parseBncTxt` + `mapBnc` | fixture anonimizada, `bncImportKey`, duplicados por `importKey` y por referencia de captura | Duplicar movimientos cuesta dinero |
+| `backup` | validar v3/v2/v1, importar reemplaza todo y es todo-o-nada ante JSON corrupto | Perder datos |
+| `commitImport`, `settleDebt`, `agruparTxs`/`desagrupar`, `asignarEvento`/`eliminarEvento` | la transacción revierte entera ante un fallo a mitad (Robolectric + Room en memoria) | Estados a medias |
+
+**Sin tests:** `dates` (helpers), `builders`, `filters`, `rules`, seeds, settings, `rates/providers` (solo los dos parsers de JSON con fixture, un caso cada uno), ViewModels y toda la UI.
+
+- **Fixtures:** copiadas de `src/import/bnc/fixtures/bncFixture.ts` y `src/capture/fixtures/notificacionesBnc.ts` a recursos de test (texto plano o JSON).
 - **UI:** sin tests automáticos. Verificación bloqueante por fase: `./gradlew :app:assembleDebug`, instalar con `adb install -r`, capturas con `adb exec-out screencap -p` guardadas en `.superpowers/sdd/capturas/`. Emulador: el plan incluye crear un AVD (Pixel, API 35, imagen x86_64) con `sdkmanager` + `avdmanager`; si Daniel conecta el Xiaomi por USB con depuración, se prefiere el teléfono.
 - **Criterio de éxito global:** Daniel importa su respaldo, registra un gasto en ≤ 3 toques, recibe un pago móvil real y lo registra desde la notificación en 2 toques, e importa un TXT mensual sin duplicar lo capturado.
 
