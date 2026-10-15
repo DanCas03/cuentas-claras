@@ -64,6 +64,26 @@ El plan se ejecutará después, probablemente en varias sesiones, con `superpowe
 - **Verificación de UI por fase:** `./gradlew :app:assembleDebug` → `adb install -r` → navegar → `adb exec-out screencap -p > .superpowers/sdd/capturas/<fase>/<pantalla>.png` → inspeccionar la imagen con Read. Las capturas no se commitean.
 - **Paleta y fuente:** `src/ui/estilos.css` bloque `:root` (fondo `#0a0f1c`, tarjeta `#121a2b`, primario `#2dd4bf`, ingreso `#34d399`, gasto `#f87171`, aviso `#fbbf24`, texto `#e8edf6`, texto2 `#8b96ab`, radio 16/10). Manrope: descargar la variable OFL de Google Fonts a `res/font/` (no está en el repo; `@fontsource-variable/manrope` en `node_modules` trae los `.woff2`, que Android no lee: hace falta el `.ttf`).
 
+## Skills recomendadas por etapa (petición de Daniel: el plan debe nombrarlas en cada tarea)
+
+Plugins verificados en la máquina el 2026-10-15: `superpowers` 6.4.1, `mattpocock-skills` 1.2.3, `ui-ux-pro-max` 2.6.2, `context-mode`. Las skills «taste» (`design-taste-frontend`, `gpt-taste`, `stitch-design-taste`, `high-end-visual-design`, `minimalist-ui`) son enlaces rotos en `~/.claude/skills` y **no están disponibles**; si Daniel las reinstala, úsalas en la fase 2 junto a `ui-ux-pro-max`. `/ask-matt` y `/handoff` solo los invoca Daniel.
+
+| Etapa | Skill principal | Skills de apoyo | Para qué |
+|---|---|---|---|
+| **Escribir el plan** (esta sesión) | `superpowers:writing-plans` | `mattpocock-skills:research` | El plan a partir del spec. `research` para fijar versiones reales de AGP, Kotlin, Compose BOM, Room y KSP contra fuentes primarias antes de escribir el scaffold (regla «no inventes versiones»); guarda el hallazgo en `docs/research/`. |
+| **Ejecución de todas las fases** | `superpowers:subagent-driven-development` | `superpowers:dispatching-parallel-agents`, `superpowers:verification-before-completion`, `context-mode` | Un subagente por tarea; paralelo solo con archivos disjuntos (regla de Daniel). Verificación con evidencia antes de marcar hecho. Gradle siempre a través de `ctx_execute` con `tail`/`grep` para no inundar el contexto. |
+| **Cierre de cada fase** | `mattpocock-skills:code-review` | `superpowers:requesting-code-review`, `superpowers:receiving-code-review` | Revisión en dos ejes (Standards contra las restricciones del spec §4; Spec contra el *qué* de v1/v2/v3) antes del APK de la fase. |
+| **Fase 1** dominio + Room + respaldo | `superpowers:test-driven-development` (solo módulos de §9) | `mattpocock-skills:codebase-design` | TDD limitado a dinero, saldos, grupos, stats, calendario, eventMatch, respaldo y ops todo-o-nada. `codebase-design` para decidir las costuras (DAO ↔ repositorio ↔ dominio) como módulos profundos antes de escribir Room. |
+| **Fase 2** pantallas | `ui-ux-pro-max:ui-ux-pro-max` | `ui-ux-pro-max:design-system`, `dataviz`, `mattpocock-skills:prototype` | `ui-ux-pro-max` con producto «mobile app / finance dashboard, dark mode» para guías UX y jerarquía; `design-system` para traducir los tokens de `estilos.css` a `Theme.kt` (primitivo → semántico → componente); `dataviz` ANTES de dibujar la dona y las barras en Canvas; `prototype` si el teclado numérico o el flujo de Nuevo en ≤ 3 toques generan dudas de estado. |
+| **Fase 3** captura de notificaciones | `mattpocock-skills:research` | `mattpocock-skills:wizard`, `superpowers:systematic-debugging` | `research` sobre `NotificationListenerService`, `requestRebind`, `POST_NOTIFICATIONS` y los intents de autoinicio de MIUI/HyperOS contra docs de Android y fuentes primarias. `wizard` para los pasos que solo Daniel puede hacer en el Xiaomi (depuración USB, confirmar el paquete del BNC, conceder permisos). `systematic-debugging` cuando el listener no dispare. |
+| **Fase 4** import TXT BNC | `superpowers:test-driven-development` | `run` | TDD con la fixture anonimizada (parser, `bncImportKey`, duplicados por referencia de captura). `run` para instalar y recorrer la app por adb y capturar la vista previa. |
+| **Fase 5** deudas y grupos | `superpowers:test-driven-development` | `ui-ux-pro-max:ui-ux-pro-max` | TDD en `settleDebt` y las ops de grupo (todo-o-nada). UX de la selección múltiple y del editor de grupo. |
+| **Fase 6** calendario | `superpowers:test-driven-development` | `ui-ux-pro-max:ui-ux-pro-max` | TDD en recurrencias y `sugerirOcurrencia`. UX de la cuadrícula de mes y los chips de evento en Nuevo. |
+| **Cualquier bug** | `superpowers:systematic-debugging` | `mattpocock-skills:diagnosing-bugs` | La primera para bugs normales; la segunda para los difíciles o de rendimiento (builds, listener, Room). |
+| **Final de la rama** | `superpowers:finishing-a-development-branch` | | Decidir integración a `main` cuando las 6 fases estén validadas por Daniel. |
+
+No uses `superpowers:brainstorming` ni `mattpocock-skills:grilling` para reabrir el diseño: ya está aprobado. Si Daniel quiere estresar una decisión concreta, él lanzará `/mattpocock-skills:grilling` o `/ask-matt`.
+
 ## Lo que Daniel tendrá que hacer él (pídeselo en el momento, no antes)
 
 - Conectar el Xiaomi por USB con depuración activada, o aceptar que se cree un emulador.
