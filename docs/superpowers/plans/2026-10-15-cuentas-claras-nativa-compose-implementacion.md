@@ -6,7 +6,7 @@
 
 **Arquitectura:** Un solo módulo `:app` en `android/`. Capas por paquete: `domain/` (Kotlin puro JVM, portado 1 a 1 de `src/domain/`), `data/` (Room: entidades, DAOs, seeds, operaciones todo-o-nada con `withTransaction`, repositorio), `importar/`, `capture/`, `rates/`, `backup/` (sin Compose), y `ui/` (Compose + Material 3, un `NavHost`, un ViewModel por pantalla con `StateFlow`). Contenedor manual `AppContainer` en `CuentasApp`; sin Hilt, sin WorkManager, sin librería de gráficas. La UI es **nueva**: se diseña desde cero en la fase 2 con una dirección visual que elige Daniel; el comportamiento sale del TSX de `src/ui/`.
 
-**Tech Stack:** Gradle 9.1.0 (Kotlin DSL + catálogo) · AGP 9.0.1 con Kotlin integrado · Kotlin 2.3.20 · KSP 2.3.12 · Compose BOM 2026.06.01 (Compose 1.11.4, Material 3 1.4.0) · Navigation Compose 2.9.8 · Lifecycle 2.10.0 · Room 2.8.5 · DataStore 1.2.1 · kotlinx.serialization 1.11.0 · coroutines 1.11.0 · OkHttp 5.4.0 · JUnit 4.13.2 + kotlin-test + Robolectric 4.17 · compileSdk 36 / minSdk 26 / targetSdk 35 · JBR 21 de Android Studio para Gradle · adb + `uiautomator` para verificar en el Xiaomi.
+**Tech Stack:** Gradle 9.7.1 (Kotlin DSL + catálogo) · AGP 9.3.3 con Kotlin integrado · Kotlin 2.4.21 · KSP 2.3.12 · Compose BOM 2026.09.00 (Compose 1.12.1, Material 3 1.4.0) · Navigation Compose 2.10.2 · Lifecycle 2.11.0 · Room 2.8.5 · DataStore 1.2.1 · kotlinx.serialization 1.11.0 · coroutines 1.11.0 · OkHttp 5.5.0 · JUnit 4.13.2 + kotlin-test-junit + Robolectric 4.17 · compileSdk 37 / minSdk 26 / targetSdk 35 · JBR 21 de Android Studio para Gradle · adb + `uiautomator` para verificar en el Xiaomi.
 
 **Spec:** `docs/superpowers/specs/2026-10-15-cuentas-claras-nativa-compose-design.md` (manda en el *cómo* y el alcance). Handoff con decisiones y contexto: `docs/superpowers/handoffs/2026-10-15-handoff-plan-nativa-compose.md`. Specs v1/v2/v3 (`docs/superpowers/specs/2026-07-07-…`, `2026-07-22-…`, `2026-09-04-…`) mandan en el *qué* de cada función. **El código TypeScript de `src/` es la especificación ejecutable** (salvo `src/import/zinli/` y `ImportZinli.tsx`, fuera de alcance): cada regla de negocio se porta de ahí; si un spec y el código difieren, manda el código. Versiones fijadas con fuentes primarias en `docs/research/2026-10-15-versiones-android-compose.md`.
 
@@ -26,7 +26,7 @@ Aplican a TODAS las tareas; cada tarea las incluye implícitamente.
 10. **Capas:** `domain/`, `data/`, `importar/`, `capture/` (salvo el servicio y el notificador), `rates/`, `backup/` **sin imports de `androidx.compose`**. `domain/` además **sin ningún import de `android.*`/`androidx.*`** (JVM puro; sí puede usar `java.*` y `kotlinx.serialization`).
 11. **Identificadores portados 1 a 1:** funciones, ids de seeds y nombres de tabla/campo como en la web (`txsEfectivas`, `sugerirOcurrencia`, `parseBncTxt`, `acc-bnc`, `cat-sueldo`, `calEvents`, `amountMinor`).
 12. **Tests SOLO de la lista cerrada del spec §9** (dinero, tasas, saldos, grupos, stats, calendario, eventMatch, parser de notificación, parser + mapeo del TXT, respaldo y las operaciones todo-o-nada con Robolectric). Pocos casos por módulo: el normal, el límite y el que históricamente falló. **Nada de tests** para `dates`, `builders`, `filters`, `rules`, seeds, settings, ViewModels ni UI. No se porta la suite de Vitest uno a uno. La cobertura NO es objetivo: el objetivo es que la app funcione bien.
-13. Antes de cada commit con Kotlin: `./gradlew :app:testDebugUnitTest` en verde y `./gradlew :app:assembleDebug` compila. Gradle SIEMPRE a través de `ctx_execute` (context-mode) con `tail`/`grep` de la salida; timeouts largos (primer build: minutos).
+13. Antes de cada commit con Kotlin: `./gradlew :app:testDebugUnitTest` en verde y `./gradlew :app:assembleDebug` compila. Gradle SIEMPRE a través de `ctx_execute` (context-mode) con `tail`/`grep` de la salida; timeouts largos (primer build: minutos). En tests JUnit 4, un `@Test fun x() = runBlocking { … }` debe devolver `Unit` (JUnit rechaza el método si la última expresión devuelve otro tipo, p. ej. `assertFailsWith`): termina el bloque con un `assert…` que devuelva `Unit` o usa `runBlocking<Unit> { … }`.
 14. **Esquema Room congelado tras la Tarea 5** (versión 1, con la tabla `capturas` incluida desde el principio). Cualquier cambio posterior exige `Migration` + subir `version` + exportar el esquema; **prohibido `fallbackToDestructiveMigration`** (Daniel tendrá datos reales desde la fase 1).
 15. **Privacidad:** los comprobantes reales de la raíz (`TXTBNC1.txt`, `TXTBNC2.txt`, `Screenshot_*.jpg`) y el respaldo real de Daniel NUNCA se copian a fixtures, docs, código ni capturas commiteadas. Fixtures: solo las anonimizadas de `src/**/fixtures/` y `respaldo-demo-v3.json` (inventado, Tarea 7). Ningún keystore en git.
 16. **Commits:** mensaje en español; footer exacto como última línea: `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>` (va como segundo `-m`). `git add` SOLO de los archivos de la tarea; nunca `git add -A`. No se commitean `.claude/`, `.superpowers/`, `android/local.properties`, `android/.gradle/`, `android/build/`, `android/app/build/` ni capturas.
@@ -198,19 +198,19 @@ Entregable de la fase (spec §7.1): APK de depuración con una pantalla mínima 
 - Consumes: nada.
 - Produces: proyecto que compila con `./gradlew :app:assembleDebug` y ejecuta `./gradlew :app:testDebugUnitTest`; aliases del catálogo usados por todas las tareas (`libs.androidx.room.runtime`, etc.); paquete `com.cuentasclaras.app`; plugins Compose, Serialization, KSP y Room aplicados en `:app`; `room { schemaDirectory("$projectDir/schemas") }`.
 
-**Versiones (NO cambiar; verificadas con build real, ver el doc de research):** Gradle 9.1.0 (`-all`, ya en caché) · AGP 9.0.1 con **Kotlin integrado** (NO se aplica `org.jetbrains.kotlin.android`) · Kotlin/KGP 2.3.20 · KSP 2.3.12 · Compose BOM 2026.06.01 · Room 2.8.5 · Navigation Compose 2.9.8 · activity-compose 1.13.0 · Lifecycle 2.10.0 · core-ktx 1.18.0 · DataStore 1.2.1 · kotlinx-serialization-json 1.11.0 · coroutines 1.11.0 · OkHttp 5.4.0 · Robolectric 4.17 · androidx.test core 1.7.0 / ext-junit 1.3.0 · JUnit 4.13.2 · compileSdk 36 / minSdk 26 / targetSdk 35 · bytecode 17 · Gradle corre con el JBR 21 de Android Studio. **Ninguna dependencia nueva sin versión fijada**: todo lo publicado para compileSdk 37 rompe `checkDebugAarMetadata` con AGP 9.0.1.
+**Versiones (NO cambiar; verificadas con build real y tests Robolectric/serialización, ver la sección «Actualización» del doc de research):** Gradle 9.7.1 (`-all`, ya en caché) · AGP 9.3.3 con **Kotlin integrado** (NO se aplica `org.jetbrains.kotlin.android`) · Kotlin/KGP 2.4.21 · KSP 2.3.12 · Compose BOM 2026.09.00 (Compose 1.12.1, Material 3 1.4.0) · Room 2.8.5 · Navigation Compose 2.10.2 · activity-compose 1.13.0 · Lifecycle 2.11.0 · core-ktx 1.19.1 · DataStore 1.2.1 · kotlinx-serialization-json 1.11.0 · coroutines 1.11.0 · OkHttp 5.5.0 · Robolectric 4.17 · androidx.test core 1.7.0 / ext-junit 1.3.0 · JUnit 4.13.2 + `kotlin-test-junit` 2.4.21 · compileSdk 37 (plataforma `android-37.0`, ya instalada) / minSdk 26 / targetSdk 35 · bytecode 17 · Gradle corre con el JBR 21 de Android Studio. Tope del IDE: Android Studio 2026.1.2 admite AGP ≤ 9.3, así que **no subas AGP a 9.4+** ni Kotlin fuera de lo que la tabla KGP cubre para AGP 9.3. **Ninguna dependencia nueva sin versión verificada**; las que no están en este catálogo (p. ej. `material-icons-extended`, `ui-test-junit4`) no se añaden.
 
-- [ ] **Paso 1: Generar el wrapper con la Gradle 9.1.0 en caché.** En Git Bash:
+- [ ] **Paso 1: Generar el wrapper de Gradle 9.7.1** (usando la Gradle 9.1.0 en caché como lanzador). En Git Bash:
 
 ```bash
 mkdir -p android && cd android
 printf 'rootProject.name = "CuentasClaras"\n' > settings.gradle.kts
 JAVA_HOME="/c/Program Files/Android/Android Studio/jbr" \
   "/c/Users/danie/.gradle/wrapper/dists/gradle-9.1.0-all/7wzd0jkjit61aq2p43wpjgij9/gradle-9.1.0/bin/gradle" \
-  wrapper --gradle-version 9.1.0 --distribution-type all
+  wrapper --gradle-version 9.7.1 --distribution-type all
 ```
 
-Expected: `BUILD SUCCESSFUL`; existen `gradlew`, `gradlew.bat` y `gradle/wrapper/`. Confirma que `gradle/wrapper/gradle-wrapper.properties` contiene `distributionUrl=https\://services.gradle.org/distributions/gradle-9.1.0-all.zip` (la carpeta en caché `7wzd0jkjit61aq2p43wpjgij9` corresponde a esa URL; con `-bin` volvería a descargar).
+Expected: `BUILD SUCCESSFUL`; existen `gradlew`, `gradlew.bat` y `gradle/wrapper/`. Confirma que `gradle/wrapper/gradle-wrapper.properties` contiene `distributionUrl=https\://services.gradle.org/distributions/gradle-9.7.1-all.zip` (ya en caché en `~/.gradle/wrapper/dists/gradle-9.7.1-all/62v79ucs7za836kmh1huc3s8x/`; con `-bin` volvería a descargar).
 
 - [ ] **Paso 2: `android/.gitignore` y `android/local.properties`.**
 
@@ -262,18 +262,18 @@ include(":app")
 
 ```toml
 [versions]
-agp = "9.0.1"
-kotlin = "2.3.20"
+agp = "9.3.3"
+kotlin = "2.4.21"
 ksp = "2.3.12"
-composeBom = "2026.06.01"
+composeBom = "2026.09.00"
 room = "2.8.5"
-navigationCompose = "2.9.8"
+navigationCompose = "2.10.2"
 activityCompose = "1.13.0"
-lifecycle = "2.10.0"
-coreKtx = "1.18.0"
+lifecycle = "2.11.0"
+coreKtx = "1.19.1"
 kotlinxSerializationJson = "1.11.0"
 kotlinxCoroutines = "1.11.0"
-okhttp = "5.4.0"
+okhttp = "5.5.0"
 datastore = "1.2.1"
 robolectric = "4.17"
 androidxTestCore = "1.7.0"
@@ -281,7 +281,7 @@ androidxTestExtJunit = "1.3.0"
 junit = "4.13.2"
 
 [libraries]
-# Sube el KGP que trae AGP 9.0 (2.2.10) a 2.3.20 (forma documentada en las notas de AGP 9.0).
+# Sube el KGP que trae AGP 9.3 como dependencia de runtime (2.2.10) a 2.4.21 (forma documentada para Kotlin integrado).
 kotlin-gradle-plugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
 
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -294,11 +294,10 @@ androidx-navigation-compose = { group = "androidx.navigation", name = "navigatio
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
 androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
-androidx-compose-ui-text-google-fonts = { group = "androidx.compose.ui", name = "ui-text-google-fonts" }
 androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
-androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
+androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation" }
 
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
@@ -315,27 +314,29 @@ okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhtt
 
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 kotlin-test = { group = "org.jetbrains.kotlin", name = "kotlin-test", version.ref = "kotlin" }
+# Kotlin integrado (AGP 9.x) NO infiere la variante JUnit de kotlin-test: sin esto, `kotlin.test.Test` no resuelve.
+kotlin-test-junit = { group = "org.jetbrains.kotlin", name = "kotlin-test-junit", version.ref = "kotlin" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 androidx-test-core = { group = "androidx.test", name = "core", version.ref = "androidxTestCore" }
 androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestExtJunit" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
-# NO declarar org.jetbrains.kotlin.android: AGP 9.0 trae Kotlin integrado y aplicarlo falla.
+# NO declarar org.jetbrains.kotlin.android: AGP 9.x trae Kotlin integrado y aplicarlo falla.
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 androidx-room = { id = "androidx.room", version.ref = "room" }
 ```
 
-`ui-text-google-fonts` y `material-icons-extended` no tienen versión propia: las fija el BOM. Si al compilar alguno no resolviera, quítalo del catálogo y decláralo en el reporte (la Tarea 10 decide si hace falta).
+Es exactamente el catálogo verificado de la sección A.2 del doc de research. Sin `material-icons-extended` (no verificado con este BOM): los íconos de la app son vector drawables propios en `res/drawable` (Tarea 10).
 
 - [ ] **Paso 5: `android/build.gradle.kts` y `android/gradle.properties`.**
 
 ```kotlin
 buildscript {
     dependencies {
-        // Sube el KGP que trae AGP 9.0 (2.2.10) a 2.3.20; forma documentada en las notas de AGP 9.0.
+        // Sube el KGP que trae AGP 9.3 (2.2.10) a 2.4.21; forma documentada para Kotlin integrado.
         classpath(libs.kotlin.gradle.plugin)
     }
 }
@@ -363,7 +364,7 @@ kotlin.code.style=official
 ```kotlin
 plugins {
     alias(libs.plugins.android.application)
-    // Sin org.jetbrains.kotlin.android: AGP 9.0 compila Kotlin de forma nativa (Kotlin integrado).
+    // Sin org.jetbrains.kotlin.android: AGP 9.x compila Kotlin de forma nativa (Kotlin integrado).
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
@@ -372,7 +373,7 @@ plugins {
 
 android {
     namespace = "com.cuentasclaras.app"
-    compileSdk = 36
+    compileSdk = 37 // resuelve a platforms;android-37.0
 
     defaultConfig {
         applicationId = "com.cuentasclaras.app"
@@ -418,9 +419,9 @@ dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.compose.material.icons.extended)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     implementation(libs.androidx.room.runtime)
@@ -434,6 +435,7 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlin.test)
+    testImplementation(libs.kotlin.test.junit)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.test.ext.junit)
@@ -514,14 +516,14 @@ cd android && ./gradlew :app:assembleDebug --console=plain 2>&1 | tail -15
 cd android && ./gradlew :app:testDebugUnitTest --console=plain 2>&1 | tail -15
 ```
 
-Expected: ambos `BUILD SUCCESSFUL` (el segundo sin tests todavía) y existe `android/app/build/outputs/apk/debug/app-debug.apk`. Si falla `checkDebugAarMetadata`, alguna versión no es la del catálogo: corrígela, no subas compileSdk. Si Gradle intenta descargar otra distribución, el `distributionUrl` no coincide con la caché.
+Expected: ambos `BUILD SUCCESSFUL` (el segundo sin tests todavía) y existe `android/app/build/outputs/apk/debug/app-debug.apk`. Si falla `checkDebugAarMetadata`, alguna versión no es la del catálogo: corrígela. Si Gradle intenta descargar otra distribución, el `distributionUrl` no coincide con la caché. Si pide la plataforma `android-37.0`, AGP la instala sola (licencia ya aceptada).
 
 - [ ] **Paso 9: Commit** (sin `local.properties` ni `build/`; el doc de research ya se commiteó junto con este plan).
 
 ```bash
 git add android/.gitignore android/settings.gradle.kts android/build.gradle.kts android/gradle.properties android/gradle/ android/gradlew android/gradlew.bat android/app/build.gradle.kts android/app/proguard-rules.pro android/app/src/main/AndroidManifest.xml android/app/src/main/res/values/ android/app/src/main/java/com/cuentasclaras/app/MainActivity.kt
 git status --short   # NO deben aparecer local.properties ni build/
-git commit -m "chore(android): scaffold Kotlin + Compose con AGP 9.0.1, Kotlin 2.3.20, Room 2.8.5 y Gradle 9.1.0" -m "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+git commit -m "chore(android): scaffold Kotlin + Compose con AGP 9.3.3, Kotlin 2.4.21, Room 2.8.5 y Gradle 9.7.1" -m "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ```
 
 ---
@@ -4277,7 +4279,7 @@ fun millisParaDatePicker(iso: String): Long =
   - `Selector`: `ExposedDropdownMenuBox` de Material 3 con `TextField` de solo lectura.
   - `HojaModal`: `ModalBottomSheet` con título, contenido desplazable y `imePadding()`.
 
-- [ ] **Paso 9: Ícono y aplicación del tema.** Ícono adaptable (`ic_launcher.xml` con `<adaptive-icon>` + primer plano vectorial sencillo en el color primario sobre `fondo`); `android:icon="@mipmap/ic_launcher"` y `android:roundIcon="@mipmap/ic_launcher"` en el manifiesto. En `MainActivity`, `MaterialTheme { … }` → `CuentasTema { … }`.
+- [ ] **Paso 9: Ícono y aplicación del tema.** Ícono adaptable (`ic_launcher.xml` con `<adaptive-icon>` + primer plano vectorial sencillo en el color primario sobre `fondo`); `android:icon="@mipmap/ic_launcher"` y `android:roundIcon="@mipmap/ic_launcher"` en el manifiesto. En `MainActivity`, `MaterialTheme { … }` → `CuentasTema { … }`. Íconos de la barra inferior y de acciones: vector drawables propios en `res/drawable/ic_*.xml` (trazos de Material Symbols, licencia Apache 2.0) usados con `painterResource`; NO añadas `material-icons-extended` (no verificado con este BOM).
 
 - [ ] **Paso 10: Verificación.** `instalar` → `captura fase-2 tema-respaldo` (la pantalla de respaldo ya con la identidad nueva) → Read. Borra `MuestrarioDirecciones.kt` y su enganche (no se commitea). `./gradlew :app:testDebugUnitTest :app:assembleDebug` en verde.
 
@@ -7508,6 +7510,6 @@ git commit -m "feat(calendario): evento en el editor de movimientos y sugerencia
   - `grep -rn "fallbackToDestructiveMigration" android/` → vacío; `android/app/schemas/…/1.json` sin cambios desde la Tarea 5 (o con su migración).
   - `git log --format=%B main..HEAD | grep -c "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"` = número de commits de la rama posteriores al plan.
   - `./gradlew :app:testDebugUnitTest :app:assembleDebug` en verde.
-- [ ] **Paso 3: `android/README.md`** (español): qué es, requisitos (Android Studio 2026.1, JBR 21, Gradle 9.1.0 en caché), compilar (`./gradlew :app:assembleDebug`), instalar (`adb install -r …`), correr los tests (`./gradlew :app:testDebugUnitTest`) y qué cubren (lista de §9), estructura de paquetes, respaldo compatible con la PWA, captura y `docs/guia-permisos.md`. Commit `docs(android): README de la app nativa`.
+- [ ] **Paso 3: `android/README.md`** (español): qué es, requisitos (Android Studio 2026.1.2, JBR 21, Gradle 9.7.1 que baja el wrapper, plataforma android-37.0), compilar (`./gradlew :app:assembleDebug`), instalar (`adb install -r …`), correr los tests (`./gradlew :app:testDebugUnitTest`) y qué cubren (lista de §9), estructura de paquetes, respaldo compatible con la PWA, captura y `docs/guia-permisos.md`. Commit `docs(android): README de la app nativa`.
 - [ ] **Paso 4: Validación del criterio de éxito con Daniel (bloqueante).** En su Xiaomi, con sus datos: (1) su respaldo importado (fase 1) sigue íntegro; (2) registra un gasto en ≤ 3 toques; (3) recibe un pago móvil real y lo registra desde la notificación en 2 toques; (4) importa un TXT mensual sin duplicar lo capturado; (5) crea la «Quincena» y la ve en «Esta semana». Entrega el reporte con las desviaciones declaradas (ledger D1–D17 y lo que haya surgido) y los avisos abiertos de cada tarea.
 - [ ] **Paso 5: Integración.** Con `superpowers:finishing-a-development-branch`, presenta a Daniel las opciones para integrar `nativa-compose` (merge a `main`, PR o dejarla abierta). Sin firma de release ni Play Store (fuera de alcance).
