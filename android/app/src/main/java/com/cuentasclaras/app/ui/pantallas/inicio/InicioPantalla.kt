@@ -34,7 +34,7 @@ import com.cuentasclaras.app.ui.vmCon
 /** Lado mínimo del botón de modo: objetivo táctil de 48 dp (DESIGN.md §6). */
 private val BOTON_MODO = 48.dp
 
-/** Inicio: patrimonio, semana (provisional), deudas y «Este mes» con su comparativa y presupuestos. */
+/** Inicio: patrimonio, «Este mes» con su comparativa y presupuestos, semana (provisional) y deudas. */
 @Composable
 fun InicioPantalla(nav: NavHostController) {
     val vm = vmCon { c, _ -> InicioViewModel(c.repo, c.apariencia) }
@@ -52,8 +52,7 @@ fun InicioPantalla(nav: NavHostController) {
     ) {
         item(key = "cabecera") { Cabecera(estado.hoy, habilitado = !estado.guardando, onAlternarModo = { vm.alternarModo(it) }) }
         item(key = "patrimonio") { PatrimonioTarjeta(estado, onAlternarMoneda = vm::alternarMoneda) }
-        item(key = "semana") { SemanaTarjeta() }
-        item(key = "deudas") { DeudasTarjeta(estado, nav) }
+        // DESIGN.md §1: «Este mes» va justo después del patrimonio.
         item(key = "este-mes") {
             EsteMesSeccion(
                 estado,
@@ -61,6 +60,8 @@ fun InicioPantalla(nav: NavHostController) {
                 onCategoria = { id, mes -> nav.navigate(Rutas.movimientos(categoria = id, mes = mes)) },
             )
         }
+        item(key = "semana") { SemanaTarjeta() }
+        item(key = "deudas") { DeudasTarjeta(estado, nav) }
     }
 }
 
