@@ -60,7 +60,8 @@ private val COLORES_CATEGORIA = listOf(
     "#22d3ee", "#fb923c", "#9ca3af", "#38bdf8", "#34d399", "#cbd5e1", "#c084fc", COLOR_NUEVA,
 )
 
-private val REGEX_HEX = Regex("^#[0-9a-fA-F]{6}$")
+/** Color escrito a mano: `#RGB` o `#RRGGBB`. */
+private val REGEX_HEX = Regex("^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
 
 /** Diámetro del círculo de color dentro de su objetivo táctil, y grosor del anillo de la elegida. */
 private val LADO_CIRCULO_COLOR = 32.dp
@@ -141,7 +142,8 @@ private fun HojaCategoria(
     var categoria by remember(inicial.id) { mutableStateOf(inicial) }
     var hex by remember(inicial.id) { mutableStateOf(inicial.color) }
     var presupuesto by remember(inicial.id) { mutableStateOf(presupuestoInicial(inicial)) }
-    val hexValido = REGEX_HEX.matches(hex)
+    // El color sin tocar no se valida: una categoría restaurada de la PWA con otro formato se puede renombrar.
+    val hexValido = hex == inicial.color || REGEX_HEX.matches(hex)
 
     HojaModal(titulo = "Categoría", onCerrar = onCerrar) {
         Column(verticalArrangement = Arrangement.spacedBy(e.m)) {
@@ -171,7 +173,7 @@ private fun HojaCategoria(
                 valor = hex,
                 onCambio = {
                     hex = it
-                    if (REGEX_HEX.matches(it)) categoria = categoria.copy(color = it)
+                    if (it == inicial.color || REGEX_HEX.matches(it)) categoria = categoria.copy(color = it)
                 },
                 etiqueta = "Color (hex)",
                 placeholder = COLOR_NUEVA,
