@@ -21,8 +21,11 @@ private val ULTIMO_REENLACE = longPreferencesKey("ultimoReenlaceMillis")
 @Volatile private var enlazadoEnProceso = false
 private const val SIN_LATIDO_MAX_MS = 6 * 60 * 60 * 1000L
 private const val ENTRE_REENLACES_MS = 10 * 60 * 1000L
-/** Margen para que el sistema re-enlace solo el listener al arrancar el proceso antes de alternar nosotros. */
-private const val GRACIA_REENLACE_MS = 4_000L
+/**
+ * Margen para que el sistema re-enlace solo el listener al arrancar el proceso antes de alternar nosotros. AOSP
+ * re-enlaza a los ~10 s (`ManagedServices`), así que 12 s dejan pasar ese re-enlace sin alternar en vano.
+ */
+private const val GRACIA_REENLACE_MS = 12_000L
 private val candado = Mutex()
 
 class EstadoListener(private val context: Context) {
@@ -53,9 +56,9 @@ class EstadoListener(private val context: Context) {
      * - Sin latido o con el último de hace más de 6 h: alternar ya (el listener lleva horas sin dar señales).
      * - Con un latido reciente: ese latido puede ser del proceso ANTERIOR. Tras un force-stop o un kill,
      *   `onListenerDisconnected` no se llama y el latido viejo sigue «reciente»; si salíamos aquí y MIUI no
-     *   re-enlazaba solo, no había re-enlace durante horas. Por eso se espera una gracia corta (el sistema suele
-     *   re-enlazar solo al arrancar el proceso, y alternar sin necesidad arriesga el acceso), se vuelve a mirar
-     *   el flag y, si sigue en false, se alterna.
+     *   re-enlazaba solo, no había re-enlace durante horas. Por eso se espera una gracia de 12 s (el sistema suele
+     *   re-enlazar solo al arrancar el proceso, a los ~10 s en AOSP, y alternar sin necesidad arriesga el acceso),
+     *   se vuelve a mirar el flag y, si sigue en false, se alterna.
      * En ambos casos manda el freno de 10 min entre alternancias. El `Mutex` evita que dos onResume seguidos
      * pasen los dos el freno mientras esperan la gracia.
      */

@@ -49,7 +49,7 @@ object Notificador {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
         val pendiente = PendingIntent.getActivity(
-            ctx, c.id.hashCode(), intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            ctx, idNotificacion(c.id), intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         val notificacion = NotificationCompat.Builder(ctx, CANAL)
             .setSmallIcon(R.drawable.ic_notificacion)
