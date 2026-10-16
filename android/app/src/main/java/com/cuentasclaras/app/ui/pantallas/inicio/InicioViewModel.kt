@@ -59,13 +59,17 @@ class InicioViewModel(
         val resumen: ResumenMes? = null,
         val comparativa: List<ResumenMes> = emptyList(),
         val presupuestos: List<EstadoPresupuesto> = emptyList(),
+        /** Un cambio de moneda o de modo está en curso: sus controles se deshabilitan (restricción 9). */
+        val guardando: Boolean = false,
     )
 
     private val hoy = todayIso()
     private val mesVisto = MutableStateFlow(monthOf(hoy))
+    private val guardando = MutableStateFlow(false)
 
     val estado: StateFlow<Estado> = combine(repo.instantanea, mesVisto) { i, visto -> calcular(i, visto) }
         .flowOn(Dispatchers.Default)
+        .combine(guardando) { e, g -> e.copy(guardando = g) }
         .stateIn(
             viewModelScope, SharingStarted.WhileSubscribed(5_000),
             Estado(hoy = hoy, mes = monthOf(hoy), mesActual = monthOf(hoy), primerMes = monthOf(hoy)),
@@ -105,6 +109,8 @@ class InicioViewModel(
     }
 
     fun alternarMoneda() {
+        if (guardando.value) return
+        guardando.value = true
         viewModelScope.launch {
             try {
                 repo.cambiarSettings { it.copy(viewCurrency = if (it.viewCurrency == Currency.USD) Currency.VES else Currency.USD) }
@@ -112,12 +118,16 @@ class InicioViewModel(
                 throw e
             } catch (e: Exception) {
                 Avisos.avisar(e.message ?: "No se pudo cambiar la moneda")
+            } finally {
+                guardando.value = false
             }
         }
     }
 
     /** E21: fija el modo manual OPUESTO al que se ve ahora (`oscuroAhora` = `CuentasTema.oscuro`). */
     fun alternarModo(oscuroAhora: Boolean) {
+        if (guardando.value) return
+        guardando.value = true
         viewModelScope.launch {
             try {
                 apariencia.cambiarModo(if (oscuroAhora) ModoTema.CLARO else ModoTema.OSCURO)
@@ -125,6 +135,8 @@ class InicioViewModel(
                 throw e
             } catch (e: Exception) {
                 Avisos.avisar(e.message ?: "No se pudo cambiar el modo")
+            } finally {
+                guardando.value = false
             }
         }
     }

@@ -60,7 +60,7 @@ fun DeudasTarjeta(estado: InicioViewModel.Estado, nav: NavHostController, modifi
                 withStyle(SpanStyle(color = c.textoSecundario)) { append(" · Te deben ") }
                 withStyle(SpanStyle(color = c.texto, fontWeight = FontWeight.W600)) { append(teDeben) }
             },
-            style = t.cuerpo,
+            style = t.cuerpo.copy(fontFeatureSettings = "tnum"),
         )
         if (estado.deudasRecientes.isEmpty()) {
             Text(
@@ -97,7 +97,7 @@ fun DeudasTarjeta(estado: InicioViewModel.Estado, nav: NavHostController, modifi
                         Monto(
                             deuda.amountMinor,
                             monedaDe[deuda.accountId] ?: Currency.USD,
-                            if (porPagar) Signo.NEGATIVO else Signo.POSITIVO,
+                            Signo.NINGUNO,
                         )
                     }
                 }

@@ -114,6 +114,7 @@ fun PatrimonioTarjeta(
             Chip(
                 if (estado.viewCurrency == Currency.USD) "ver en Bs" else "ver en $",
                 onClick = onAlternarMoneda,
+                enabled = !estado.guardando,
             )
         }
 
@@ -130,7 +131,7 @@ fun PatrimonioTarjeta(
                 )
                 Text(
                     equivalencia(vista.usdMinor, estado.viewCurrency, estado.tasa) ?: ESPACIO_FIJO,
-                    style = t.cuerpo,
+                    style = t.cuerpo.copy(fontFeatureSettings = "tnum"),
                     color = c.textoSecundario,
                 )
             }
@@ -162,7 +163,7 @@ fun PatrimonioTarjeta(
             ) {
                 Text(
                     "Tasa ${tasa.source.name} del ${tasa.date}: ${tasaTexto(tasa.vesPerUsd)} Bs/$",
-                    style = t.etiqueta,
+                    style = t.etiqueta.copy(fontFeatureSettings = "tnum"),
                     color = c.textoSecundario,
                     modifier = Modifier.weight(1f, fill = false),
                 )
@@ -227,7 +228,7 @@ private fun FilaCuenta(linea: PatrimonioLinea) {
             if (linea.account.currency == Currency.VES) {
                 Text(
                     "≈ " + (linea.balanceUsdMinor?.let { formatMoney(it, Currency.USD) } ?: "—"),
-                    style = t.etiqueta,
+                    style = t.etiqueta.copy(fontFeatureSettings = "tnum"),
                     color = c.textoSecundario,
                 )
             }

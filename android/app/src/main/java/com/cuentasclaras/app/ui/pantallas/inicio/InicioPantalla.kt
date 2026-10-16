@@ -49,7 +49,7 @@ fun InicioPantalla(nav: NavHostController) {
         contentPadding = PaddingValues(horizontal = e.m, vertical = e.m),
         verticalArrangement = Arrangement.spacedBy(e.l),
     ) {
-        item(key = "cabecera") { Cabecera(estado.hoy, onAlternarModo = { vm.alternarModo(it) }) }
+        item(key = "cabecera") { Cabecera(estado.hoy, habilitado = !estado.guardando, onAlternarModo = { vm.alternarModo(it) }) }
         item(key = "patrimonio") { PatrimonioTarjeta(estado, onAlternarMoneda = vm::alternarMoneda) }
         item(key = "semana") { SemanaTarjeta() }
         item(key = "deudas") { DeudasTarjeta(estado, nav) }
@@ -59,7 +59,7 @@ fun InicioPantalla(nav: NavHostController) {
 
 /** Fecha pequeña + título y, a la derecha, el botón sol/luna (E21) que fija el modo manual opuesto al que se ve. */
 @Composable
-private fun Cabecera(hoy: String, onAlternarModo: (oscuroAhora: Boolean) -> Unit) {
+private fun Cabecera(hoy: String, habilitado: Boolean, onAlternarModo: (oscuroAhora: Boolean) -> Unit) {
     val c = CuentasTema.colores
     val oscuro = CuentasTema.oscuro
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -76,7 +76,7 @@ private fun Cabecera(hoy: String, onAlternarModo: (oscuroAhora: Boolean) -> Unit
             Modifier
                 .size(BOTON_MODO)
                 .clip(CircleShape)
-                .clickable(role = Role.Button) { onAlternarModo(oscuro) },
+                .clickable(enabled = habilitado, role = Role.Button) { onAlternarModo(oscuro) },
             contentAlignment = Alignment.Center,
         ) {
             Icon(
