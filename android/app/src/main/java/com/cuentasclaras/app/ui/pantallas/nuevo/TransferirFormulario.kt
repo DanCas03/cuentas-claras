@@ -2,10 +2,22 @@ package com.cuentasclaras.app.ui.pantallas.nuevo
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.input.KeyboardType
+import kotlinx.coroutines.flow.collectLatest
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cuentasclaras.app.domain.formatMoney
 import com.cuentasclaras.app.domain.textoTasa
@@ -60,11 +72,42 @@ fun TransferirFormulario(vm: TransferirViewModel) {
                 Banner("Destino recibirá ${formatMoney(recibe, destino.currency)}", TipoBanner.OK)
             }
         }
-        CampoTexto(
-            valor = f.nota,
-            onCambio = { v -> vm.cambiar { it.copy(nota = v) } },
-            etiqueta = "Nota (opcional)",
+        NotaYBoton(
+            nota = f.nota,
+            onNota = { v -> vm.cambiar { it.copy(nota = v) } },
+            onTransferir = vm::guardar,
+            puedeGuardar = estado.puedeGuardar,
         )
-        BotonPrincipal("Transferir", onClick = vm::guardar, enabled = estado.puedeGuardar)
+    }
+}
+
+/**
+ * D3: con la nota enfocada, la nota y el botón «Transferir» se traen juntos a la vista cada vez que cambia el
+ * borde del teclado (el de texto es más alto que el numérico y tapaba medio botón). El relleno del teclado ya lo
+ * pone `imePadding()` en NuevoPantalla: aquí solo se desplaza el contenido, sin relleno extra.
+ */
+@Composable
+private fun NotaYBoton(nota: String, onNota: (String) -> Unit, onTransferir: () -> Unit, puedeGuardar: Boolean) {
+    val solicitante = remember { BringIntoViewRequester() }
+    var notaEnfocada by remember { mutableStateOf(false) }
+    val ime = WindowInsets.ime
+    val densidad = LocalDensity.current
+    LaunchedEffect(notaEnfocada) {
+        if (notaEnfocada) {
+            // El último valor (el teclado ya abierto) termina su desplazamiento; los intermedios se cancelan.
+            snapshotFlow { ime.getBottom(densidad) }.collectLatest { solicitante.bringIntoView() }
+        }
+    }
+    Column(
+        Modifier.bringIntoViewRequester(solicitante),
+        verticalArrangement = Arrangement.spacedBy(CuentasTema.espacios.m),
+    ) {
+        CampoTexto(
+            valor = nota,
+            onCambio = onNota,
+            etiqueta = "Nota (opcional)",
+            modifier = Modifier.onFocusChanged { notaEnfocada = it.hasFocus },
+        )
+        BotonPrincipal("Transferir", onClick = onTransferir, enabled = puedeGuardar)
     }
 }
