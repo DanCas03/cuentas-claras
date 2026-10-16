@@ -227,7 +227,7 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
   y `ic_mas` (28 dp) dentro del disco.
 - **Íconos**: vector drawables propios en `res/drawable/ic_*.xml` (trazos de Material Icons, Apache 2.0) con
   `painterResource` y `tint` del tema. Tamaños: 16 (en línea con cifras), 20 (campos), 24 (navegación y acciones).
-  No se añade `material-icons-extended`.
+  No se añade `material-icons-extended`. `ic_candado` (16 dp, `textoSecundario`) marca las cuentas de ahorro en Inicio.
 - **Ícono de la app**: adaptable (`mipmap-anydpi-v26/ic_launcher.xml`): «C» abierta con un visto en lima `#C5F05A`
   sobre `#0A0F1C` (Noche lima), con capa monocroma.
 
