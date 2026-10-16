@@ -35,6 +35,8 @@ class DeudasViewModel(private val repo: CuentasRepo) : ViewModel() {
         val pendientes: List<Debt> = emptyList(),
         /** Cerradas de la pestaña, settledIso desc. */
         val cerradas: List<Debt> = emptyList(),
+        /** `true` hasta que llega la primera lectura de la base (evita parpadear el estado vacío). */
+        val cargando: Boolean = true,
     )
 
     private val ui = MutableStateFlow(Ui())
@@ -48,6 +50,7 @@ class DeudasViewModel(private val repo: CuentasRepo) : ViewModel() {
             todasLasCuentas = cuentas,
             pendientes = delaPestana.filter { it.status == DebtStatus.PENDIENTE }.sortedByDescending { it.createdIso },
             cerradas = delaPestana.filter { it.status == DebtStatus.CERRADA }.sortedByDescending { it.settledIso ?: "" },
+            cargando = false,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Estado())
 

@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,10 +37,10 @@ import com.cuentasclaras.app.domain.Debt
 import com.cuentasclaras.app.domain.DebtDirection
 import com.cuentasclaras.app.domain.DebtStatus
 import com.cuentasclaras.app.ui.Avisos
-import com.cuentasclaras.app.ui.componentes.BotonPeligro
 import com.cuentasclaras.app.ui.componentes.BotonPrincipal
 import com.cuentasclaras.app.ui.componentes.BotonSecundario
 import com.cuentasclaras.app.ui.componentes.Chip
+import com.cuentasclaras.app.ui.componentes.DialogoConfirmacion
 import com.cuentasclaras.app.ui.componentes.Monto
 import com.cuentasclaras.app.ui.componentes.Segmentado
 import com.cuentasclaras.app.ui.componentes.Tarjeta
@@ -86,7 +85,7 @@ fun DeudasPantalla(nav: NavHostController) {
     var confirmacion by remember { mutableStateOf<Confirmacion?>(null) }
     var historialAbierto by remember { mutableStateOf(false) }
 
-    // Como la web: la cuenta y la moneda de cada deuda salen de TODAS las cuentas (una archivada sigue siendo suya).
+    // A diferencia de la web (que muestra "?" y USD para una cuenta archivada), aquí se resuelve con todas las cuentas.
     fun monedaDe(accountId: String): Currency = estado.todasLasCuentas.firstOrNull { it.id == accountId }?.currency ?: Currency.USD
     fun nombreCuenta(accountId: String): String = estado.todasLasCuentas.firstOrNull { it.id == accountId }?.name ?: "?"
 
@@ -119,7 +118,7 @@ fun DeudasPantalla(nav: NavHostController) {
                 )
             }
         }
-        if (estado.pendientes.isEmpty()) {
+        if (!estado.cargando && estado.pendientes.isEmpty()) {
             item(key = "vacio") {
                 Vacio("🤝", "Sin deudas ${if (porPagar) "por pagar" else "por cobrar"}.", Modifier.fillMaxWidth())
             }
@@ -220,8 +219,8 @@ fun DeudasPantalla(nav: NavHostController) {
                     texto = "¿Marcar «${deuda.concepto}» como ${if (porPagarDeuda) "pagada" else "cobrada"}? " +
                         "Se creará ${if (porPagarDeuda) "el gasto" else "el ingreso"} en ${nombreCuenta(deuda.accountId)}.",
                     textoConfirmar = "Sí, marcar",
-                    peligrosa = false,
-                    guardando = guardando,
+                    peligro = false,
+                    habilitado = !guardando,
                     onConfirmar = { cerrar(); vm.marcarCerrada(deuda) },
                     onCancelar = cerrar,
                 )
@@ -234,8 +233,7 @@ fun DeudasPantalla(nav: NavHostController) {
                     "¿Eliminar esta deuda pendiente?"
                 },
                 textoConfirmar = "Sí, eliminar",
-                peligrosa = true,
-                guardando = guardando,
+                habilitado = !guardando,
                 onConfirmar = { cerrar(); vm.eliminar(deuda) },
                 onCancelar = cerrar,
             )
@@ -291,34 +289,4 @@ private fun FilaCerrada(deuda: Debt, moneda: Currency, habilitada: Boolean, onEl
             modifier = Modifier.semantics { contentDescription = "Eliminar ${deuda.concepto}" },
         )
     }
-}
-
-/** Confirmación en `AlertDialog` (DESIGN.md §4); los botones se bloquean mientras hay una escritura en curso. */
-@Composable
-private fun DialogoConfirmacion(
-    titulo: String,
-    texto: String,
-    textoConfirmar: String,
-    peligrosa: Boolean,
-    guardando: Boolean,
-    onConfirmar: () -> Unit,
-    onCancelar: () -> Unit,
-) {
-    val c = CuentasTema.colores
-    AlertDialog(
-        onDismissRequest = onCancelar,
-        containerColor = c.superficieElevada,
-        titleContentColor = c.texto,
-        textContentColor = c.texto,
-        title = { Text(titulo, style = CuentasTema.tipografia.titulo) },
-        text = { Text(texto, style = CuentasTema.tipografia.cuerpo) },
-        confirmButton = {
-            if (peligrosa) {
-                BotonPeligro(textoConfirmar, onClick = onConfirmar, enabled = !guardando)
-            } else {
-                BotonPrincipal(textoConfirmar, onClick = onConfirmar, enabled = !guardando)
-            }
-        },
-        dismissButton = { BotonSecundario("Cancelar", onClick = onCancelar, enabled = !guardando) },
-    )
 }
