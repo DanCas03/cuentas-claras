@@ -354,9 +354,12 @@ private fun CeldaDia(
     }
 }
 
-/** Punto del color de la categoría: hecha atenuada, vencida con anillo (el estado no depende solo del color). */
+/**
+ * Punto del color de la categoría: hecha atenuada, vencida con anillo (el estado no depende solo del color).
+ * También lo usa la tira de «Esta semana» en Inicio (T30), para que ambos calendarios se vean igual.
+ */
 @Composable
-private fun Punto(o: OcurrenciaVista, hex: String?, sobreSeleccion: Boolean) {
+internal fun Punto(o: OcurrenciaVista, hex: String?, sobreSeleccion: Boolean) {
     val c = CuentasTema.colores
     val color = if (hex != null) colorDeCategoria(hex, c.textoSecundario) else c.textoSecundario
     // Sobre la celda seleccionada (fondo `primario`) el punto lleva un borde de `sobrePrimario` para no perderse.
@@ -460,9 +463,9 @@ private fun FilaOcurrencia(
     }
 }
 
-/** Estado en texto + tinte: nunca solo color. Omitida va tachada y en `textoSecundario`. */
+/** Estado en texto + tinte: nunca solo color. Omitida va tachada y en `textoSecundario`. También en «Esta semana». */
 @Composable
-private fun EtiquetaEstado(estado: EstadoOcurrencia) {
+internal fun EtiquetaEstado(estado: EstadoOcurrencia) {
     val c = CuentasTema.colores
     val (texto, color) = when (estado) {
         EstadoOcurrencia.PENDIENTE -> "pendiente" to c.texto

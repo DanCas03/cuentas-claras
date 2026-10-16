@@ -40,7 +40,7 @@ import com.cuentasclaras.app.ui.nav.Rutas
 import com.cuentasclaras.app.ui.theme.CuentasTema
 import com.cuentasclaras.app.ui.vmCon
 
-/** Inicio: patrimonio, «Este mes» con su comparativa y presupuestos, semana (provisional) y deudas. */
+/** Inicio: patrimonio, «Este mes» con su comparativa y presupuestos, «Esta semana» (calendario) y deudas. */
 @Composable
 fun InicioPantalla(nav: NavHostController) {
     val vm = vmCon { c, _ -> InicioViewModel(c.repo, c.apariencia, c.capturas) }
@@ -90,7 +90,7 @@ fun InicioPantalla(nav: NavHostController) {
                 onCategoria = { id, mes -> nav.navigate(Rutas.movimientos(categoria = id, mes = mes)) },
             )
         }
-        item(key = "semana") { SemanaTarjeta(onCalendario = { nav.navigate(Rutas.calendario()) }) }
+        item(key = "semana") { SemanaTarjeta(estado, nav) }
         item(key = "deudas") { DeudasTarjeta(estado, nav) }
     }
 }

@@ -11,12 +11,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -24,12 +26,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.cuentasclaras.app.domain.Account
 import com.cuentasclaras.app.domain.Currency
+import com.cuentasclaras.app.domain.fechaCorta
 import com.cuentasclaras.app.domain.formatMoney
 import com.cuentasclaras.app.ui.componentes.Banner
 import com.cuentasclaras.app.ui.componentes.CampoTexto
@@ -168,10 +172,57 @@ fun NuevoPantalla(nav: NavHostController) {
                         .semantics { if (cifra == null) contentDescription = "Sin monto" },
                 )
                 Teclado(onTecla = vm::tecla, compacto = true)
+                // Restricción 6: sin eventos aplicables no hay fila y el camino de ≤ 3 toques no cambia.
+                if (estado.chips.isNotEmpty()) {
+                    FilaChipsEvento(estado.chips, enabled = !f.guardando, onTocar = vm::tocarChip)
+                }
                 CategoriaGrid(
                     categorias = estado.categorias,
                     enabled = !f.guardando,
                     onElegir = vm::guardar,
+                )
+            }
+        }
+    }
+}
+
+/** Texto del chip de evento (`NuevoPage.tsx`): «💼 Quincena · 15 oct · vencida», con «✕» si está elegido. */
+private fun textoChipEvento(c: NuevoViewModel.ChipEvento): String =
+    "${c.icono} ${c.evento.titulo} · ${fechaCorta(c.o.date)}" +
+        (if (c.vencida) " · vencida" else "") +
+        (if (c.activo) " ✕" else "")
+
+/**
+ * Chips de evento en UNA línea con desplazamiento horizontal (compacta: suma una sola fila de 48 dp táctiles sobre
+ * el grid). Activo = `primario` con «✕» para desmarcar; sugerido = tinte y contorno `primario` (DESIGN.md §4).
+ */
+@Composable
+private fun FilaChipsEvento(
+    chips: List<NuevoViewModel.ChipEvento>,
+    enabled: Boolean,
+    onTocar: (NuevoViewModel.ChipEvento) -> Unit,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(CuentasTema.espacios.s),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        chips.forEach { c ->
+            key(c.o.eventId, c.o.date) {
+                Chip(
+                    texto = textoChipEvento(c),
+                    onClick = { onTocar(c) },
+                    activo = c.activo,
+                    enabled = enabled,
+                    sugerido = c.sugerido,
+                    modifier = Modifier.semantics {
+                        when {
+                            c.activo -> stateDescription = "Evento elegido, toca para quitarlo"
+                            c.sugerido -> stateDescription = "Evento sugerido"
+                        }
+                    },
                 )
             }
         }

@@ -10,6 +10,11 @@ import com.cuentasclaras.app.data.ModoTema
 import com.cuentasclaras.app.data.db.CapturaEntity
 import com.cuentasclaras.app.domain.Account
 import com.cuentasclaras.app.domain.Category
+import com.cuentasclaras.app.domain.OcurrenciaVista
+import com.cuentasclaras.app.domain.TotalesEsperados
+import com.cuentasclaras.app.domain.addDays
+import com.cuentasclaras.app.domain.ocurrenciasEnRango
+import com.cuentasclaras.app.domain.totalesEsperados
 import com.cuentasclaras.app.domain.Currency
 import com.cuentasclaras.app.domain.Debt
 import com.cuentasclaras.app.domain.DebtDirection
@@ -66,6 +71,10 @@ class InicioViewModel(
         val guardando: Boolean = false,
         /** Capturas del BNC sin registrar ni descartar, más recientes primero. */
         val capturasPendientes: List<CapturaEntity> = emptyList(),
+        /** «Esta semana» (decisión 13 del spec v3): ocurrencias de [hoy − 30, hoy + 6] (7 días rodantes + vencidas). */
+        val ocurrenciasSemana: List<OcurrenciaVista> = emptyList(),
+        /** Lo que falta pagar/cobrar en esas ocurrencias, por moneda. */
+        val totalesSemana: TotalesEsperados = TotalesEsperados(emptyList(), emptyList()),
     )
 
     private val hoy = todayIso()
@@ -104,6 +113,10 @@ class InicioViewModel(
             .map { monthSummary(efectivas, i.cuentas, it, s.viewCurrency, i.tasas, s.rateSource) }
             .reversed()
         val presupuestos = budgetStatus(efectivas, i.cuentas, i.categorias, mes, i.tasas, s.rateSource)
+        // E18: el calendario deriva las ocurrencias de las txs CRUDAS (DashboardPage.tsx:28-29). Los eventos con fechas
+        // corruptas (un respaldo no las valida) se ignoran para que Inicio no lance en cada arranque.
+        val eventos = i.eventos.filter { esFechaIso(it.startDate) && (it.endDate == null || esFechaIso(it.endDate)) }
+        val ocurrenciasSemana = ocurrenciasEnRango(eventos, i.txs, i.cuentas, addDays(hoy, -30), addDays(hoy, 6), hoy)
         return Estado(
             cargado = true, hoy = hoy, viewCurrency = s.viewCurrency, tasa = tasa, patrimonio = p,
             cuentas = i.cuentas, categorias = i.categorias,
@@ -111,6 +124,8 @@ class InicioViewModel(
             deudasRecientes = pendientes.sortedByDescending { it.createdIso }.take(3),
             mes = mes, mesActual = mesActual, primerMes = primerMes,
             resumen = resumen, comparativa = comparativa, presupuestos = presupuestos,
+            ocurrenciasSemana = ocurrenciasSemana,
+            totalesSemana = totalesEsperados(ocurrenciasSemana, i.cuentas, i.categorias),
         )
     }
 

@@ -69,10 +69,15 @@ class CapturaRepo(private val db: CuentasDb, private val alResolver: (capturaId:
      * Registra la captura con su movimiento, todo-o-nada (restricción 8): inserta `tx` y marca la captura como
      * REGISTRADA en una transacción. Si la captura ya no estaba PENDIENTE (se registró o descartó desde otra
      * pantalla), lanza y el movimiento NO queda guardado.
+     *
+     * `ademas` corre dentro de la MISMA transacción, tras insertar `tx` (T30: asignar el movimiento a una ocurrencia
+     * del calendario con `asignarEvento`). Si lanza, no queda ni el movimiento ni la captura registrada, y la
+     * notificación sigue puesta (`alResolver` solo se llama tras confirmar).
      */
-    suspend fun registrarConTx(capturaId: String, tx: Transaction) {
+    suspend fun registrarConTx(capturaId: String, tx: Transaction, ademas: suspend () -> Unit = {}) {
         db.withTransaction {
             db.transactions().insertar(tx.toEntity())
+            ademas()
             check(db.capturas().marcarRegistrada(capturaId, tx.id) == 1) { MENSAJE_CAPTURA_RESUELTA }
         }
         alResolver(capturaId)
