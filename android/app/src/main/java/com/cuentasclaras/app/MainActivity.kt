@@ -21,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.navigation.compose.rememberNavController
 import com.cuentasclaras.app.backup.ValidacionRespaldo
 import com.cuentasclaras.app.backup.leerRespaldo
 import com.cuentasclaras.app.backup.restaurarConPrevio
@@ -29,7 +30,8 @@ import com.cuentasclaras.app.domain.todayIso
 import com.cuentasclaras.app.rates.proveedoresPorDefecto
 import com.cuentasclaras.app.rates.refreshRatesOncePerDay
 import com.cuentasclaras.app.ui.Avisos
-import com.cuentasclaras.app.ui.pantallas.respaldo.RespaldoSeccion
+import com.cuentasclaras.app.ui.nav.BarraInferior
+import com.cuentasclaras.app.ui.nav.CuentasNavHost
 import com.cuentasclaras.app.ui.theme.CuentasTema
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -111,9 +113,13 @@ private fun PantallaErrorInicio() {
 
 @Composable
 private fun RaizApp() {
+    val nav = rememberNavController()
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(Unit) { Avisos.mensajes.collect { snackbar.showSnackbar(it) } }
-    Scaffold(snackbarHost = { SnackbarHost(snackbar) }) { relleno ->
-        Box(Modifier.padding(relleno).padding(16.dp)) { RespaldoSeccion() }
+    Scaffold(
+        bottomBar = { BarraInferior(nav) },
+        snackbarHost = { SnackbarHost(snackbar) },
+    ) { relleno ->
+        CuentasNavHost(nav, Modifier.padding(relleno))
     }
 }

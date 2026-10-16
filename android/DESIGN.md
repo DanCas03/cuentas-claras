@@ -26,9 +26,12 @@ los radios y la densidad son comunes a toda la app; **el color sale de paletas**
   «Este mes» con dos columnas (ingresos / gastos, cada una con flecha y signo) y **la línea de progreso** debajo
   (pista `fondo`, relleno `gasto`, 6 dp, píldora) con la frase «Gastaste el N % de lo que entró». Después la
   `Tarjeta` de movimientos recientes.
-- Barra inferior: franja en `superficieElevada` con hasta 4 destinos (ícono + texto, activo en `primario`) y,
-  al centro, el «+» como disco de 56 dp en `primario` con el ícono en `sobrePrimario`, que sobresale 14 dp hacia
-  arriba (`offset(y = (-14).dp)`). Se reserva el alto de la barra con `navigationBarsPadding()`.
+- Barra inferior (`ui/nav/BarraInferior.kt`): franja de 64 dp en `superficieElevada` con divisor de 1 dp en `borde`,
+  cuatro destinos (Inicio, Movs, Importar, Ajustes: ícono de 24 dp + texto `etiqueta`; activo en `primario` con
+  píldora de tinte `primario` al 14 % tras el ícono, así el estado no depende solo del color) y, al centro, el «+»
+  como disco de 56 dp en `primario` con el ícono en `sobrePrimario`. El disco sobresale 14 dp: esa franja de 14 dp
+  es parte de la barra (transparente) para que el disco entero reciba toques y el contenido no quede tapado. Se
+  reserva el alto con `navigationBarsPadding()`. Se oculta en `nuevo`.
 - Pantallas equivalentes usan **el mismo layout** (todas las listas iguales, todas las hojas de edición iguales).
 
 ## 2. Tokens
@@ -220,7 +223,7 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
   con el emoji de la categoría (24 sp) sobre el color de la categoría al 18 %, nombre en `etiqueta` a 2 líneas.
   `enabled = false` al 38 % mientras se guarda. El color de la categoría es dato del usuario:
   `colorDeCategoria(hex, respaldo)`.
-- **Barra inferior con «+»**: ver §1. Íconos `ic_inicio`, `ic_movimientos`, `ic_calendario`, `ic_ajustes` (24 dp)
+- **Barra inferior con «+»**: ver §1. Íconos `ic_inicio`, `ic_movimientos`, `ic_importar`, `ic_calendario`, `ic_ajustes` (24 dp)
   y `ic_mas` (28 dp) dentro del disco.
 - **Íconos**: vector drawables propios en `res/drawable/ic_*.xml` (trazos de Material Icons, Apache 2.0) con
   `painterResource` y `tint` del tema. Tamaños: 16 (en línea con cifras), 20 (campos), 24 (navegación y acciones).

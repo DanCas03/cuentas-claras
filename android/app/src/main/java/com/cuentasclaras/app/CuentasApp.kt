@@ -3,6 +3,7 @@ package com.cuentasclaras.app
 import android.app.Application
 import android.content.Context
 import com.cuentasclaras.app.data.AparienciaRepo
+import com.cuentasclaras.app.data.CuentasRepo
 import com.cuentasclaras.app.data.almacenApariencia
 import com.cuentasclaras.app.data.db.CuentasDb
 import com.cuentasclaras.app.rates.crearHttp
@@ -14,6 +15,8 @@ class AppContainer(context: Context) {
     /** Respaldos de seguridad previos a cada restauración (D16). */
     val dirRespaldos: File = File(context.filesDir, "respaldos")
     val db: CuentasDb = CuentasDb.crear(context)
+    /** Lecturas reactivas y escrituras simples sobre `db` (T11). */
+    val repo: CuentasRepo = CuentasRepo(db)
     val http: OkHttpClient = crearHttp()
     /** Modo y paletas elegidos (E20), en DataStore Preferences. */
     val apariencia: AparienciaRepo = AparienciaRepo(context.almacenApariencia)
