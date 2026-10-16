@@ -46,8 +46,8 @@ data class BncDraft(
     val matchedRuleId: String?,
 )
 
-private val COMISION = Regex("comisi[oó]n", RegexOption.IGNORE_CASE)
-private val PAGO_MOVIL = Regex("pago m[oó]vil", RegexOption.IGNORE_CASE)
+private val COMISION = Regex("comisi[oóOÓ]n", RegexOption.IGNORE_CASE)
+private val PAGO_MOVIL = Regex("pago m[oóOÓ]vil", RegexOption.IGNORE_CASE)
 
 fun mapBncRows(
     rows: List<BncRow>,

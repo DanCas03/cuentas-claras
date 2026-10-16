@@ -275,10 +275,12 @@ private fun FilaDraft(
                     val kind = d.tx.type.comoKind()
                     val eventId = d.tx.eventId
                     val eventDate = d.tx.eventDate
+                    val ocurrencia =
+                        if (!eventId.isNullOrEmpty() && eventDate != null) Ocurrencia(eventId, eventDate) else null
                     if (kind != null) {
                         SelectEvento(
                             tx = TxParaSugerir(kind, d.tx.date, d.tx.accountId, d.tx.amountMinor),
-                            actual = if (eventId != null && eventDate != null) Ocurrencia(eventId, eventDate) else null,
+                            actual = ocurrencia,
                             ctx = ctxEventos,
                             etiqueta = "Evento",
                             descripcion = "Evento fila $n",

@@ -45,6 +45,10 @@ import kotlinx.coroutines.withContext
 
 private const val MAX_BYTES = 1_000_000
 
+/** Aviso de `analizar` cuando `acc-bnc` está archivada o no existe (M6): no se importa nada. */
+private const val MENSAJE_BNC_NO_ACTIVA =
+    "No se puede importar: la cuenta BNC está archivada o no existe. Revísala en Ajustes → Cuentas."
+
 data class DraftUI(
     val draft: BncDraft,
     val tx: Transaction,
@@ -72,6 +76,11 @@ class ImportarViewModel(private val repo: CuentasRepo) : ViewModel() {
         /** Oculta el banner tras crear el ajuste: un segundo toque crearía otro ajuste sobre un saldo ya cuadrado. */
         val ajusteHecho: Boolean = false,
         val guardando: Boolean = false,
+        /**
+         * Fecha de referencia de las ocurrencias (`useState(todayIso)` de la web). Se toma de nuevo en cada
+         * `analizar` (I1): este ViewModel puede vivir de un día para otro.
+         */
+        val hoy: String = todayIso(),
     )
 
     data class Estado(
@@ -93,9 +102,6 @@ class ImportarViewModel(private val repo: CuentasRepo) : ViewModel() {
     private val ui = MutableStateFlow(Ui())
     private val ocupacion = Ocupacion({ ui.value.guardando }) { g -> ui.update { it.copy(guardando = g) } }
 
-    /** Fecha de referencia de las ocurrencias, fijada al abrir la pantalla (`useState(todayIso)` de la web). */
-    private val hoy = todayIso()
-
     // Saldos con las transacciones CRUDAS (restricción 7): nunca txsEfectivas().
     val estado: StateFlow<Estado> = combine(
         ui, repo.txs, repo.categorias, repo.cuentas, repo.eventos,
@@ -108,9 +114,9 @@ class ImportarViewModel(private val repo: CuentasRepo) : ViewModel() {
         val hayPosteriores = finArchivo != null && txs.any { it.accountId == CUENTA_BNC && it.date > finArchivo }
         Estado(
             ui = u, categorias = categorias, cuentas = cuentas, saldoApp = saldoApp,
-            descuadre = if (rawMismatch && !hayPosteriores) u.saldoTxt!! - saldoApp else null,
+            descuadre = if (rawMismatch && !hayPosteriores) u.saldoTxt - saldoApp else null,
             rawMismatch = rawMismatch, hayTxsPosteriores = hayPosteriores,
-            ctxEventos = CtxSugerencia(eventos, txs.filter { it.eventId != null }, cuentas, categorias, hoy),
+            ctxEventos = CtxSugerencia(eventos, txs.filter { !it.eventId.isNullOrEmpty() }, cuentas, categorias, u.hoy),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Estado())
 
@@ -131,7 +137,7 @@ class ImportarViewModel(private val repo: CuentasRepo) : ViewModel() {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Avisos.avisar("No se pudo leer el archivo: ${e.message}")
+                Avisos.avisar("No se pudo leer el archivo: ${e.message ?: ERROR_DESCONOCIDO}")
             }
         }
     }
@@ -153,19 +159,27 @@ class ImportarViewModel(private val repo: CuentasRepo) : ViewModel() {
         if (ocupacion.activa) return
         val texto = ui.value.texto
         escribir(ocupacion, "No se pudo analizar", aviso = { "No se pudo analizar: ${it.message ?: ERROR_DESCONOCIDO}" }) {
+            val db = repo.db
+            // M4: todo el import va a `acc-bnc`. Si está archivada o no existe, no se analiza ni se importa nada
+            // (antes entraba en silencio en una cuenta oculta o inexistente).
+            val cuenta = db.accounts().porId(CUENTA_BNC)
+            if (cuenta == null || cuenta.archived) {
+                Avisos.avisar(MENSAJE_BNC_NO_ACTIVA)
+                return@escribir
+            }
             val r = parseBncTxt(texto)
             if (r.rows.isEmpty()) {
                 ui.update { it.copy(sinResultados = true) }
                 Avisos.avisar("No se encontraron movimientos en el texto")
                 return@escribir
             }
-            val db = repo.db
+            // I1: la fecha de referencia de las ocurrencias es la del día en que se analiza.
+            val hoy = todayIso()
             val reglas = db.rules().todas().map { it.toDomain() }
             val existentes = db.transactions().importKeys().toSet()
             // E19/E24: solo capturas REGISTRADA cuyo movimiento existe, con su sentido (DAO de capturas).
             val capturadas = db.capturas().registradas()
             val categorias = db.categories().todas().map { it.toDomain() }
-            val cuenta = db.accounts().porId(CUENTA_BNC)
             val mapeados = mapBncRows(r.rows, CUENTA_BNC, existentes, reglas, categorias, capturadas)
             val vistas = mutableSetOf<String>()
             val sinSugerencia = mapeados.map { d ->
@@ -182,7 +196,7 @@ class ImportarViewModel(private val repo: CuentasRepo) : ViewModel() {
             // E18: el contexto lleva las transacciones CRUDAS asignadas, nunca txsEfectivas().
             val eventos = db.calEvents().todas().map { it.toDomain() }
             val cuentas = db.accounts().todas().map { it.toDomain() }
-            val asignadas = db.transactions().todas().map { it.toDomain() }.filter { it.eventId != null }
+            val asignadas = db.transactions().todas().map { it.toDomain() }.filter { !it.eventId.isNullOrEmpty() }
             val sugerencias = sugerirParaLote(
                 sinSugerencia.filter { !it.draft.duplicate && !it.repetida }.map { it.tx },
                 CtxSugerencia(eventos, asignadas, cuentas, categorias, hoy),
@@ -196,10 +210,11 @@ class ImportarViewModel(private val repo: CuentasRepo) : ViewModel() {
                 it.copy(
                     sinResultados = false, ajusteHecho = false, resultado = r,
                     rotos = validateChain(r.rows),
-                    gap = detectGap(r.rows, cuenta?.bncLastImportKey, cuenta?.bncLastSaldoMinor),
+                    gap = detectGap(r.rows, cuenta.bncLastImportKey, cuenta.bncLastSaldoMinor),
                     saldoTxt = newestRow(r.rows)?.saldoMinor,
                     drafts = borradores,
                     fase = FaseImport.PREVIA,
+                    hoy = hoy,
                 )
             }
         }
