@@ -3,7 +3,15 @@ package com.cuentasclaras.app.ui.pantallas.movimientos
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.room.withTransaction
 import com.cuentasclaras.app.data.CuentasRepo
+import com.cuentasclaras.app.data.db.toDomain
+import com.cuentasclaras.app.data.db.toEntity
+import com.cuentasclaras.app.data.ops.actualizarGrupo
+import com.cuentasclaras.app.data.ops.agruparTxs
+import com.cuentasclaras.app.data.ops.anadirAGrupo
+import com.cuentasclaras.app.data.ops.desagrupar
+import com.cuentasclaras.app.data.ops.quitarDeGrupo
 import com.cuentasclaras.app.domain.Account
 import com.cuentasclaras.app.domain.CalEvent
 import com.cuentasclaras.app.domain.Category
@@ -78,12 +86,21 @@ fun construirItems(txs: List<Transaction>, grupos: List<TxGroup>, accounts: List
     return items.sortedByDescending { it.clave }
 }
 
+/** Se agrupan solo gastos e ingresos sueltos (`esAgrupable` de `MovimientosPage.tsx`). */
+internal fun esAgrupable(t: Transaction) = (t.type == TxType.INCOME || t.type == TxType.EXPENSE) && t.groupId == null
+
 class MovimientosViewModel(private val repo: CuentasRepo, args: SavedStateHandle) : ViewModel() {
     data class Ui(
         val filtro: FiltroMovs,
         val expandidos: Set<String> = emptySet(),
         val editando: Transaction? = null,
         val guardando: Boolean = false,
+        /** null = sin modo selección. */
+        val seleccion: Set<String>? = null,
+        /** Con valor: la selección se añade a ese grupo existente. */
+        val destinoGrupoId: String? = null,
+        val hojaAgrupar: Boolean = false,
+        val editandoGrupo: TxGroup? = null,
     )
 
     data class Estado(
@@ -94,6 +111,8 @@ class MovimientosViewModel(private val repo: CuentasRepo, args: SavedStateHandle
         val cuentas: List<Account> = emptyList(),
         val categorias: List<Category> = emptyList(),
         val eventos: List<CalEvent> = emptyList(),
+        /** Residuos del grupo que se está editando (con TODOS sus miembros, no solo los visibles por el filtro). */
+        val residuosEditandoGrupo: List<ResiduoMoneda> = emptyList(),
         /** `true` hasta que llega la primera lectura de la base (evita parpadear el estado vacío). */
         val cargando: Boolean = true,
     )
@@ -118,6 +137,9 @@ class MovimientosViewModel(private val repo: CuentasRepo, args: SavedStateHandle
             cuentas = i.cuentas,
             categorias = i.categorias,
             eventos = i.eventos,
+            residuosEditandoGrupo = u.editandoGrupo?.let { g ->
+                residuosDeGrupo(i.txs.filter { it.groupId == g.id }, i.cuentas)
+            } ?: emptyList(),
             cargando = false,
         )
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Estado(ui.value))
@@ -133,16 +155,25 @@ class MovimientosViewModel(private val repo: CuentasRepo, args: SavedStateHandle
     fun editar(t: Transaction) = ui.update { it.copy(editando = t) }
     fun cerrarEditor() = ui.update { it.copy(editando = null) }
 
-    /** Transferencias y ajustes: solo nota y fecha son editables (el monto afecta dos saldos o es un delta). */
+    /**
+     * Transferencias y ajustes: solo nota y fecha son editables (el monto afecta dos saldos o es un delta).
+     *
+     * Como la web (`db.transactions.update(id, cambios)`), se escriben SOLO los campos editados sobre la fila ACTUAL,
+     * releída dentro de una transacción: así un `groupId` asignado (o quitado) mientras el editor estaba abierto no se
+     * revierte con la copia tomada al abrirlo.
+     */
     fun guardarEdicion(original: Transaction, montoTxt: String, categoryId: String?, fecha: String, nota: String) {
         if (ocupacion.activa) return
         if (!esFechaIso(fecha)) { Avisos.avisar("Fecha inválida"); return }
-        var cambiado = original.copy(note = nota.trim().takeIf { it.isNotEmpty() }, date = fecha)
+        val notaLimpia = nota.trim().takeIf { it.isNotEmpty() }
+        var monto: Long? = null
         if (original.type == TxType.EXPENSE || original.type == TxType.INCOME) {
             val m = parseVenezuelanAmount(montoTxt.removeSuffix(","))
             if (m == null || m <= 0) { Avisos.avisar("Monto inválido"); return }
-            cambiado = cambiado.copy(amountMinor = m, categoryId = categoryId?.takeIf { it.isNotEmpty() })
+            monto = m
         }
+        val montoNuevo = monto
+        val categoriaNueva = categoryId?.takeIf { it.isNotEmpty() }
         escribir(
             ocupacion,
             "No se pudo actualizar",
@@ -150,7 +181,16 @@ class MovimientosViewModel(private val repo: CuentasRepo, args: SavedStateHandle
                 Avisos.avisar("Actualizado ✓")
                 ui.update { it.copy(editando = null) }
             },
-        ) { repo.actualizarTx(cambiado) }
+        ) {
+            val db = repo.db
+            db.withTransaction {
+                val actual = db.transactions().porId(original.id)?.toDomain()
+                    ?: throw IllegalStateException("El movimiento ya no existe")
+                var cambiado = actual.copy(note = notaLimpia, date = fecha)
+                if (montoNuevo != null) cambiado = cambiado.copy(amountMinor = montoNuevo, categoryId = categoriaNueva)
+                db.transactions().actualizar(cambiado.toEntity())
+            }
+        }
     }
 
     /** La UI pide confirmación ANTES de llamar aquí. */
@@ -162,4 +202,91 @@ class MovimientosViewModel(private val repo: CuentasRepo, args: SavedStateHandle
             ui.update { it.copy(editando = null) }
         },
     ) { repo.borrarTx(t.id) }
+
+    // ---- Grupos transaccionales: modo selección y acciones (`MovimientosPage.tsx` 66-135 y 240-285) ----
+
+    /** Pulsación larga sobre una fila suelta (spec §7.2: «selección por pulsación larga»). */
+    fun iniciarSeleccion(t: Transaction) =
+        ui.update { it.copy(destinoGrupoId = null, seleccion = if (esAgrupable(t)) setOf(t.id) else emptySet()) }
+
+    fun alternarSeleccion(t: Transaction) {
+        if (!esAgrupable(t)) { Avisos.avisar("Solo se agrupan gastos e ingresos sueltos"); return }
+        ui.update { u ->
+            val s = u.seleccion ?: emptySet()
+            u.copy(seleccion = if (t.id in s) s - t.id else s + t.id)
+        }
+    }
+
+    fun cancelarSeleccion() = ui.update { it.copy(seleccion = null, destinoGrupoId = null, hojaAgrupar = false) }
+
+    /** «Añadir movimientos» de un grupo expandido: entra en modo selección con ese grupo como destino. */
+    fun anadirAlGrupo(gid: String) {
+        ui.update { it.copy(destinoGrupoId = gid, seleccion = emptySet()) }
+        Avisos.avisar("Toca los movimientos a añadir")
+    }
+
+    /** Botón de la barra: con destino añade directo; sin destino abre la hoja «Agrupar». */
+    fun pedirAgrupar() {
+        val u = ui.value
+        if (u.destinoGrupoId != null) confirmarAgrupar("", "") else ui.update { it.copy(hojaAgrupar = true) }
+    }
+
+    /** «Cancelar» de la hoja «Agrupar»: la cierra sin salir del modo selección (como el modal de la web). */
+    fun cerrarHojaAgrupar() = ui.update { it.copy(hojaAgrupar = false) }
+
+    /**
+     * Crea el grupo con la selección (≥ 2, lo valida `agruparTxs`) o la añade al grupo destino (≥ 1, `anadirAGrupo`).
+     * La hoja y el modo selección se cierran SOLO tras el éxito; si falla, la hoja queda abierta con lo escrito.
+     */
+    fun confirmarAgrupar(nota: String, categoryId: String) {
+        if (ocupacion.activa) return
+        val u = ui.value
+        val ids = u.seleccion?.toList() ?: return
+        val destino = u.destinoGrupoId
+        if (destino != null) {
+            escribir(
+                ocupacion,
+                "No se pudo añadir al grupo",
+                alTerminar = {
+                    Avisos.avisar("Añadidos al grupo ✓")
+                    cancelarSeleccion()
+                },
+            ) { anadirAGrupo(repo.db, destino, ids) }
+        } else {
+            escribir(
+                ocupacion,
+                "No se pudo agrupar",
+                alTerminar = {
+                    Avisos.avisar("Grupo transaccional creado ✓")
+                    cancelarSeleccion()
+                },
+            ) { agruparTxs(repo.db, ids, nota, categoryId.takeIf { it.isNotEmpty() }) }
+        }
+    }
+
+    /** Un grupo que baja de 2 miembros se disuelve (`quitarDeGrupo`). */
+    fun quitarDelGrupo(txId: String) = escribir(
+        ocupacion,
+        "No se pudo quitar del grupo",
+        alTerminar = { Avisos.avisar("Quitado del grupo ✓") },
+    ) { quitarDeGrupo(repo.db, listOf(txId)) }
+
+    /** La UI confirma ANTES: «¿Desagrupar? Todos los movimientos vuelven a contarse normal.» */
+    fun desagruparGrupo(gid: String) = escribir(
+        ocupacion,
+        "No se pudo desagrupar",
+        alTerminar = { Avisos.avisar("Grupo desagrupado ✓") },
+    ) { desagrupar(repo.db, gid) }
+
+    fun editarGrupo(g: TxGroup?) = ui.update { it.copy(editandoGrupo = g) }
+
+    /** El editor de grupo se cierra SOLO tras guardar con éxito; si falla, queda abierto con lo escrito. */
+    fun guardarGrupo(gid: String, nota: String, categoryId: String) = escribir(
+        ocupacion,
+        "No se pudo actualizar el grupo",
+        alTerminar = {
+            Avisos.avisar("Grupo actualizado ✓")
+            ui.update { it.copy(editandoGrupo = null) }
+        },
+    ) { actualizarGrupo(repo.db, gid, nota, categoryId) }
 }
