@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 3,
+  "exportedAt": "2026-10-10T14:00:00.000Z",
+  "origen": "pwa-v3",
+  "accounts": [
+    { "id": "acc-bnc", "name": "BNC", "currency": "VES", "kind": "bank", "isSavings": false, "archived": false, "bncLastImportKey": "bnc:2026-06-19:100000000:09:00:00.000:-10000", "bncLastSaldoMinor": 50000 },
+    { "id": "acc-zinli", "name": "Zinli", "currency": "USD", "kind": "wallet", "isSavings": false, "archived": false },
+    { "id": "acc-binance", "name": "Binance", "currency": "USD", "kind": "snapshot", "isSavings": true, "archived": false, "enDisposicion": true },
+    { "id": "acc-efectivo", "name": "Efectivo", "currency": "USD", "kind": "cash", "isSavings": false, "archived": false },
+    { "id": "acc-efectivo-ahorro", "name": "Efectivo ahorro", "currency": "USD", "kind": "cash", "isSavings": true, "archived": false }
+  ],
+  "transactions": [
+    { "id": "tx-demo-01", "type": "income", "accountId": "acc-bnc", "amountMinor": 8000000, "date": "2026-09-30", "categoryId": "cat-sueldo", "note": "Quincena", "source": "manual", "eventId": "evento-quincena", "eventDate": "2026-09-30" },
+    { "id": "tx-demo-02", "type": "expense", "accountId": "acc-bnc", "amountMinor": 345079, "date": "2026-10-01", "time": "12:34:56.789", "categoryId": "cat-supermercado", "note": "PANADERIA CENTRAL C A", "source": "bnc", "importKey": "bnc:2026-10-01:100000011:12:34:56.789:-345079" },
+    { "id": "tx-demo-03", "type": "expense", "accountId": "acc-bnc", "amountMinor": 360, "date": "2026-10-01", "time": "12:35:00.100", "categoryId": "cat-comisiones", "note": "Comisión Pago Movil", "source": "bnc", "importKey": "bnc:2026-10-01:100000012:12:35:00.100:-360" },
+    { "id": "tx-demo-04", "type": "expense", "accountId": "acc-efectivo", "amountMinor": 1250, "date": "2026-10-03", "categoryId": "cat-comida-fuera", "note": "Arepas", "source": "manual" },
+    { "id": "tx-demo-05", "type": "transfer", "accountId": "acc-zinli", "toAccountId": "acc-bnc", "amountMinor": 5000, "toAmountMinor": 900000, "rateUsed": 180, "date": "2026-10-04", "source": "manual" },
+    { "id": "tx-demo-06", "type": "income", "accountId": "acc-efectivo", "amountMinor": 500, "date": "2026-10-08", "note": "Me pasaron para la leche", "source": "manual", "groupId": "grupo-demo" },
+    { "id": "tx-demo-07", "type": "expense", "accountId": "acc-efectivo", "amountMinor": 350, "date": "2026-10-08", "time": "09:30:00", "categoryId": "cat-supermercado", "note": "Leche", "source": "manual", "groupId": "grupo-demo" },
+    { "id": "tx-demo-08", "type": "adjustment", "accountId": "acc-binance", "amountMinor": 12000, "date": "2026-10-01", "note": "Ajuste de saldo", "source": "adjust" },
+    { "id": "tx-demo-09", "type": "expense", "accountId": "acc-zinli", "amountMinor": 1599, "date": "2026-10-05", "categoryId": "cat-suscripciones", "note": "Netflix", "source": "manual", "eventId": "evento-netflix", "eventDate": "2026-10-05" },
+    { "id": "tx-demo-10", "type": "expense", "accountId": "acc-bnc", "amountMinor": 120000, "date": "2026-10-09", "categoryId": "cat-transporte", "note": "Taxi", "source": "manual" },
+    { "id": "tx-demo-11", "type": "income", "accountId": "acc-bnc", "amountMinor": 150000, "date": "2026-10-12", "categoryId": "cat-pago-movil-recibido", "note": "Pago móvil de un amigo", "source": "manual" },
+    { "id": "tx-demo-12", "type": "expense", "accountId": "acc-efectivo", "amountMinor": 800, "date": "2026-08-20", "categoryId": "cat-ocio", "note": "Cine", "source": "manual" }
+  ],
+  "categories": [
+    { "id": "cat-supermercado", "name": "Supermercado", "icon": "🛒", "color": "#4ade80", "kind": "expense", "monthlyBudgetMinor": 15000 },
+    { "id": "cat-comida-fuera", "name": "Comida fuera", "icon": "🍔", "color": "#fbbf24", "kind": "expense", "monthlyBudgetMinor": 8000 },
+    { "id": "cat-transporte", "name": "Transporte", "icon": "🚌", "color": "#60a5fa", "kind": "expense" },
+    { "id": "cat-salud", "name": "Salud", "icon": "💊", "color": "#f87171", "kind": "expense" },
+    { "id": "cat-servicios", "name": "Servicios", "icon": "💡", "color": "#facc15", "kind": "expense" },
+    { "id": "cat-comisiones", "name": "Comisiones bancarias", "icon": "🏦", "color": "#94a3b8", "kind": "expense" },
+    { "id": "cat-hogar", "name": "Hogar", "icon": "🏠", "color": "#a78bfa", "kind": "expense" },
+    { "id": "cat-ocio", "name": "Ocio/Juegos", "icon": "🎮", "color": "#f472b6", "kind": "expense" },
+    { "id": "cat-suscripciones", "name": "Suscripciones", "icon": "📺", "color": "#22d3ee", "kind": "expense" },
+    { "id": "cat-ropa", "name": "Ropa", "icon": "👕", "color": "#fb923c", "kind": "expense" },
+    { "id": "cat-otros-gastos", "name": "Otros gastos", "icon": "📦", "color": "#9ca3af", "kind": "expense" },
+    { "id": "cat-pago-movil-recibido", "name": "Pago móvil recibido", "icon": "📲", "color": "#4ade80", "kind": "income" },
+    { "id": "cat-transferencia-recibida", "name": "Transferencia recibida", "icon": "🔁", "color": "#38bdf8", "kind": "income" },
+    { "id": "cat-sueldo", "name": "Sueldo/Pagos", "icon": "💼", "color": "#34d399", "kind": "income" },
+    { "id": "cat-otros-ingresos", "name": "Otros ingresos", "icon": "➕", "color": "#cbd5e1", "kind": "income" },
+    { "id": "cat-deudas", "name": "Deudas", "icon": "🤝", "color": "#c084fc", "kind": "expense" },
+    { "id": "cat-vuelto-ingreso", "name": "Vuelto", "icon": "↩️", "color": "#34d399", "kind": "income" },
+    { "id": "cat-vuelto-gasto", "name": "Vuelto", "icon": "↪️", "color": "#f87171", "kind": "expense" }
+  ],
+  "rules": [
+    { "id": "regla-demo", "pattern": "PANADERIA", "categoryId": "cat-supermercado", "autoCreated": true }
+  ],
+  "rates": [
+    { "date": "2026-10-01", "source": "BCV", "vesPerUsd": 180 },
+    { "date": "2026-10-10", "source": "BCV", "vesPerUsd": 185.5 },
+    { "date": "2026-10-10", "source": "BINANCE", "vesPerUsd": 230.25 }
+  ],
+  "settings": [
+    { "id": "main", "viewCurrency": "USD", "rateSource": "BCV", "lastAccountId": "acc-bnc", "lastRatesFetchDate": "2026-10-10" }
+  ],
+  "debts": [
+    { "id": "deuda-demo-1", "direction": "porPagar", "concepto": "Préstamo de Ana", "amountMinor": 2000, "accountId": "acc-efectivo", "status": "pendiente", "createdIso": "2026-10-02T12:00:00.000Z" },
+    { "id": "deuda-demo-2", "direction": "porCobrar", "concepto": "Almuerzo con Luis", "amountMinor": 150000, "accountId": "acc-bnc", "status": "pendiente", "createdIso": "2026-10-05T12:00:00.000Z" }
+  ],
+  "txGroups": [
+    { "id": "grupo-demo", "nota": "me pasaron para la leche", "categoryId": "cat-supermercado", "createdIso": "2026-10-08T09:00:00.000Z" }
+  ],
+  "calEvents": [
+    { "id": "evento-quincena", "titulo": "Quincena", "categoryId": "cat-sueldo", "accountId": "acc-bnc", "amountMinor": 8000000, "startDate": "2026-01-01", "recurrence": { "kind": "monthly", "days": [15, 31] }, "createdIso": "2026-09-04T10:00:00.000Z" },
+    { "id": "evento-netflix", "titulo": "Netflix", "categoryId": "cat-suscripciones", "accountId": "acc-zinli", "amountMinor": 1599, "startDate": "2026-01-05", "recurrence": { "kind": "monthly", "days": [5] }, "omitidas": ["2026-09-05"], "createdIso": "2026-09-04T10:05:00.000Z" }
+  ]
+}
