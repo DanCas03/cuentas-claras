@@ -50,9 +50,6 @@ import com.cuentasclaras.app.ui.theme.CuentasTema
 import com.cuentasclaras.app.ui.theme.Movimiento
 import com.cuentasclaras.app.ui.vmCon
 
-/** Alto mínimo de un objetivo táctil (DESIGN.md §6). */
-private val ALTO_TACTIL = 48.dp
-
 /** Lado del chevron del historial (DESIGN.md §4: íconos de 24 dp en acciones). */
 private val ICONO_ACCION = 24.dp
 
@@ -254,7 +251,7 @@ private fun EncabezadoHistorial(cantidad: Int, abierto: Boolean, alternar: () ->
     Row(
         Modifier
             .fillMaxWidth()
-            .heightIn(min = ALTO_TACTIL)
+            .heightIn(min = CuentasTema.medidas.tactilMinimo)
             .clickable(role = Role.Button, onClick = alternar)
             .semantics { stateDescription = if (abierto) "Expandido" else "Contraído" },
         verticalAlignment = Alignment.CenterVertically,
@@ -276,7 +273,7 @@ private fun FilaCerrada(deuda: Debt, moneda: Currency, habilitada: Boolean, onEl
     val c = CuentasTema.colores
     val e = CuentasTema.espacios
     Row(
-        Modifier.fillMaxWidth().heightIn(min = ALTO_TACTIL),
+        Modifier.fillMaxWidth().heightIn(min = CuentasTema.medidas.tactilMinimo),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(e.s),
     ) {

@@ -16,6 +16,9 @@ import com.cuentasclaras.app.backup.respaldoAJson
 import com.cuentasclaras.app.data.db.CuentasDb
 import com.cuentasclaras.app.domain.todayIso
 import com.cuentasclaras.app.ui.Avisos
+import com.cuentasclaras.app.ui.ERROR_DESCONOCIDO
+import com.cuentasclaras.app.ui.Ocupacion
+import com.cuentasclaras.app.ui.escribir
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,6 +39,7 @@ class RespaldoViewModel(private val db: CuentasDb, private val dirSeguridad: Fil
 
     private val _estado = MutableStateFlow(Estado())
     val estado: StateFlow<Estado> = _estado.asStateFlow()
+    private val ocupacion = Ocupacion({ _estado.value.guardando }) { g -> _estado.update { it.copy(guardando = g) } }
 
     init { refrescarConteos() }
 
@@ -45,24 +49,16 @@ class RespaldoViewModel(private val db: CuentasDb, private val dirSeguridad: Fil
 
     fun nombreSugerido(): String = backupFilename(todayIso())
 
-    fun exportarA(resolver: ContentResolver, uri: Uri) {
-        if (_estado.value.guardando) return
-        _estado.update { it.copy(guardando = true) }
-        viewModelScope.launch {
-            try {
-                val json = withContext(Dispatchers.Default) { respaldoAJson(exportBackup(db)) }
-                withContext(Dispatchers.IO) {
-                    val salida = resolver.openOutputStream(uri, "wt") ?: error("No se pudo abrir el archivo")
-                    salida.bufferedWriter().use { it.write(json) }
-                }
-                Avisos.avisar("Respaldo guardado ✓")
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Avisos.avisar("No se pudo exportar: ${e.message}")
-            } finally {
-                _estado.update { it.copy(guardando = false) }
-            }
+    fun exportarA(resolver: ContentResolver, uri: Uri) = escribir(
+        ocupacion,
+        "No se pudo exportar",
+        alTerminar = { Avisos.avisar("Respaldo guardado ✓") },
+        aviso = { "No se pudo exportar: ${it.message ?: ERROR_DESCONOCIDO}" },
+    ) {
+        val json = withContext(Dispatchers.Default) { respaldoAJson(exportBackup(db)) }
+        withContext(Dispatchers.IO) {
+            val salida = resolver.openOutputStream(uri, "wt") ?: error("No se pudo abrir el archivo")
+            salida.bufferedWriter().use { it.write(json) }
         }
     }
 
@@ -96,21 +92,15 @@ class RespaldoViewModel(private val db: CuentasDb, private val dirSeguridad: Fil
     /** Reemplaza TODO. Antes guarda un respaldo de seguridad de lo actual (D16). */
     fun restaurar() {
         val pendiente = _estado.value.pendiente ?: return
-        if (_estado.value.guardando) return
-        _estado.update { it.copy(guardando = true) }
-        viewModelScope.launch {
-            try {
-                restaurarConPrevio(db, dirSeguridad, pendiente.backup)
+        escribir(
+            ocupacion,
+            "No se restauró nada",
+            alTerminar = {
                 _estado.update { it.copy(pendiente = null) }
                 Avisos.avisar("Datos restaurados ✓")
                 refrescarConteos()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Avisos.avisar("No se restauró nada: ${e.message}")
-            } finally {
-                _estado.update { it.copy(guardando = false) }
-            }
-        }
+            },
+            aviso = { "No se restauró nada: ${it.message ?: ERROR_DESCONOCIDO}" },
+        ) { restaurarConPrevio(db, dirSeguridad, pendiente.backup) }
     }
 }

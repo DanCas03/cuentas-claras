@@ -15,13 +15,20 @@ class Ocupacion(private val leer: () -> Boolean, private val poner: (Boolean) ->
     internal fun marcar(valor: Boolean) = poner(valor)
 }
 
+/** Texto de los avisos con prefijo («No se importó nada: …») cuando la excepción no trae mensaje. */
+const val ERROR_DESCONOCIDO = "error desconocido"
+
 /**
  * Helper único de escritura asíncrona de los ViewModels (restricción 9, E7, E16).
  *
  * Secuencia: guard (si `ocupacion` ya está activa, no hace nada) → `ocupacion = true` → en `viewModelScope`,
  * `trabajo()` y, si termina bien, `alTerminar()` (hilo principal) → `CancellationException` se relanza → cualquier
- * otra excepción avisa con `e.message ?: mensajeError` → `finally` repone la ocupación, salvo tras un éxito con
- * `reponerAlExito = false` (D19: la pantalla se cierra y un segundo toque no debe repetir la escritura).
+ * otra excepción avisa con `aviso(e)` (por defecto `e.message ?: mensajeError`) → `finally` repone la ocupación,
+ * salvo tras un éxito con `reponerAlExito = false` (D19: la pantalla se cierra y un segundo toque no debe repetir
+ * la escritura).
+ *
+ * `aviso` permite los textos con prefijo de la web («No se importó nada: …»); quien lo pase decide qué mostrar
+ * cuando `e.message` es nulo (nunca «null»).
  *
  * La validación del ViewModel va ANTES de llamar aquí y DESPUÉS de su propio guard (`if (ocupacion.activa) return`),
  * para no avisar de un error de validación mientras otro guardado sigue en curso.
@@ -34,6 +41,7 @@ fun ViewModel.escribir(
     mensajeError: String,
     reponerAlExito: Boolean = true,
     alTerminar: () -> Unit = {},
+    aviso: (Exception) -> String = { it.message ?: mensajeError },
     trabajo: suspend () -> Unit,
 ) {
     if (ocupacion?.activa == true) return
@@ -47,7 +55,7 @@ fun ViewModel.escribir(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Avisos.avisar(e.message ?: mensajeError)
+            Avisos.avisar(aviso(e))
         } finally {
             if (!exito || reponerAlExito) ocupacion?.marcar(false)
         }

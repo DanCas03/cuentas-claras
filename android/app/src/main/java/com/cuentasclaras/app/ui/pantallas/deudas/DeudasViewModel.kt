@@ -14,14 +14,14 @@ import com.cuentasclaras.app.domain.buildDebt
 import com.cuentasclaras.app.domain.parseVenezuelanAmount
 import com.cuentasclaras.app.domain.todayIso
 import com.cuentasclaras.app.ui.Avisos
-import kotlinx.coroutines.CancellationException
+import com.cuentasclaras.app.ui.Ocupacion
+import com.cuentasclaras.app.ui.escribir
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 
 class DeudasViewModel(private val repo: CuentasRepo) : ViewModel() {
     data class Ui(val pestana: DebtDirection = DebtDirection.POR_PAGAR, val guardando: Boolean = false)
@@ -38,6 +38,7 @@ class DeudasViewModel(private val repo: CuentasRepo) : ViewModel() {
     )
 
     private val ui = MutableStateFlow(Ui())
+    private val ocupacion = Ocupacion({ ui.value.guardando }) { g -> ui.update { it.copy(guardando = g) } }
 
     val estado: StateFlow<Estado> = combine(ui, repo.cuentas, repo.deudas) { u, cuentas, deudas ->
         val delaPestana = deudas.filter { it.direction == u.pestana }
@@ -53,26 +54,19 @@ class DeudasViewModel(private val repo: CuentasRepo) : ViewModel() {
     fun cambiarPestana(d: DebtDirection) = ui.update { it.copy(pestana = d) }
 
     /**
-     * Guard primero (E7); si ya hay una escritura en curso no hace nada. `alTerminar` se llama en el hilo
-     * principal solo tras escribir con éxito; si falla, se avisa con el mensaje y la hoja queda abierta.
+     * Escritura con el helper común (E7, E16): si ya hay una en curso no hace nada. `alTerminar` se llama en el
+     * hilo principal solo tras escribir con éxito, y después se avisa `exito`; si falla, se avisa con el mensaje
+     * y la hoja queda abierta.
      */
-    private fun conGuard(exito: String, alTerminar: () -> Unit = {}, trabajo: suspend () -> Unit) {
-        if (ui.value.guardando) return
-        ui.update { it.copy(guardando = true) }
-        viewModelScope.launch {
-            try {
-                trabajo()
-                alTerminar()
-                Avisos.avisar(exito)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Avisos.avisar(e.message ?: "No se pudo completar")
-            } finally {
-                ui.update { it.copy(guardando = false) }
-            }
-        }
-    }
+    private fun conGuard(exito: String, alTerminar: () -> Unit = {}, trabajo: suspend () -> Unit) = escribir(
+        ocupacion,
+        "No se pudo completar",
+        alTerminar = {
+            alTerminar()
+            Avisos.avisar(exito)
+        },
+        trabajo = trabajo,
+    )
 
     /** La UI confirma ANTES con «¿Marcar «concepto» como pagada/cobrada? Se creará el gasto/ingreso en {cuenta}.» */
     fun marcarCerrada(d: Debt) {
@@ -92,7 +86,7 @@ class DeudasViewModel(private val repo: CuentasRepo) : ViewModel() {
         montoTxt: String,
         alGuardar: () -> Unit,
     ) {
-        if (ui.value.guardando) return
+        if (ocupacion.activa) return
         val minor = parseVenezuelanAmount(montoTxt.removeSuffix(","))
         if (minor == null || minor <= 0) { Avisos.avisar("Monto inválido"); return }
         if (concepto.isBlank()) { Avisos.avisar("Ponle un concepto a la deuda"); return }
