@@ -16,7 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.cuentasclaras.app.ui.componentes.BotonPrincipal
@@ -26,9 +25,6 @@ import com.cuentasclaras.app.ui.componentes.Tarjeta
 import com.cuentasclaras.app.ui.pantallas.respaldo.RespaldoSeccion
 import com.cuentasclaras.app.ui.theme.CuentasTema
 import com.cuentasclaras.app.ui.vmCon
-
-/** Alto mínimo de un objetivo táctil (DESIGN.md §6). */
-internal val ALTO_TACTIL = 48.dp
 
 /**
  * Ajustes: apariencia, cuentas, categorías, tasas, reglas, respaldo y el enlace a Permisos de captura.

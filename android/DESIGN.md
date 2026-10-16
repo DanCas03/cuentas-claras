@@ -41,7 +41,7 @@ los radios y la densidad son comunes a toda la app; **el color sale de paletas**
 
 ## 2. Tokens
 
-Se leen SIEMPRE desde `CuentasTema` (`CuentasTema.colores`, `.tipografia`, `.formas`, `.espacios`). Nombres exactos:
+Se leen SIEMPRE desde `CuentasTema` (`CuentasTema.colores`, `.tipografia`, `.formas`, `.espacios`, `.medidas`). Nombres exactos:
 
 | Grupo | Tipo | Campos |
 |---|---|---|
@@ -49,6 +49,7 @@ Se leen SIEMPRE desde `CuentasTema` (`CuentasTema.colores`, `.tipografia`, `.for
 | Tipografía | `data class Tipografia` | `titulo`, `subtitulo`, `cuerpo`, `etiqueta`, `cifraGrande`, `cifra` |
 | Formas | `data class Formas` | `tarjeta` = 20 dp · `control` = 12 dp · `pildora` = 50 % |
 | Espacios | `data class Espacios` | `xs` 4 · `s` 8 · `m` 16 · `l` 24 · `xl` 32 dp |
+| Medidas | `data class Medidas` (`ui/theme/Medidas.kt`) | `tactilMinimo` = 48 dp (objetivo táctil, §6) · `alfaTinteCategoria` = 0,18 (tinte del color de categoría tras su emoji o ícono) |
 
 Roles de color:
 - `fondo`: lienzo de la pantalla. `superficie`: carcasa exterior de tarjetas, hojas modales, círculos de estado vacío.
@@ -227,7 +228,7 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
   (248 dp en total; `compacto = true`, solo Nuevo: teclas de 52 dp, 232 dp en total, nunca menos de 48 dp), fondo `superficieElevada`, radio `control`, dígitos en `cifra` a 24 sp, «⌫» con `ic_borrar`.
   `contentDescription` «coma» y «borrar». Vibración corta de tecla.
 - **`CategoriaGrid(categorias, enabled, onElegir)`**: 4 columnas sin scroll propio; cada celda: cuadro de 48 dp
-  con el emoji de la categoría (24 sp) sobre el color de la categoría al 18 %, nombre en `etiqueta` de 1 a 2 líneas
+  con el emoji de la categoría (24 sp) sobre el color de la categoría al 18 % (`medidas.alfaTinteCategoria`), nombre en `etiqueta` de 1 a 2 líneas
   (relleno vertical de celda `espacios.xs`: 78 dp con nombre de una línea, 96 dp con dos).
   `enabled = false` al 38 % mientras se guarda. El color de la categoría es dato del usuario:
   `colorDeCategoria(hex, respaldo)`.
@@ -236,6 +237,9 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
 - **Íconos**: vector drawables propios en `res/drawable/ic_*.xml` (trazos de Material Icons, Apache 2.0) con
   `painterResource` y `tint` del tema. Tamaños: 16 (en línea con cifras), 20 (campos), 24 (navegación y acciones).
   No se añade `material-icons-extended`. `ic_candado` (16 dp, `textoSecundario`) marca las cuentas de ahorro en Inicio.
+  En el cuadro de las filas sin emoji de categoría (24 dp): `ic_transferir` (transferencia, 🔁 en la web),
+  `ic_ajuste_saldo` (ajuste, 🎯), `ic_sin_categoria` (sin categoría, 📦; también en «Este mes») e `ic_grupo`
+  (grupo transaccional sin categoría, 🔁).
 - **Ícono de la app**: adaptable (`mipmap-anydpi-v26/ic_launcher.xml`): «C» abierta con un visto en lima `#C5F05A`
   sobre `#0A0F1C` (Noche lima), con capa monocroma.
 
@@ -261,7 +265,7 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
 - **Botones píldora** con relleno generoso; una acción principal por pantalla; las secundarias son tonales.
 - **Ritmo de espacios** en la escala 4/8/16/24/32: dentro de un componente `s`–`m`, entre componentes `m`, entre
   secciones `l`, márgenes de pantalla `m`. Nada de valores sueltos.
-- **Objetivos táctiles** ≥ 48 dp con ≥ 8 dp entre ellos; teclas del teclado ≥ 56 dp.
+- **Objetivos táctiles** ≥ 48 dp (`CuentasTema.medidas.tactilMinimo`) con ≥ 8 dp entre ellos; teclas del teclado ≥ 56 dp.
 - **Accesibilidad**: todo ícono suelto con `contentDescription` en español; los textos visibles y
   `contentDescription` son los que usa `tocar` en la verificación por adb.
 

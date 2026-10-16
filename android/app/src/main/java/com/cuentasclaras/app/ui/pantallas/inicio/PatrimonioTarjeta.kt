@@ -190,16 +190,13 @@ fun PatrimonioTarjeta(
 /** Lado de los íconos en línea con cifras (DESIGN.md §4: 16 dp). */
 private val ICONO_LINEA = 16.dp
 
-/** Alto mínimo de cada fila de cuenta. */
-private val ALTO_FILA = 48.dp
-
 @Composable
 private fun FilaCuenta(linea: PatrimonioLinea) {
     val c = CuentasTema.colores
     val t = CuentasTema.tipografia
     val e = CuentasTema.espacios
     Row(
-        Modifier.fillMaxWidth().heightIn(min = ALTO_FILA),
+        Modifier.fillMaxWidth().heightIn(min = CuentasTema.medidas.tactilMinimo),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (linea.account.isSavings) {

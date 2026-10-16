@@ -82,7 +82,7 @@ private fun CeldaCategoria(categoria: Category, enabled: Boolean, onElegir: (Str
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
-            Modifier.size(CUADRO_CATEGORIA).clip(CuentasTema.formas.control).background(tono.copy(alpha = 0.18f)),
+            Modifier.size(CUADRO_CATEGORIA).clip(CuentasTema.formas.control).background(tono.copy(alpha = CuentasTema.medidas.alfaTinteCategoria)),
             contentAlignment = Alignment.Center,
         ) {
             Text(categoria.icon, fontSize = 24.sp, modifier = Modifier.clearAndSetSemantics { })

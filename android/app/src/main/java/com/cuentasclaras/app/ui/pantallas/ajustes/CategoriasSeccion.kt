@@ -214,7 +214,7 @@ private fun MuestraColor(hex: String, elegida: Boolean, onClick: () -> Unit) {
     val tintaVisto = if (color.luminance() > 0.5f) oscuroDelTema else claroDelTema
     Box(
         Modifier
-            .size(ALTO_TACTIL)
+            .size(CuentasTema.medidas.tactilMinimo)
             .clip(CircleShape)
             .selectable(selected = elegida, role = Role.RadioButton, onClick = onClick)
             .semantics { contentDescription = "Color $hex" },

@@ -30,9 +30,6 @@ import com.cuentasclaras.app.ui.theme.Movimiento
 /** Separación entre la pista y el segmento activo. */
 private val HOLGURA_SEGMENTADO = 4.dp
 
-/** Alto mínimo de cada segmento (objetivo táctil de 48 dp). */
-private val ALTO_SEGMENTO = 48.dp
-
 /**
  * Control segmentado en píldora: pista en el relleno de controles (`borde`), segmento activo en `primario`.
  * El cambio de selección anima el color con la curva propia.
@@ -69,7 +66,7 @@ fun Segmentado(
             Box(
                 Modifier
                     .weight(1f)
-                    .heightIn(min = ALTO_SEGMENTO)
+                    .heightIn(min = CuentasTema.medidas.tactilMinimo)
                     .clip(pildora)
                     .background(fondo)
                     .selectable(selected = activo, role = Role.Tab, onClick = { onSeleccion(indice) }),

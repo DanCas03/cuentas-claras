@@ -61,9 +61,6 @@ import com.cuentasclaras.app.ui.componentes.Vacio
 import com.cuentasclaras.app.ui.componentes.colorDeCategoria
 import com.cuentasclaras.app.ui.theme.CuentasTema
 
-/** Botones «‹» / «›» del navegador de mes: objetivo táctil de 48 dp (DESIGN.md §6). */
-private val BOTON_MES = 48.dp
-
 /** Ícono en línea con una cifra (DESIGN.md §4: 16 dp). */
 private val ICONO_LINEA = 16.dp
 
@@ -73,17 +70,14 @@ private val MUESTRA_LEYENDA = 10.dp
 /** Cuadro del emoji de la categoría en las filas de la lista. */
 private val CUADRO_EMOJI = 40.dp
 
+/** Ícono vectorial de «Sin categoría» dentro de su cuadro (DESIGN.md §4: 24 dp). */
+private val ICONO_FILA = 24.dp
+
 /** Tamaño del emoji dentro de su cuadro. */
 private val EMOJI_FILA = 20.sp
 
-/** Opacidad del tinte de la categoría tras su emoji (como en `CategoriaGrid`). */
-private const val ALFA_TINTE = 0.18f
-
 /** Alto de las líneas de progreso (DESIGN.md §7: 6 dp, píldora). */
 private val ALTO_PROGRESO = 6.dp
-
-/** Emoji de respaldo para «Sin categoría» (como la web). */
-private const val EMOJI_SIN_CATEGORIA = "📦"
 
 /** Umbral de aviso de un presupuesto (DESIGN.md §7: pasa del 80 %). */
 private const val UMBRAL_AVISO = 0.8
@@ -227,7 +221,7 @@ private fun NavegadorMes(mes: String, mesActual: String, primerMes: String, onMe
 private fun BotonMes(glifo: String, descripcion: String, habilitado: Boolean, onClick: () -> Unit) {
     Box(
         Modifier
-            .size(BOTON_MES)
+            .size(CuentasTema.medidas.tactilMinimo)
             .clip(CircleShape)
             .alpha(if (habilitado) 1f else 0.38f)
             .clickable(enabled = habilitado, role = Role.Button, onClick = onClick)
@@ -312,7 +306,7 @@ private fun LineaProgreso(fraccion: Float, relleno: Color, pista: Color, modifie
 }
 
 /**
- * Fila de la lista de categorías: emoji, nombre, barra proporcional, monto con signo y porcentaje del total.
+ * Fila de la lista de categorías: emoji (o `ic_sin_categoria`), nombre, barra proporcional, monto con signo y porcentaje del total.
  * Con `onClick` (categoría existente) abre Movimientos filtrado; «Sin categoría» no es tocable y va en gris.
  */
 @Composable
@@ -331,7 +325,7 @@ private fun FilaCategoria(
     val pct = if (total > 0L) Math.round(minor * 100.0 / total) else 0L
     val base = Modifier
         .fillMaxWidth()
-        .heightIn(min = BOTON_MES)
+        .heightIn(min = CuentasTema.medidas.tactilMinimo)
         .clip(CuentasTema.formas.control)
     Row(
         (if (onClick != null) base.clickable(role = Role.Button, onClick = onClick) else base.semantics(mergeDescendants = true) { })
@@ -342,10 +336,20 @@ private fun FilaCategoria(
             Modifier
                 .size(CUADRO_EMOJI)
                 .clip(CuentasTema.formas.control)
-                .background(color.copy(alpha = ALFA_TINTE)),
+                .background(color.copy(alpha = CuentasTema.medidas.alfaTinteCategoria)),
             contentAlignment = Alignment.Center,
         ) {
-            Text(cat?.icon ?: EMOJI_SIN_CATEGORIA, fontSize = EMOJI_FILA, modifier = Modifier.clearAndSetSemantics { })
+            if (cat != null) {
+                Text(cat.icon, fontSize = EMOJI_FILA, modifier = Modifier.clearAndSetSemantics { })
+            } else {
+                // «Sin categoría» (📦 en la web): ícono de interfaz, no dato del usuario; el nombre ya está al lado.
+                Icon(
+                    painterResource(R.drawable.ic_sin_categoria),
+                    contentDescription = null,
+                    tint = c.textoSecundario,
+                    modifier = Modifier.size(ICONO_FILA),
+                )
+            }
         }
         Column(
             Modifier

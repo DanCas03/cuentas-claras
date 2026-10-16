@@ -73,10 +73,10 @@ private val ALTO_FILA = 64.dp
 private val CUADRO_ICONO = 44.dp
 private val ICONO_FLECHA = 16.dp
 private val ICONO_CHEVRON = 24.dp
+private val ICONO_FILA = 24.dp
 private val ICONO_QUITAR = 16.dp
 private val ALTO_CHIP_FILTRO = 36.dp
 private val EMOJI_FILA = 22.sp
-private const val TINTE_CATEGORIA = 0.18f
 
 /** Diccionarios para resolver cuenta, categoría y evento de cada fila sin recorrer las listas. */
 private class Catalogos(
@@ -310,13 +310,21 @@ private fun FilaBase(
     }
 }
 
+/**
+ * Cuadro del ícono de una fila: el emoji de la categoría (dato del usuario) o, si no hay, un vector `ic_*`
+ * (DESIGN.md §8). Sin descripción: la fila entera ya se lee con su descripción (tipo de movimiento incluido).
+ */
 @Composable
-private fun IconoFila(emoji: String, fondo: Color) {
+private fun IconoFila(fondo: Color, emoji: String?, vector: Int) {
     Box(
         Modifier.size(CUADRO_ICONO).clip(CuentasTema.formas.control).background(fondo),
         contentAlignment = Alignment.Center,
     ) {
-        Text(emoji, fontSize = EMOJI_FILA)
+        if (emoji != null) {
+            Text(emoji, fontSize = EMOJI_FILA)
+        } else {
+            Icon(painterResource(vector), contentDescription = null, tint = CuentasTema.colores.texto, modifier = Modifier.size(ICONO_FILA))
+        }
     }
 }
 
@@ -380,13 +388,15 @@ private fun FilaMovimiento(t: Transaction, cat: Catalogos, indentada: Boolean, o
         TxType.TRANSFER -> "transferencia de ${formatMoney(t.amountMinor, moneda)}"
         TxType.ADJUSTMENT -> "ajuste de ${formatMoney(t.amountMinor, moneda)}"
     }
-    val emoji = when (t.type) {
-        TxType.TRANSFER -> "🔁"
-        TxType.ADJUSTMENT -> "🎯"
-        else -> categoria?.icon ?: "📦"
+    // La web pinta 🔁 (transferencia), 🎯 (ajuste) y 📦 (sin categoría): aquí son vectores (DESIGN.md §8).
+    val emoji = if (t.type == TxType.TRANSFER || t.type == TxType.ADJUSTMENT) null else categoria?.icon
+    val vector = when (t.type) {
+        TxType.TRANSFER -> R.drawable.ic_transferir
+        TxType.ADJUSTMENT -> R.drawable.ic_ajuste_saldo
+        else -> R.drawable.ic_sin_categoria
     }
     val fondoIcono = if (categoria != null && t.type != TxType.TRANSFER && t.type != TxType.ADJUSTMENT) {
-        colorDeCategoria(categoria.color, c.borde).copy(alpha = TINTE_CATEGORIA)
+        colorDeCategoria(categoria.color, c.borde).copy(alpha = CuentasTema.medidas.alfaTinteCategoria)
     } else {
         c.borde
     }
@@ -396,7 +406,7 @@ private fun FilaMovimiento(t: Transaction, cat: Catalogos, indentada: Boolean, o
         estadoAccesible = null,
         onClick = onClick,
     ) {
-        IconoFila(emoji, fondoIcono)
+        IconoFila(fondoIcono, emoji, vector)
         TextoFila(descripcion, meta)
         when (t.type) {
             TxType.INCOME -> MontoConDireccion(t.amountMinor, moneda, Signo.POSITIVO)
@@ -435,8 +445,13 @@ private fun FilaGrupo(g: ItemMov.Grupo, abierto: Boolean, cat: Catalogos, onClic
         estadoAccesible = if (abierto) "Expandido" else "Contraído",
         onClick = onClick,
     ) {
-        val fondoIcono = if (categoria != null) colorDeCategoria(categoria.color, c.borde).copy(alpha = TINTE_CATEGORIA) else c.borde
-        IconoFila(categoria?.icon ?: "🔁", fondoIcono)
+        val fondoIcono = if (categoria != null) {
+            colorDeCategoria(categoria.color, c.borde).copy(alpha = CuentasTema.medidas.alfaTinteCategoria)
+        } else {
+            c.borde
+        }
+        // Sin categoría, la web pinta 🔁: aquí `ic_grupo` (DESIGN.md §8).
+        IconoFila(fondoIcono, categoria?.icon, R.drawable.ic_grupo)
         TextoFila(nota, meta)
         Column(horizontalAlignment = Alignment.End) {
             if (g.residuos.isEmpty()) {

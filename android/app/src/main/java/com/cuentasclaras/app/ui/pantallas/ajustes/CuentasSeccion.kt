@@ -162,7 +162,7 @@ private fun Interruptor(texto: String, marcado: Boolean, onCambio: (Boolean) -> 
     Row(
         Modifier
             .fillMaxWidth()
-            .heightIn(min = ALTO_TACTIL)
+            .heightIn(min = CuentasTema.medidas.tactilMinimo)
             .toggleable(value = marcado, role = Role.Switch, onValueChange = onCambio)
             .padding(vertical = e.xs),
         verticalAlignment = Alignment.CenterVertically,

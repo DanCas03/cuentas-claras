@@ -34,6 +34,7 @@ private val LocalColores = staticCompositionLocalOf { paletaPorId(null, oscura =
 private val LocalTipografia = staticCompositionLocalOf { TipografiaSistema }
 private val LocalFormas = staticCompositionLocalOf { FormasCuentas }
 private val LocalEspacios = staticCompositionLocalOf { EspaciosCuentas }
+private val LocalMedidas = staticCompositionLocalOf { MedidasCuentas }
 private val LocalOscuro = staticCompositionLocalOf { true }
 
 /**
@@ -76,6 +77,7 @@ fun CuentasTemaConPaleta(paleta: Paleta, content: @Composable () -> Unit) {
         LocalTipografia provides tipografia,
         LocalFormas provides FormasCuentas,
         LocalEspacios provides EspaciosCuentas,
+        LocalMedidas provides MedidasCuentas,
         LocalOscuro provides paleta.esOscura,
     ) {
         MaterialTheme(
@@ -93,6 +95,7 @@ object CuentasTema {
     val tipografia: Tipografia @Composable @ReadOnlyComposable get() = LocalTipografia.current
     val formas: Formas @Composable @ReadOnlyComposable get() = LocalFormas.current
     val espacios: Espacios @Composable @ReadOnlyComposable get() = LocalEspacios.current
+    val medidas: Medidas @Composable @ReadOnlyComposable get() = LocalMedidas.current
 
     /** `true` si la paleta activa es oscura (p. ej. para el botón sol/luna de Inicio, E21). */
     val oscuro: Boolean @Composable @ReadOnlyComposable get() = LocalOscuro.current

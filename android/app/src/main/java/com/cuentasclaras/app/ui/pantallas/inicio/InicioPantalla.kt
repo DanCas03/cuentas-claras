@@ -22,7 +22,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.cuentasclaras.app.R
@@ -30,9 +29,6 @@ import com.cuentasclaras.app.domain.fechaLarga
 import com.cuentasclaras.app.ui.nav.Rutas
 import com.cuentasclaras.app.ui.theme.CuentasTema
 import com.cuentasclaras.app.ui.vmCon
-
-/** Lado mínimo del botón de modo: objetivo táctil de 48 dp (DESIGN.md §6). */
-private val BOTON_MODO = 48.dp
 
 /** Inicio: patrimonio, «Este mes» con su comparativa y presupuestos, semana (provisional) y deudas. */
 @Composable
@@ -82,7 +78,7 @@ private fun Cabecera(hoy: String, habilitado: Boolean, onAlternarModo: (oscuroAh
         }
         Box(
             Modifier
-                .size(BOTON_MODO)
+                .size(CuentasTema.medidas.tactilMinimo)
                 .clip(CircleShape)
                 .clickable(enabled = habilitado, role = Role.Button) { onAlternarModo(oscuro) },
             contentAlignment = Alignment.Center,
