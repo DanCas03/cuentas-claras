@@ -112,10 +112,20 @@ fun BarraInferior(nav: NavHostController) {
  * Patrón estándar de pestañas: una sola copia por destino, con su estado guardado y restaurado. Con
  * `restaurar = false` (Movimientos, E25) la pestaña abre limpia: no restaura la copia con filtros de un
  * drill-down y tampoco usa `launchSingleTop`, que reutilizaría esa entrada con sus argumentos anteriores.
+ *
+ * Ciclo de vida: `popBackStack` solo limpia el `ViewModelStore` de una entrada si NO se guarda su estado.
+ * Como Movimientos nunca se restaura, sacarla con `saveState = true` dejaría su ViewModel (con todas las
+ * transacciones) retenido hasta destruir la Activity. Por eso, si en la pila hay una entrada de Movimientos,
+ * el `popUpTo` no guarda estado; las demás pestañas siguen guardándose cuando no se sale de Movimientos.
  */
 private fun irAPestana(nav: NavHostController, destino: String, restaurar: Boolean) {
+    val actual = nav.currentBackStackEntry
+    val enMovimientos = actual?.destination?.route == Rutas.MOVIMIENTOS
+    // Tocar «Movs» estando en Movimientos sin filtros no hace nada (como el mismo hash en la web).
+    if (!restaurar && enMovimientos && Rutas.ARGS_MOVIMIENTOS.none { actual?.arguments?.getString(it) != null }) return
+    val hayMovimientosEnPila = nav.currentBackStack.value.any { it.destination.route == Rutas.MOVIMIENTOS }
     nav.navigate(destino) {
-        popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+        popUpTo(nav.graph.findStartDestination().id) { saveState = !hayMovimientosEnPila }
         launchSingleTop = restaurar
         restoreState = restaurar
     }

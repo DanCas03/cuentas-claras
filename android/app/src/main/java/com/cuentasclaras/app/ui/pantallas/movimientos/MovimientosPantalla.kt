@@ -203,7 +203,7 @@ fun MovimientosPantalla(nav: NavHostController) {
             }
 
             if (!estado.cargando && estado.items.isEmpty()) {
-                item(key = "vacio") { Vacio("🔍", "No hay movimientos con estos filtros") }
+                item(key = "vacio") { Vacio("🗂️", "No hay movimientos que coincidan.") }
             }
             estado.items.forEach { item ->
                 when (item) {
