@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -78,6 +77,7 @@ import com.cuentasclaras.app.ui.componentes.BotonPeligro
 import com.cuentasclaras.app.ui.componentes.BotonPrincipal
 import com.cuentasclaras.app.ui.componentes.BotonSecundario
 import com.cuentasclaras.app.ui.componentes.CampoTexto
+import com.cuentasclaras.app.ui.componentes.DialogoConfirmacion
 import com.cuentasclaras.app.ui.componentes.Monto
 import com.cuentasclaras.app.ui.componentes.Selector
 import com.cuentasclaras.app.ui.componentes.Signo
@@ -768,22 +768,12 @@ private fun BarraSeleccion(
 /** Confirmación de «Desagrupar» (`window.confirm` de la web). Botones distintos de los de la lista para `tocar`. */
 @Composable
 private fun ConfirmarDesagrupar(guardando: Boolean, onConfirmar: () -> Unit, onDescartar: () -> Unit) {
-    val c = CuentasTema.colores
-    AlertDialog(
-        onDismissRequest = onDescartar,
-        title = { Text("¿Desagrupar?", style = CuentasTema.tipografia.subtitulo) },
-        text = {
-            Text(
-                "Todos los movimientos vuelven a contarse normal.",
-                style = CuentasTema.tipografia.cuerpo,
-                color = c.textoSecundario,
-            )
-        },
-        confirmButton = { BotonPeligro("Sí, desagrupar", onClick = onConfirmar, enabled = !guardando) },
-        dismissButton = { BotonSecundario("Conservar", onClick = onDescartar, enabled = !guardando) },
-        containerColor = c.superficie,
-        titleContentColor = c.texto,
-        textContentColor = c.textoSecundario,
-        shape = CuentasTema.formas.tarjeta,
+    DialogoConfirmacion(
+        titulo = "¿Desagrupar?",
+        texto = "Todos los movimientos vuelven a contarse normal.",
+        textoConfirmar = "Sí, desagrupar",
+        habilitado = !guardando,
+        onConfirmar = onConfirmar,
+        onCancelar = onDescartar,
     )
 }

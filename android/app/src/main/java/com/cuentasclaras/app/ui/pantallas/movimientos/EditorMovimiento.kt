@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -24,6 +23,7 @@ import com.cuentasclaras.app.ui.componentes.BotonPrincipal
 import com.cuentasclaras.app.ui.componentes.BotonSecundario
 import com.cuentasclaras.app.ui.componentes.CampoFecha
 import com.cuentasclaras.app.ui.componentes.CampoTexto
+import com.cuentasclaras.app.ui.componentes.DialogoConfirmacion
 import com.cuentasclaras.app.ui.componentes.HojaModal
 import com.cuentasclaras.app.ui.componentes.Selector
 import com.cuentasclaras.app.ui.theme.CuentasTema
@@ -95,34 +95,16 @@ fun EditorMovimiento(
     }
 
     if (confirmando) {
-        val c = CuentasTema.colores
-        AlertDialog(
-            onDismissRequest = { confirmando = false },
-            title = { Text("¿Eliminar este movimiento?", style = CuentasTema.tipografia.subtitulo) },
-            text = {
-                Text(
-                    "Esta acción no se puede deshacer.",
-                    style = CuentasTema.tipografia.cuerpo,
-                    color = c.textoSecundario,
-                )
+        DialogoConfirmacion(
+            titulo = "¿Eliminar este movimiento?",
+            texto = "Esta acción no se puede deshacer.",
+            textoConfirmar = "Sí, eliminar",
+            habilitado = !guardando,
+            onConfirmar = {
+                confirmando = false
+                onEliminar()
             },
-            confirmButton = {
-                BotonPeligro(
-                    "Sí, eliminar",
-                    onClick = {
-                        confirmando = false
-                        onEliminar()
-                    },
-                    enabled = !guardando,
-                )
-            },
-            dismissButton = {
-                BotonSecundario("Conservar", onClick = { confirmando = false }, enabled = !guardando)
-            },
-            containerColor = c.superficie,
-            titleContentColor = c.texto,
-            textContentColor = c.textoSecundario,
-            shape = CuentasTema.formas.tarjeta,
+            onCancelar = { confirmando = false },
         )
     }
 }

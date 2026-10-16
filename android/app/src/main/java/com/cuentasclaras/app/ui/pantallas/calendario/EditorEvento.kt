@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -33,6 +32,7 @@ import com.cuentasclaras.app.ui.componentes.BotonPrincipal
 import com.cuentasclaras.app.ui.componentes.BotonSecundario
 import com.cuentasclaras.app.ui.componentes.CampoFecha
 import com.cuentasclaras.app.ui.componentes.CampoTexto
+import com.cuentasclaras.app.ui.componentes.DialogoConfirmacion
 import com.cuentasclaras.app.ui.componentes.Chip
 import com.cuentasclaras.app.ui.componentes.HojaModal
 import com.cuentasclaras.app.ui.componentes.Segmentado
@@ -201,32 +201,16 @@ fun EditorEvento(
     }
 
     if (confirmando && b.original != null) {
-        val c = CuentasTema.colores
-        AlertDialog(
-            onDismissRequest = { confirmando = false },
-            title = { Text("¿Eliminar «${b.original.titulo}»?", style = CuentasTema.tipografia.subtitulo) },
-            text = {
-                Text(
-                    "$movimientosAsignados movimientos quedarán sin evento (conservan su categoría).",
-                    style = CuentasTema.tipografia.cuerpo,
-                    color = c.textoSecundario,
-                )
+        DialogoConfirmacion(
+            titulo = "¿Eliminar «${b.original.titulo}»?",
+            texto = "$movimientosAsignados movimientos quedarán sin evento (conservan su categoría).",
+            textoConfirmar = "Sí, eliminar",
+            habilitado = !guardando,
+            onConfirmar = {
+                confirmando = false
+                onEliminar()
             },
-            confirmButton = {
-                BotonPeligro(
-                    "Sí, eliminar",
-                    onClick = {
-                        confirmando = false
-                        onEliminar()
-                    },
-                    enabled = !guardando,
-                )
-            },
-            dismissButton = { BotonSecundario("Conservar", onClick = { confirmando = false }, enabled = !guardando) },
-            containerColor = c.superficie,
-            titleContentColor = c.texto,
-            textContentColor = c.textoSecundario,
-            shape = CuentasTema.formas.tarjeta,
+            onCancelar = { confirmando = false },
         )
     }
 }

@@ -232,6 +232,10 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
   (relleno vertical de celda `espacios.xs`: 78 dp con nombre de una línea, 96 dp con dos).
   `enabled = false` al 38 % mientras se guarda. El color de la categoría es dato del usuario:
   `colorDeCategoria(hex, respaldo)`.
+- **`DialogoConfirmacion(titulo, texto, textoConfirmar, onConfirmar, onCancelar, textoCancelar = "Conservar", peligro = true, habilitado = true)`**:
+  único `AlertDialog` de confirmación (eliminar, desagrupar, cerrar deuda): `superficie`, título en `subtitulo`, texto en
+  `cuerpo`/`textoSecundario`, forma `tarjeta`; confirmar con `BotonPeligro` (o `BotonPrincipal` si `peligro = false`) y
+  cancelar con `BotonSecundario`. `habilitado = !guardando` bloquea ambos botones durante la escritura.
 - **Barra inferior con «+»**: ver §1. Íconos `ic_inicio`, `ic_movimientos`, `ic_importar`, `ic_calendario`, `ic_ajustes` (24 dp)
   y `ic_mas` (28 dp) dentro del disco.
 - **Íconos**: vector drawables propios en `res/drawable/ic_*.xml` (trazos de Material Icons, Apache 2.0) con
@@ -259,7 +263,8 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
 
 - **Sin bordes grises genéricos de 1 px** como separador por defecto: los planos se separan por tono (`fondo` →
   `superficie` → `superficieElevada`) y por espacio. El único trazo de 1 dp permitido es el filo iluminado del
-  núcleo de la tarjeta, el contorno del chip sugerido y el divisor de 1 dp de la barra inferior (`borde`).
+  núcleo de la tarjeta, el contorno del chip sugerido, el contorno de la fila seleccionada en Movimientos (`TRAZO_SELECCION`, mismo patrón: tinte
+  `primario` al 14 % + contorno `primario`) y el divisor de 1 dp de la barra inferior (`borde`).
 - **Sin sombras duras**: `elevation = null` en botones; ninguna `shadow()` con negro. La profundidad es tonal.
 - **Doble bisel** en tarjetas (ver `Tarjeta`): carcasa + núcleo concéntrico (radio exterior 20, bisel 4,
   interior 16).
