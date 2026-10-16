@@ -94,11 +94,11 @@ fun BarraInferior(nav: NavHostController) {
             Box(Modifier.fillMaxWidth().height(GROSOR_DIVISOR).background(c.borde))
             Row(Modifier.fillMaxWidth().height(ALTO_BARRA), verticalAlignment = Alignment.CenterVertically) {
                 PESTANAS_IZQUIERDA.forEach { p ->
-                    ItemPestana(p, activa = jerarquia?.any { it.route == p.ruta } == true) { irAPestana(nav, p.destino, p.restaurar) }
+                    ItemPestana(p, activa = jerarquia?.any { it.route == p.ruta } == true) { irAPestana(nav, p) }
                 }
                 Spacer(Modifier.weight(1f))
                 PESTANAS_DERECHA.forEach { p ->
-                    ItemPestana(p, activa = jerarquia?.any { it.route == p.ruta } == true) { irAPestana(nav, p.destino, p.restaurar) }
+                    ItemPestana(p, activa = jerarquia?.any { it.route == p.ruta } == true) { irAPestana(nav, p) }
                 }
             }
         }
@@ -118,12 +118,21 @@ fun BarraInferior(nav: NavHostController) {
  * Movimientos sin guardar (`popBackStack(..., saveState = false)`, API pública; devuelve false si no hay).
  * El `popUpTo` conserva siempre `saveState = true`, así las demás pestañas se guardan y restauran como en el
  * patrón estándar (incluida una pestaña que estuviera bajo un drill-down de Movimientos).
+ *
+ * Retocar una pestaña que ya está en la pila (M2; solo las que restauran: Inicio, Importar, Ajustes): se vuelve a
+ * su raíz con `popBackStack(ruta, inclusive = false)`, sin guardar lo de encima, y no se navega. Si se navegara,
+ * `popUpTo(start) { saveState = true }` guardaría la pila de encima asociada a la propia pestaña (Inicio, el
+ * destino inicial, la recibe cuando aún no tenía estado guardado) y `restoreState` la volvería a poner: Inicio →
+ * «ver todas» Deudas → «Inicio» dejaba Deudas. Estando ya en su raíz no se hace nada.
  */
-private fun irAPestana(nav: NavHostController, destino: String, restaurar: Boolean) {
+private fun irAPestana(nav: NavHostController, p: Pestana) {
     val actual = nav.currentBackStackEntry
+    if (p.restaurar && (actual?.destination?.route == p.ruta || nav.popBackStack(p.ruta, inclusive = false))) return
+    val destino = p.destino
+    val restaurar = p.restaurar
     val enMovimientos = actual?.destination?.route == Rutas.MOVIMIENTOS
     // Tocar «Movs» estando en Movimientos sin filtros no hace nada (como el mismo hash en la web).
-    if (!restaurar && enMovimientos && Rutas.ARGS_MOVIMIENTOS.none { actual?.arguments?.getString(it) != null }) return
+    if (!restaurar && enMovimientos && Rutas.ARGS_MOVIMIENTOS.none { actual.arguments?.getString(it) != null }) return
     while (nav.popBackStack(Rutas.MOVIMIENTOS, inclusive = true, saveState = false)) { /* una por entrada */ }
     nav.navigate(destino) {
         popUpTo(nav.graph.findStartDestination().id) { saveState = true }
