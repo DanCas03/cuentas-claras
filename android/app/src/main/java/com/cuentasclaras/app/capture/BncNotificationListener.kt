@@ -42,11 +42,13 @@ class BncNotificationListener : NotificationListenerService() {
 
     override fun onListenerConnected() {
         container.estadoListener.marcarEnlazado(true)
+        Log.i("CuentasClaras", "Listener conectado")
         conLog("No se pudo guardar el latido") { container.estadoListener.latido() }
     }
 
     override fun onListenerDisconnected() {
         container.estadoListener.marcarEnlazado(false)
+        Log.i("CuentasClaras", "Listener desconectado")
         conLog("No se pudo guardar la desconexión") { container.estadoListener.desconectado() }
     }
 
