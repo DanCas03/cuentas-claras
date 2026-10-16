@@ -27,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.cuentasclaras.app.ui.theme.CuentasTema
@@ -95,7 +96,11 @@ internal fun ExposedDropdownMenuBoxScope.AnclaSelector(valor: String?, abierto: 
             .background(c.borde)
             .border(ANILLO_FOCO, if (abierto) c.primario else Color.Transparent, forma)
             .semantics(mergeDescendants = true) {
-                if (contentDescription != null) this.contentDescription = contentDescription
+                if (contentDescription != null) {
+                    this.contentDescription = contentDescription
+                    // Con descripción, TalkBack la lee en lugar del texto: el valor elegido va como estado.
+                    stateDescription = valor ?: "Elegir"
+                }
             }
             .padding(start = e.m, end = e.s + e.xs),
         verticalAlignment = Alignment.CenterVertically,

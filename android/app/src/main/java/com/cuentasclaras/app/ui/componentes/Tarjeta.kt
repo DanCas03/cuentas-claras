@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -23,6 +25,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.cuentasclaras.app.domain.Currency
 import com.cuentasclaras.app.domain.formatMoney
 import com.cuentasclaras.app.ui.theme.BISEL_TARJETA
@@ -94,6 +97,8 @@ fun Tarjeta(
 /**
  * Monto con `formatMoney` y cifras tabulares. `POSITIVO` antepone «+» y usa `ingreso`; `NEGATIVO` antepone «−»
  * (U+2212) y usa `gasto`; `NINGUNO` muestra el formato de `formatMoney` tal cual (negativos como `-$5.00`).
+ * Siempre en una línea y nunca cortado: si ni siquiera el ancho disponible le alcanza (p. ej. el final apilado de
+ * una `FilaConFinal` a 277 dp con un monto en Bs muy largo), la cifra se encoge hasta 11 sp (DESIGN.md §3).
  */
 @Composable
 fun Monto(
@@ -114,14 +119,19 @@ fun Monto(
         Signo.POSITIVO -> c.ingreso
         Signo.NEGATIVO -> c.gasto
     }
-    Text(
+    val estilo = if (grande) CuentasTema.tipografia.cifraGrande else CuentasTema.tipografia.cifra
+    BasicText(
         texto,
-        style = if (grande) CuentasTema.tipografia.cifraGrande else CuentasTema.tipografia.cifra,
-        color = color,
+        style = estilo.copy(color = color),
         maxLines = 1,
+        softWrap = false,
+        autoSize = TextAutoSize.StepBased(minFontSize = CIFRA_MINIMA, maxFontSize = estilo.fontSize),
         modifier = modifier,
     )
 }
+
+/** Tamaño mínimo de una cifra al encogerse para no cortarse (DESIGN.md §3: nada por debajo de 11 sp). */
+private val CIFRA_MINIMA = 11.sp
 
 /** Marco común de las vistas previas de los componentes: tema real sobre el `fondo`. */
 @Composable

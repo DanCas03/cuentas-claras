@@ -56,6 +56,7 @@ import com.cuentasclaras.app.domain.Category
 import com.cuentasclaras.app.domain.Currency
 import com.cuentasclaras.app.domain.EstadoOcurrencia
 import com.cuentasclaras.app.domain.LETRAS_DIA
+import com.cuentasclaras.app.domain.MontoMoneda
 import com.cuentasclaras.app.domain.OcurrenciaVista
 import com.cuentasclaras.app.domain.Transaction
 import com.cuentasclaras.app.domain.celdasMes
@@ -73,6 +74,7 @@ import com.cuentasclaras.app.ui.componentes.BotonPrincipal
 import com.cuentasclaras.app.ui.componentes.Chip
 import com.cuentasclaras.app.ui.componentes.CuadroCategoria
 import com.cuentasclaras.app.ui.componentes.FilaConFinal
+import com.cuentasclaras.app.ui.componentes.Monto
 import com.cuentasclaras.app.ui.componentes.Vacio
 import com.cuentasclaras.app.ui.componentes.colorDeCategoria
 import com.cuentasclaras.app.ui.componentes.fondoDeCategoria
@@ -372,10 +374,10 @@ private fun FilaOcurrencia(
     val c = CuentasTema.colores
     val e = CuentasTema.espacios
     val monedaDe = { accountId: String? -> cuentas[accountId]?.currency ?: Currency.USD }
-    val cifra = if (o.estado == EstadoOcurrencia.HECHA) {
-        o.asignadoPorMoneda.joinToString(" · ") { formatMoney(it.totalMinor, it.currency) }
+    val cifras = if (o.estado == EstadoOcurrencia.HECHA) {
+        o.asignadoPorMoneda
     } else {
-        o.evento.amountMinor?.let { formatMoney(it, monedaDe(o.evento.accountId)) } ?: ""
+        listOfNotNull(o.evento.amountMinor?.let { MontoMoneda(monedaDe(o.evento.accountId), it) })
     }
     val cuenta = o.evento.accountId?.let { cuentas[it]?.name }
 
@@ -408,7 +410,8 @@ private fun FilaOcurrencia(
                 },
                 final = {
                     Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(e.xs)) {
-                        if (cifra.isNotEmpty()) Text(cifra, style = CuentasTema.tipografia.cifra, color = c.texto, maxLines = 1, softWrap = false)
+                        // Una cifra por moneda, apiladas: unidas en una línea («Bs … · $…») no cabían en estrecho.
+                    cifras.forEach { m -> Monto(m.totalMinor, m.currency) }
                         EtiquetaEstado(o.estado)
                     }
                 },

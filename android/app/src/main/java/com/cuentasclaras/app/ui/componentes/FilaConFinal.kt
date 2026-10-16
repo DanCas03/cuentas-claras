@@ -20,6 +20,10 @@ import com.cuentasclaras.app.ui.theme.CuentasTema
  * el texto arriba a todo el ancho y el final debajo, alineado al final, separado `espacios.xs`. Con el ancho
  * habitual se ve como una fila normal.
  *
+ * El final se mide como mucho a todo el ancho de la fila: debe caber en esa línea. Por eso cada cifra va en su
+ * propio `Monto` (una por moneda, apiladas, nunca unidas en una sola línea), y `Monto` se encoge hasta 11 sp si ni
+ * a todo el ancho le alcanza: así ninguna cifra se corta.
+ *
  * El ícono o cuadro de la izquierda y los chevrons van fuera, en la `Row` que contiene a esta fila.
  */
 @Composable

@@ -124,7 +124,12 @@ fun BarraInferior(nav: NavHostController) {
  *    `ViewModelStore` de una entrada si no se guarda su estado, y Movimientos nunca se restaura) y luego se navega
  *    con `popUpTo(start) { saveState = true }` + `restoreState`: la pestaña de la que se sale guarda su estado y la
  *    de destino recupera el suyo, si lo tenía. Así Ajustes → Permisos → Importar → Ajustes vuelve a Permisos, y
- *    Importar → Ajustes → Importar conserva lo pegado; solo el paso por «Inicio» (punto 1) lo descarta.
+ *    Importar → Ajustes → Importar conserva lo pegado.
+ *
+ * Tocar «Inicio» (punto 1) solo descarta la pestaña DESDE la que se toca, la que está en la pila en ese momento.
+ * No borra el estado que otra pestaña ya guardó antes por el punto 2: Importar → Ajustes → «Inicio» → Importar
+ * recupera lo pegado (el estado de Importar se guardó al ir a Ajustes y `restoreState` lo devuelve); en cambio,
+ * Importar → «Inicio» → Importar llega vacío.
  * 3. Movimientos (`restaurar = false`, E25) abre siempre limpio: no restaura la copia con filtros de un drill-down
  *    ni usa `launchSingleTop`, que reutilizaría esa entrada con sus argumentos anteriores. Tocar «Movs» estando en
  *    Movimientos sin filtros no hace nada.

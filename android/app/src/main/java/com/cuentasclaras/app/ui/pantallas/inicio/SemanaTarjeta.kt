@@ -48,6 +48,7 @@ import com.cuentasclaras.app.domain.weekdayLunes0
 import com.cuentasclaras.app.ui.componentes.Chip
 import com.cuentasclaras.app.ui.componentes.CuadroCategoria
 import com.cuentasclaras.app.ui.componentes.FilaConFinal
+import com.cuentasclaras.app.ui.componentes.Monto
 import com.cuentasclaras.app.ui.componentes.Tarjeta
 import com.cuentasclaras.app.ui.componentes.Vacio
 import com.cuentasclaras.app.ui.componentes.fondoDeCategoria
@@ -235,10 +236,10 @@ private fun FilaSemana(
 ) {
     val c = CuentasTema.colores
     val e = CuentasTema.espacios
-    val cifra = if (o.estado == EstadoOcurrencia.HECHA) {
-        o.asignadoPorMoneda.joinToString(" · ") { formatMoney(it.totalMinor, it.currency) }
+    val cifras = if (o.estado == EstadoOcurrencia.HECHA) {
+        o.asignadoPorMoneda
     } else {
-        o.evento.amountMinor?.let { formatMoney(it, cuentas[o.evento.accountId]?.currency ?: Currency.USD) } ?: ""
+        listOfNotNull(o.evento.amountMinor?.let { MontoMoneda(cuentas[o.evento.accountId]?.currency ?: Currency.USD, it) })
     }
     val cuenta = o.evento.accountId?.let { cuentas[it]?.name }
     Row(
@@ -275,7 +276,8 @@ private fun FilaSemana(
             },
             final = {
                 Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(e.xs)) {
-                    if (cifra.isNotEmpty()) Text(cifra, style = CuentasTema.tipografia.cifra, color = c.texto, maxLines = 1, softWrap = false)
+                    // Una cifra por moneda, apiladas: unidas en una línea («Bs … · $…») no cabían en estrecho.
+                    cifras.forEach { m -> Monto(m.totalMinor, m.currency) }
                     EtiquetaEstado(o.estado)
                 }
             },

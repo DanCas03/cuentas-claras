@@ -63,7 +63,9 @@ Roles de color:
   Nunca es el único indicador de estado o de foco.
 - `primario` / `sobrePrimario`: la acción principal, el estado activo y el foco. Un único acento por paleta.
 - `ingreso` / `gasto`: montos con signo; `aviso` / `error`: banners y validación.
-- `texto` / `textoSecundario`: texto principal y metadatos.
+- `texto` / `textoSecundario`: texto principal y metadatos. `textoSecundario` también es la pista de 2 dp de
+  `LineaProgreso` (§7): da ≥ 4,5:1 frente a `superficieElevada` en todas las paletas, donde `fondo` y `borde` no
+  llegan a 3:1.
 - Texto sobre `error` (botón de peligro): `Colores.sobreError()` (el `fondo` en paletas oscuras, blanco en las claras).
 
 ### 2.1 Paletas (E20)
@@ -182,11 +184,14 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
   categorías y presupuestos de Inicio, Deudas, histórico de tasas. El final se mide primero con su ancho natural;
   si al texto le quedan menos de `medidas.anchoMinimoTexto` (120 dp), la fila se apila: el texto arriba a todo el
   ancho y el final debajo alineado al final (`espacios.xs` entre ambos), con su estado («vencida», «pendiente»)
-  incluido. El cuadro del ícono y los chevrons quedan fuera, en la `Row` que la contiene. Así una cifra de dinero
+  incluido. El final debe caber en una línea a todo el ancho: una cifra por moneda, apiladas (nunca «Bs … · $…» en
+  una sola línea), y `Monto` se encoge hasta 11 sp si ni así cabe. El cuadro del ícono y los chevrons quedan fuera,
+  en la `Row` que la contiene. Así una cifra de dinero
   nunca se parte ni se corta y el título no queda en 25 dp (objetivo: legible a 320 dp; a 277 dp, degradación digna).
 - **`Monto(minor, currency, signo = Signo.NINGUNO, grande = false)`** (en `Tarjeta.kt`): `formatMoney` + `cifra` /
   `cifraGrande`. `POSITIVO` → «+» y `ingreso`; `NEGATIVO` → «−» (U+2212) y `gasto`; `NINGUNO` → `formatMoney` tal
-  cual en `texto`. En filas de movimientos el monto va acompañado SIEMPRE de un ícono `ic_entra` / `ic_sale` (16 dp,
+  cual en `texto`. Una línea, nunca cortado: si no cabe ni en el ancho disponible, se encoge hasta 11 sp. En filas
+  de movimientos el monto va acompañado SIEMPRE de un ícono `ic_entra` / `ic_sale` (16 dp,
   mismo color): el color nunca es la única señal.
   **Criterio único de signo (no mezclar):**
   - `Monto(signo = POSITIVO/NEGATIVO)` → «+$120.00» / «−Bs 12,50» (signo delante de la moneda, U+2212): para

@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,6 +33,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
 import com.cuentasclaras.app.R
 import com.cuentasclaras.app.domain.Category
 import com.cuentasclaras.app.domain.Currency
@@ -64,6 +67,9 @@ private val ICONO_LINEA = 16.dp
 
 /** Muestra de color de la leyenda de la comparativa. */
 private val MUESTRA_LEYENDA = 10.dp
+
+/** Tamaño mínimo de «gastado / tope» al encogerse para no cortarse (DESIGN.md §3: nada por debajo de 11 sp). */
+private val CIFRA_MINIMA = 11.sp
 
 /** Umbral de aviso de un presupuesto (DESIGN.md §7: pasa del 80 %). */
 private const val UMBRAL_AVISO = 0.8
@@ -381,13 +387,14 @@ private fun TarjetaPresupuestos(presupuestos: List<EstadoPresupuesto>, mes: Stri
                             )
                         },
                         final = {
-                            Text(
+                            // Cifra de dinero: `cifra` (DESIGN.md §3), el dato principal de la fila. Nunca se corta:
+                            // si ni a todo el ancho cabe, se encoge hasta 11 sp, como `Monto`.
+                            BasicText(
                                 "${formatMoney(p.gastoUsdMinor, Currency.USD)} / ${formatMoney(p.presupuestoMinor, Currency.USD)}",
-                                // Cifra de dinero: `cifra` (DESIGN.md §3), el dato principal de la fila.
-                                style = t.cifra,
-                                color = if (excedido) c.gasto else c.texto,
+                                style = t.cifra.copy(color = if (excedido) c.gasto else c.texto),
                                 maxLines = 1,
                                 softWrap = false,
+                                autoSize = TextAutoSize.StepBased(minFontSize = CIFRA_MINIMA, maxFontSize = t.cifra.fontSize),
                             )
                         },
                         separacion = e.s,
