@@ -26,8 +26,8 @@ import com.cuentasclaras.app.domain.monthSummary
 import com.cuentasclaras.app.domain.patrimonio
 import com.cuentasclaras.app.domain.todayIso
 import com.cuentasclaras.app.domain.txsEfectivas
-import com.cuentasclaras.app.ui.Avisos
-import kotlinx.coroutines.CancellationException
+import com.cuentasclaras.app.ui.Ocupacion
+import com.cuentasclaras.app.ui.escribir
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -35,7 +35,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 
 class InicioViewModel(
     private val repo: CuentasRepo,
@@ -66,6 +65,7 @@ class InicioViewModel(
     private val hoy = todayIso()
     private val mesVisto = MutableStateFlow(monthOf(hoy))
     private val guardando = MutableStateFlow(false)
+    private val ocupacion = Ocupacion({ guardando.value }) { guardando.value = it }
 
     val estado: StateFlow<Estado> = combine(repo.instantanea, mesVisto) { i, visto -> calcular(i, visto) }
         .flowOn(Dispatchers.Default)
@@ -108,36 +108,12 @@ class InicioViewModel(
         mesVisto.value = m
     }
 
-    fun alternarMoneda() {
-        if (guardando.value) return
-        guardando.value = true
-        viewModelScope.launch {
-            try {
-                repo.cambiarSettings { it.copy(viewCurrency = if (it.viewCurrency == Currency.USD) Currency.VES else Currency.USD) }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Avisos.avisar(e.message ?: "No se pudo cambiar la moneda")
-            } finally {
-                guardando.value = false
-            }
-        }
+    fun alternarMoneda() = escribir(ocupacion, "No se pudo cambiar la moneda") {
+        repo.cambiarSettings { it.copy(viewCurrency = if (it.viewCurrency == Currency.USD) Currency.VES else Currency.USD) }
     }
 
     /** E21: fija el modo manual OPUESTO al que se ve ahora (`oscuroAhora` = `CuentasTema.oscuro`). */
-    fun alternarModo(oscuroAhora: Boolean) {
-        if (guardando.value) return
-        guardando.value = true
-        viewModelScope.launch {
-            try {
-                apariencia.cambiarModo(if (oscuroAhora) ModoTema.CLARO else ModoTema.OSCURO)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Avisos.avisar(e.message ?: "No se pudo cambiar el modo")
-            } finally {
-                guardando.value = false
-            }
-        }
+    fun alternarModo(oscuroAhora: Boolean) = escribir(ocupacion, "No se pudo cambiar el modo") {
+        apariencia.cambiarModo(if (oscuroAhora) ModoTema.CLARO else ModoTema.OSCURO)
     }
 }

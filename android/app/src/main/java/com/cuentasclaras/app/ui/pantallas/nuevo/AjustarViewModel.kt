@@ -10,7 +10,8 @@ import com.cuentasclaras.app.domain.buildAdjustment
 import com.cuentasclaras.app.domain.parseVenezuelanAmount
 import com.cuentasclaras.app.domain.todayIso
 import com.cuentasclaras.app.ui.Avisos
-import kotlinx.coroutines.CancellationException
+import com.cuentasclaras.app.ui.Ocupacion
+import com.cuentasclaras.app.ui.escribir
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,7 +21,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 
 class AjustarViewModel(private val repo: CuentasRepo) : ViewModel() {
     data class Formulario(val cuentaId: String = "acc-binance", val realTxt: String = "", val guardando: Boolean = false)
@@ -38,6 +38,7 @@ class AjustarViewModel(private val repo: CuentasRepo) : ViewModel() {
     }
 
     private val form = MutableStateFlow(Formulario())
+    private val ocupacion = Ocupacion({ form.value.guardando }) { g -> form.update { it.copy(guardando = g) } }
     private val _salir = Channel<Unit>(Channel.BUFFERED)
     val salir: Flow<Unit> = _salir.receiveAsFlow()
 
@@ -53,28 +54,21 @@ class AjustarViewModel(private val repo: CuentasRepo) : ViewModel() {
 
     fun cambiar(cambio: (Formulario) -> Formulario) = form.update(cambio)
 
+    /** D19: tras guardar bien, `guardando` se queda en true (la pantalla tarda unos ms en cerrarse). */
     fun guardar() {
         val e = estado.value
-        if (form.value.guardando) return
+        if (ocupacion.activa) return
         val cuenta = e.cuenta ?: return
         val real = e.real ?: return
         if (e.delta == null || e.delta == 0L) return
-        form.update { it.copy(guardando = true) }
-        viewModelScope.launch {
-            // Tras guardar bien, `guardando` se queda en true (la pantalla tarda unos ms en cerrarse).
-            var guardado = false
-            try {
-                repo.agregarTx(buildAdjustment(cuenta.id, e.actual, real, todayIso()))
-                guardado = true
+        escribir(
+            ocupacion,
+            "No se pudo ajustar",
+            reponerAlExito = false,
+            alTerminar = {
                 Avisos.avisar("Saldo ajustado ✓")
-                _salir.send(Unit)
-            } catch (ex: CancellationException) {
-                throw ex
-            } catch (ex: Exception) {
-                Avisos.avisar(ex.message ?: "No se pudo ajustar")
-            } finally {
-                if (!guardado) form.update { it.copy(guardando = false) }
-            }
-        }
+                _salir.trySend(Unit)
+            },
+        ) { repo.agregarTx(buildAdjustment(cuenta.id, e.actual, real, todayIso())) }
     }
 }

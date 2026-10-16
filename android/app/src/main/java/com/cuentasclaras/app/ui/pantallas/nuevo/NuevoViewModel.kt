@@ -13,6 +13,8 @@ import com.cuentasclaras.app.domain.montoEditable
 import com.cuentasclaras.app.domain.parseVenezuelanAmount
 import com.cuentasclaras.app.domain.todayIso
 import com.cuentasclaras.app.ui.Avisos
+import com.cuentasclaras.app.ui.Ocupacion
+import com.cuentasclaras.app.ui.escribir
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -67,6 +69,8 @@ class NuevoViewModel(private val repo: CuentasRepo, args: SavedStateHandle) : Vi
         ),
     )
 
+    private val ocupacion = Ocupacion({ formulario.value.guardando }) { g -> formulario.update { it.copy(guardando = g) } }
+
     private val _salir = Channel<Unit>(Channel.BUFFERED)
     val salir: Flow<Unit> = _salir.receiveAsFlow()
 
@@ -95,45 +99,40 @@ class NuevoViewModel(private val repo: CuentasRepo, args: SavedStateHandle) : Vi
     fun cambiarNota(n: String) = formulario.update { it.copy(nota = n) }
     fun cambiarCuenta(id: String) = formulario.update { it.copy(cuentaId = id) }
 
-    /** Tocar una categoría guarda (≤ 3 toques). */
+    /**
+     * Tocar una categoría guarda (≤ 3 toques). D19: tras guardar bien, `guardando` se queda en true (la pantalla
+     * sigue viva ~150 ms mientras se cierra y un segundo toque rápido no debe crear un movimiento duplicado).
+     */
     fun guardar(categoryId: String) {
         val e = estado.value
         val f = formulario.value
-        if (f.guardando) return
+        if (ocupacion.activa) return
         val cuenta = e.cuenta ?: return
         val minor = e.minor
         if (minor == null || minor <= 0) {
             Avisos.avisar("Escribe el monto")
             return
         }
-        formulario.update { it.copy(guardando = true) }
-        viewModelScope.launch {
-            // Tras guardar bien, `guardando` se queda en true: la pantalla sigue viva ~150 ms mientras se
-            // cierra y un segundo toque rápido no debe crear un movimiento duplicado.
-            var guardado = false
+        escribir(ocupacion, "No se pudo guardar", reponerAlExito = false) {
+            val tx = buildManualTx(
+                type = if (f.modo == Modo.GASTO) TxType.EXPENSE else TxType.INCOME,
+                accountId = cuenta.id,
+                amountMinor = minor,
+                categoryId = categoryId,
+                dateIso = todayIso(),
+                note = f.nota.trim().takeIf { it.isNotEmpty() },
+            )
+            repo.agregarTx(tx)
+            // El movimiento ya está guardado: si falla solo recordar la cuenta, se avisa y se sale igual (no reintentar).
             try {
-                val tx = buildManualTx(
-                    type = if (f.modo == Modo.GASTO) TxType.EXPENSE else TxType.INCOME,
-                    accountId = cuenta.id,
-                    amountMinor = minor,
-                    categoryId = categoryId,
-                    dateIso = todayIso(),
-                    note = f.nota.trim().takeIf { it.isNotEmpty() },
-                )
-                repo.agregarTx(tx)
-                guardado = true
                 repo.cambiarSettings { it.copy(lastAccountId = cuenta.id) }
                 Avisos.avisar("Guardado ✓")
-                _salir.send(Unit)
             } catch (ex: CancellationException) {
                 throw ex
             } catch (ex: Exception) {
                 Avisos.avisar(ex.message ?: "No se pudo guardar")
-                // Si el movimiento ya se guardó (falló solo recordar la cuenta), se sale igual: no reintentar.
-                if (guardado) _salir.trySend(Unit)
-            } finally {
-                if (!guardado) formulario.update { it.copy(guardando = false) }
             }
+            _salir.trySend(Unit)
         }
     }
 }

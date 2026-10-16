@@ -17,7 +17,8 @@ import com.cuentasclaras.app.domain.filterTxs
 import com.cuentasclaras.app.domain.parseVenezuelanAmount
 import com.cuentasclaras.app.domain.residuosDeGrupo
 import com.cuentasclaras.app.ui.Avisos
-import kotlinx.coroutines.CancellationException
+import com.cuentasclaras.app.ui.Ocupacion
+import com.cuentasclaras.app.ui.escribir
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -26,7 +27,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 
 /** Una fila de la lista: un movimiento suelto o un grupo transaccional (con el residuo como valor visual). */
 sealed interface ItemMov {
@@ -108,6 +108,8 @@ class MovimientosViewModel(private val repo: CuentasRepo, args: SavedStateHandle
         ),
     )
 
+    private val ocupacion = Ocupacion({ ui.value.guardando }) { g -> ui.update { it.copy(guardando = g) } }
+
     val estado: StateFlow<Estado> = combine(ui, repo.instantanea) { u, i ->
         Estado(
             ui = u,
@@ -133,7 +135,7 @@ class MovimientosViewModel(private val repo: CuentasRepo, args: SavedStateHandle
 
     /** Transferencias y ajustes: solo nota y fecha son editables (el monto afecta dos saldos o es un delta). */
     fun guardarEdicion(original: Transaction, montoTxt: String, categoryId: String?, fecha: String, nota: String) {
-        if (ui.value.guardando) return
+        if (ocupacion.activa) return
         if (!esFechaIso(fecha)) { Avisos.avisar("Fecha inválida"); return }
         var cambiado = original.copy(note = nota.trim().takeIf { it.isNotEmpty() }, date = fecha)
         if (original.type == TxType.EXPENSE || original.type == TxType.INCOME) {
@@ -141,38 +143,23 @@ class MovimientosViewModel(private val repo: CuentasRepo, args: SavedStateHandle
             if (m == null || m <= 0) { Avisos.avisar("Monto inválido"); return }
             cambiado = cambiado.copy(amountMinor = m, categoryId = categoryId?.takeIf { it.isNotEmpty() })
         }
-        ui.update { it.copy(guardando = true) }
-        viewModelScope.launch {
-            try {
-                repo.actualizarTx(cambiado)
+        escribir(
+            ocupacion,
+            "No se pudo actualizar",
+            alTerminar = {
                 Avisos.avisar("Actualizado ✓")
                 ui.update { it.copy(editando = null) }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Avisos.avisar(e.message ?: "No se pudo actualizar")
-            } finally {
-                ui.update { it.copy(guardando = false) }
-            }
-        }
+            },
+        ) { repo.actualizarTx(cambiado) }
     }
 
     /** La UI pide confirmación ANTES de llamar aquí. */
-    fun eliminar(t: Transaction) {
-        if (ui.value.guardando) return
-        ui.update { it.copy(guardando = true) }
-        viewModelScope.launch {
-            try {
-                repo.borrarTx(t.id)
-                Avisos.avisar("Eliminado")
-                ui.update { it.copy(editando = null) }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Avisos.avisar(e.message ?: "No se pudo eliminar")
-            } finally {
-                ui.update { it.copy(guardando = false) }
-            }
-        }
-    }
+    fun eliminar(t: Transaction) = escribir(
+        ocupacion,
+        "No se pudo eliminar",
+        alTerminar = {
+            Avisos.avisar("Eliminado")
+            ui.update { it.copy(editando = null) }
+        },
+    ) { repo.borrarTx(t.id) }
 }

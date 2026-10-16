@@ -11,7 +11,8 @@ import com.cuentasclaras.app.domain.effectiveRate
 import com.cuentasclaras.app.domain.parseVenezuelanAmount
 import com.cuentasclaras.app.domain.todayIso
 import com.cuentasclaras.app.ui.Avisos
-import kotlinx.coroutines.CancellationException
+import com.cuentasclaras.app.ui.Ocupacion
+import com.cuentasclaras.app.ui.escribir
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,7 +22,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 
 class TransferirViewModel(private val repo: CuentasRepo) : ViewModel() {
     data class Formulario(
@@ -49,6 +49,7 @@ class TransferirViewModel(private val repo: CuentasRepo) : ViewModel() {
     }
 
     private val form = MutableStateFlow(Formulario())
+    private val ocupacion = Ocupacion({ form.value.guardando }) { g -> form.update { it.copy(guardando = g) } }
     private val _salir = Channel<Unit>(Channel.BUFFERED)
     val salir: Flow<Unit> = _salir.receiveAsFlow()
 
@@ -68,34 +69,29 @@ class TransferirViewModel(private val repo: CuentasRepo) : ViewModel() {
 
     fun cambiar(cambio: (Formulario) -> Formulario) = form.update(cambio)
 
+    /** D19: tras guardar bien, `guardando` se queda en true (la pantalla tarda unos ms en cerrarse). */
     fun guardar() {
         val e = estado.value
-        if (form.value.guardando) return
+        if (ocupacion.activa) return
         val origen = e.origen ?: return
         val destino = e.destino ?: return
         val monto = e.monto ?: return
         if (monto <= 0) return
-        form.update { it.copy(guardando = true) }
-        viewModelScope.launch {
-            // Tras guardar bien, `guardando` se queda en true (la pantalla tarda unos ms en cerrarse).
-            var guardado = false
-            try {
-                repo.agregarTx(
-                    buildTransfer(
-                        origen, destino, monto, todayIso(), if (e.cruza) e.tasa else null,
-                        e.f.nota.trim().takeIf { it.isNotEmpty() },
-                    ),
-                )
-                guardado = true
+        escribir(
+            ocupacion,
+            "No se pudo guardar",
+            reponerAlExito = false,
+            alTerminar = {
                 Avisos.avisar("Transferencia guardada ✓")
-                _salir.send(Unit)
-            } catch (ex: CancellationException) {
-                throw ex
-            } catch (ex: Exception) {
-                Avisos.avisar(ex.message ?: "No se pudo guardar")
-            } finally {
-                if (!guardado) form.update { it.copy(guardando = false) }
-            }
+                _salir.trySend(Unit)
+            },
+        ) {
+            repo.agregarTx(
+                buildTransfer(
+                    origen, destino, monto, todayIso(), if (e.cruza) e.tasa else null,
+                    e.f.nota.trim().takeIf { it.isNotEmpty() },
+                ),
+            )
         }
     }
 }
