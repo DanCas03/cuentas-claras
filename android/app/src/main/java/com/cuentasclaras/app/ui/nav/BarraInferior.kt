@@ -53,11 +53,18 @@ private val ANCHO_INDICADOR = 56.dp
 private val ALTO_INDICADOR = 32.dp
 private const val TINTE_ACTIVO = 0.14f
 
-private class Pestana(val ruta: String, val destino: String, val texto: String, @DrawableRes val icono: Int)
+/** `restaurar = false`: la pestaña siempre abre limpia (Movs sin filtros, E25), sin estado guardado. */
+private class Pestana(
+    val ruta: String,
+    val destino: String,
+    val texto: String,
+    @DrawableRes val icono: Int,
+    val restaurar: Boolean = true,
+)
 
 private val PESTANAS_IZQUIERDA = listOf(
     Pestana(Rutas.INICIO, Rutas.INICIO, "Inicio", R.drawable.ic_inicio),
-    Pestana(Rutas.MOVIMIENTOS, Rutas.movimientos(), "Movs", R.drawable.ic_movimientos),
+    Pestana(Rutas.MOVIMIENTOS, Rutas.movimientos(), "Movs", R.drawable.ic_movimientos, restaurar = false),
 )
 private val PESTANAS_DERECHA = listOf(
     Pestana(Rutas.IMPORTAR, Rutas.IMPORTAR, "Importar", R.drawable.ic_importar),
@@ -87,11 +94,11 @@ fun BarraInferior(nav: NavHostController) {
             Box(Modifier.fillMaxWidth().height(GROSOR_DIVISOR).background(c.borde))
             Row(Modifier.fillMaxWidth().height(ALTO_BARRA), verticalAlignment = Alignment.CenterVertically) {
                 PESTANAS_IZQUIERDA.forEach { p ->
-                    ItemPestana(p, activa = jerarquia?.any { it.route == p.ruta } == true) { irAPestana(nav, p.destino) }
+                    ItemPestana(p, activa = jerarquia?.any { it.route == p.ruta } == true) { irAPestana(nav, p.destino, p.restaurar) }
                 }
                 Spacer(Modifier.weight(1f))
                 PESTANAS_DERECHA.forEach { p ->
-                    ItemPestana(p, activa = jerarquia?.any { it.route == p.ruta } == true) { irAPestana(nav, p.destino) }
+                    ItemPestana(p, activa = jerarquia?.any { it.route == p.ruta } == true) { irAPestana(nav, p.destino, p.restaurar) }
                 }
             }
         }
@@ -101,12 +108,16 @@ fun BarraInferior(nav: NavHostController) {
     }
 }
 
-/** Patrón estándar de pestañas: una sola copia por destino, con su estado guardado y restaurado. */
-private fun irAPestana(nav: NavHostController, destino: String) {
+/**
+ * Patrón estándar de pestañas: una sola copia por destino, con su estado guardado y restaurado. Con
+ * `restaurar = false` (Movimientos, E25) la pestaña abre limpia: no restaura la copia con filtros de un
+ * drill-down y tampoco usa `launchSingleTop`, que reutilizaría esa entrada con sus argumentos anteriores.
+ */
+private fun irAPestana(nav: NavHostController, destino: String, restaurar: Boolean) {
     nav.navigate(destino) {
         popUpTo(nav.graph.findStartDestination().id) { saveState = true }
-        launchSingleTop = true
-        restoreState = true
+        launchSingleTop = restaurar
+        restoreState = restaurar
     }
 }
 
