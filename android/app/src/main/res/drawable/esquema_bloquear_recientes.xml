@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Esquema de Recientes: la tarjeta de la app con un candado. Una sola tinta (se tiñe desde Compose); el relieve sale de la opacidad. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="80dp"
+    android:viewportWidth="120"
+    android:viewportHeight="80">
+    <path
+        android:fillColor="#FF000000"
+        android:fillAlpha="0.22"
+        android:pathData="M12,6h96a8,8 0 0 1 8,8v52a8,8 0 0 1 -8,8h-96a8,8 0 0 1 -8,-8v-52a8,8 0 0 1 8,-8z" />
+    <path
+        android:fillColor="#FF000000"
+        android:fillAlpha="0.5"
+        android:pathData="M14,16h44v6h-44z" />
+    <path
+        android:fillColor="#FF000000"
+        android:fillAlpha="0.35"
+        android:pathData="M14,30h56v5h-56z" />
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M78,46h24a2,2 0 0 1 2,2v16a2,2 0 0 1 -2,2h-24a2,2 0 0 1 -2,-2v-16a2,2 0 0 1 2,-2z" />
+    <path
+        android:strokeColor="#FF000000"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M82,46v-6a8,8 0 0 1 16,0v6" />
+</vector>

@@ -1,5 +1,6 @@
 package com.cuentasclaras.app.ui.pantallas.ajustes
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -22,15 +23,15 @@ import com.cuentasclaras.app.ui.componentes.BotonPrincipal
 import com.cuentasclaras.app.ui.componentes.BotonSecundario
 import com.cuentasclaras.app.ui.componentes.Chip
 import com.cuentasclaras.app.ui.componentes.Tarjeta
+import com.cuentasclaras.app.ui.nav.Rutas
 import com.cuentasclaras.app.ui.pantallas.respaldo.RespaldoSeccion
 import com.cuentasclaras.app.ui.theme.CuentasTema
 import com.cuentasclaras.app.ui.vmCon
 
 /**
  * Ajustes: apariencia, cuentas, categorías, tasas, reglas, respaldo y el enlace a Permisos de captura.
- * `nav` queda para la Tarea 21, que activa la fila de Permisos (`Rutas.PERMISOS`).
+ * La fila de Permisos navega a `Rutas.PERMISOS`.
  */
-@Suppress("UNUSED_PARAMETER")
 @Composable
 fun AjustesPantalla(nav: NavHostController) {
     val vm = vmCon { c, _ -> AjustesViewModel(c.repo, c.http) }
@@ -89,15 +90,22 @@ fun AjustesPantalla(nav: NavHostController) {
             }
         }
         item(key = "respaldo") { RespaldoSeccion() }
-        item(key = "permisos") { FilaPermisos() }
+        item(key = "permisos") { FilaPermisos(onAbrir = { nav.navigate(Rutas.PERMISOS) }) }
     }
 }
 
-/** «Permisos de captura»: deshabilitado hasta la fase 3, en la que la Tarea 21 lo enlaza a `Rutas.PERMISOS`. */
+/** «Permisos de captura»: lleva a la lista de verificación de la captura de notificaciones. */
 @Composable
-private fun FilaPermisos() {
-    Tarjeta(titulo = "Permisos de captura") {
-        Text("Disponible en la fase 3", style = CuentasTema.tipografia.cuerpo, color = CuentasTema.colores.textoSecundario)
+private fun FilaPermisos(onAbrir: () -> Unit) {
+    Tarjeta(titulo = "Permisos de captura", modifier = Modifier.clickable(onClick = onAbrir)) {
+        Column(verticalArrangement = Arrangement.spacedBy(CuentasTema.espacios.s)) {
+            Text(
+                "Acceso a notificaciones, batería y defensas de Xiaomi.",
+                style = CuentasTema.tipografia.cuerpo,
+                color = CuentasTema.colores.textoSecundario,
+            )
+            BotonSecundario("Revisar permisos", onClick = onAbrir, modifier = Modifier.fillMaxWidth())
+        }
     }
 }
 

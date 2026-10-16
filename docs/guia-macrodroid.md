@@ -1,3 +1,5 @@
+> Obsoleta para la app nativa: ver `guia-permisos.md`.
+
 # Capturar notificaciones del BNC con MacroDroid
 
 Esta guía configura tu Android para que, al tocar una acción de MacroDroid tras
