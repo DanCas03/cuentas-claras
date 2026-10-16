@@ -27,14 +27,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cuentasclaras.app.backup.Conteos
 import com.cuentasclaras.app.ui.vmCon
-import java.io.File
 
 /** Respaldo: exportar, restaurar con confirmación y tabla de conteos. La reutiliza Ajustes (Tarea 16). */
 @Composable
 fun RespaldoSeccion() {
     val contexto = LocalContext.current
-    val dir = File(contexto.filesDir, "respaldos")
-    val vm = vmCon { c, _ -> RespaldoViewModel(c.db, dir) }
+    val vm = vmCon { c, _ -> RespaldoViewModel(c.db, c.dirRespaldos) }
     val estado by vm.estado.collectAsStateWithLifecycle()
 
     val exportar = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->

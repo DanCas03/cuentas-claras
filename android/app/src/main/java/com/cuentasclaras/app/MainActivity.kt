@@ -1,6 +1,5 @@
 package com.cuentasclaras.app
 
-import android.content.pm.ApplicationInfo
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -24,9 +23,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.cuentasclaras.app.backup.ValidacionRespaldo
-import com.cuentasclaras.app.backup.guardarRespaldoPrevio
-import com.cuentasclaras.app.backup.importBackup
 import com.cuentasclaras.app.backup.leerRespaldo
+import com.cuentasclaras.app.backup.restaurarConPrevio
 import com.cuentasclaras.app.data.seedIfEmpty
 import com.cuentasclaras.app.domain.todayIso
 import com.cuentasclaras.app.rates.proveedoresPorDefecto
@@ -83,21 +81,21 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** D12: solo en builds depurables. `adb … am start … --es respaldoDebug archivo.json`
-     *  carga filesDir/archivo.json (puesto con `run-as`) y lo borra. */
+    /** D12: solo en el build type `verif` (no en debug, que Daniel usa a diario, ni en release).
+     *  `adb … am start … --es respaldoDebug archivo.json` carga filesDir/archivo.json (puesto con `run-as`),
+     *  pasando por `restaurarConPrevio`, y lo borra. El nombre debe estar directamente en filesDir. */
     private suspend fun cargarRespaldoDebug(container: AppContainer) {
-        val depurable = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        if (BuildConfig.BUILD_TYPE != "verif") return
         val nombre = intent.getStringExtra("respaldoDebug") ?: return
-        if (!depurable) return
+        if (nombre.isEmpty() || nombre.contains('/') || nombre.contains('\\') || nombre.contains("..")) {
+            Log.w("CuentasClaras", "respaldoDebug rechazado: el nombre debe estar directamente en filesDir")
+            return
+        }
         val archivo = File(filesDir, nombre)
-        if (!archivo.exists()) return
+        if (!archivo.isFile) return
         val texto = withContext(Dispatchers.IO) { archivo.readText() }
         when (val v = withContext(Dispatchers.Default) { leerRespaldo(texto) }) {
-            is ValidacionRespaldo.Ok -> {
-                // Como en la restauración normal: sin respaldo previo escrito, no se importa nada.
-                guardarRespaldoPrevio(container.db, File(filesDir, "respaldos"))
-                importBackup(container.db, v.backup)
-            }
+            is ValidacionRespaldo.Ok -> restaurarConPrevio(container.db, container.dirRespaldos, v.backup)
             is ValidacionRespaldo.Error -> Log.w("CuentasClaras", "respaldoDebug inválido: ${v.mensaje}")
         }
         archivo.delete()

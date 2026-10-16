@@ -10,8 +10,7 @@ import com.cuentasclaras.app.backup.ValidacionRespaldo
 import com.cuentasclaras.app.backup.backupFilename
 import com.cuentasclaras.app.backup.contarTablas
 import com.cuentasclaras.app.backup.exportBackup
-import com.cuentasclaras.app.backup.guardarRespaldoPrevio
-import com.cuentasclaras.app.backup.importBackup
+import com.cuentasclaras.app.backup.restaurarConPrevio
 import com.cuentasclaras.app.backup.leerRespaldo
 import com.cuentasclaras.app.backup.respaldoAJson
 import com.cuentasclaras.app.data.db.CuentasDb
@@ -101,8 +100,7 @@ class RespaldoViewModel(private val db: CuentasDb, private val dirSeguridad: Fil
         _estado.update { it.copy(guardando = true) }
         viewModelScope.launch {
             try {
-                guardarRespaldoPrevio(db, dirSeguridad)
-                importBackup(db, pendiente.backup)
+                restaurarConPrevio(db, dirSeguridad, pendiente.backup)
                 _estado.update { it.copy(pendiente = null) }
                 Avisos.avisar("Datos restaurados ✓")
                 refrescarConteos()
