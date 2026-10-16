@@ -1,5 +1,6 @@
 package com.cuentasclaras.app
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -21,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.rememberNavController
 import com.cuentasclaras.app.backup.ValidacionRespaldo
 import com.cuentasclaras.app.backup.leerRespaldo
@@ -31,10 +33,14 @@ import com.cuentasclaras.app.rates.proveedoresPorDefecto
 import com.cuentasclaras.app.rates.refreshRatesOncePerDay
 import com.cuentasclaras.app.ui.Avisos
 import com.cuentasclaras.app.ui.nav.BarraInferior
+import com.cuentasclaras.app.capture.Notificador
 import com.cuentasclaras.app.ui.nav.CuentasNavHost
+import com.cuentasclaras.app.ui.nav.Rutas
 import com.cuentasclaras.app.ui.theme.CuentasTema
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -42,9 +48,13 @@ import java.io.File
 private enum class Arranque { CARGANDO, LISTO, ERROR }
 
 class MainActivity : ComponentActivity() {
+    /** Captura pedida por el toque en la notificación propia; la consume `RaizApp`. */
+    val capturaPedida = MutableStateFlow<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        leerCaptura(intent)
         val container = (application as CuentasApp).container
         setContent {
             CuentasTema {
@@ -77,10 +87,26 @@ class MainActivity : ComponentActivity() {
                 when (arranque) {
                     Arranque.CARGANDO -> Unit
                     Arranque.ERROR -> PantallaErrorInicio()
-                    Arranque.LISTO -> RaizApp()
+                    Arranque.LISTO -> RaizApp(capturaPedida)
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        leerCaptura(intent)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val container = (application as CuentasApp).container
+        lifecycleScope.launch { runCatching { container.estadoListener.reenlazarSiHaceFalta() } }
+    }
+
+    private fun leerCaptura(intent: Intent?) {
+        intent?.getStringExtra(Notificador.EXTRA_CAPTURA_ID)?.let { capturaPedida.value = it }
     }
 
     /** D12: solo en el build type `verif` (no en debug, que Daniel usa a diario, ni en release).
@@ -112,10 +138,16 @@ private fun PantallaErrorInicio() {
 }
 
 @Composable
-private fun RaizApp() {
+private fun RaizApp(capturaPedida: MutableStateFlow<String?>) {
     val nav = rememberNavController()
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(Unit) { Avisos.mensajes.collect { snackbar.showSnackbar(it) } }
+    LaunchedEffect(Unit) {
+        capturaPedida.filterNotNull().collect { id ->
+            nav.navigate(Rutas.nuevo(capturaId = id))
+            capturaPedida.value = null
+        }
+    }
     Scaffold(
         bottomBar = { BarraInferior(nav) },
         snackbarHost = { SnackbarHost(snackbar) },

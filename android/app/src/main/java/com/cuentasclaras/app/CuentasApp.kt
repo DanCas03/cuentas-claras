@@ -3,6 +3,9 @@ package com.cuentasclaras.app
 import android.app.Application
 import android.content.Context
 import com.cuentasclaras.app.data.AparienciaRepo
+import com.cuentasclaras.app.capture.CapturaRepo
+import com.cuentasclaras.app.capture.EstadoListener
+import com.cuentasclaras.app.capture.Notificador
 import com.cuentasclaras.app.data.CuentasRepo
 import com.cuentasclaras.app.data.almacenApariencia
 import com.cuentasclaras.app.data.db.CuentasDb
@@ -20,6 +23,9 @@ class AppContainer(context: Context) {
     val http: OkHttpClient = crearHttp()
     /** Modo y paletas elegidos (E20), en DataStore Preferences. */
     val apariencia: AparienciaRepo = AparienciaRepo(context.almacenApariencia)
+    /** Capturas de notificaciones del BNC (T18/T19). */
+    val capturas: CapturaRepo = CapturaRepo(db)
+    val estadoListener: EstadoListener = EstadoListener(context)
 }
 
 class CuentasApp : Application() {
@@ -29,5 +35,6 @@ class CuentasApp : Application() {
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
+        Notificador.crearCanal(this)
     }
 }
