@@ -6,7 +6,9 @@
     <application
         android:name=".CuentasApp"
         android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
         android:label="${etiquetaApp}"
+        android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.CuentasClaras">
         <activity

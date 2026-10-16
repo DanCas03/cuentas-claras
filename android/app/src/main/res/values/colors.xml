@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Fondo de la ventana de arranque en modo claro: `fondo` de Noche claro (paleta clara por defecto). -->
+    <color name="fondo_arranque">#FFF1F4F9</color>
+    <!-- Fondo del ícono adaptable: `fondo` de Noche lima. -->
+    <color name="ic_launcher_fondo">#FF0A0F1C</color>
+</resources>

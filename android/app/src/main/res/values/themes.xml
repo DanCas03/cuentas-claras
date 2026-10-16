@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.CuentasClaras" parent="android:Theme.Material.NoActionBar" />
+    <!-- Ventana de arranque en modo claro del sistema. Los colores reales los pone CuentasTema (E20). -->
+    <style name="Theme.CuentasClaras" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/fondo_arranque</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
 </resources>

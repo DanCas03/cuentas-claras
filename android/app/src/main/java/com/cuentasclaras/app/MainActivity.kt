@@ -8,7 +8,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -31,6 +30,7 @@ import com.cuentasclaras.app.rates.proveedoresPorDefecto
 import com.cuentasclaras.app.rates.refreshRatesOncePerDay
 import com.cuentasclaras.app.ui.Avisos
 import com.cuentasclaras.app.ui.pantallas.respaldo.RespaldoSeccion
+import com.cuentasclaras.app.ui.theme.CuentasTema
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -45,7 +45,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         val container = (application as CuentasApp).container
         setContent {
-            MaterialTheme {
+            CuentasTema {
                 var arranque by remember { mutableStateOf(Arranque.CARGANDO) }
                 LaunchedEffect(Unit) {
                     arranque = try {

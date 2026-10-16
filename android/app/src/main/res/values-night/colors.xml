@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Fondo de la ventana de arranque en modo oscuro: `fondo` de Noche lima (paleta oscura por defecto). -->
+    <color name="fondo_arranque">#FF0A0F1C</color>
+</resources>
