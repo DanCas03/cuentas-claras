@@ -16,8 +16,10 @@ import com.cuentasclaras.app.domain.Settings
 import com.cuentasclaras.app.domain.Transaction
 import com.cuentasclaras.app.domain.TxGroup
 import com.cuentasclaras.app.domain.ahoraIso
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -48,15 +50,41 @@ sealed interface ValidacionRespaldo {
 private val TABLAS_V2 = listOf("accounts", "transactions", "categories", "rules", "rates", "settings", "debts", "txGroups")
 private val TABLAS = TABLAS_V2 + "calEvents"
 private const val NO_ES_RESPALDO = "El archivo no es un respaldo de Cuentas Claras"
+private const val JSON_INVALIDO = "El archivo no es un JSON válido"
 
 private fun faltaTabla(b: JsonObject, tablas: List<String>): String? = tablas.firstOrNull { b[it] !is JsonArray }
 
+private val SERIALIZADORES_TABLAS: Map<String, KSerializer<out List<Any>>> = mapOf(
+    "accounts" to ListSerializer(Account.serializer()),
+    "transactions" to ListSerializer(Transaction.serializer()),
+    "categories" to ListSerializer(Category.serializer()),
+    "rules" to ListSerializer(Rule.serializer()),
+    "rates" to ListSerializer(Rate.serializer()),
+    "settings" to ListSerializer(Settings.serializer()),
+    "debts" to ListSerializer(Debt.serializer()),
+    "txGroups" to ListSerializer(TxGroup.serializer()),
+    "calEvents" to ListSerializer(CalEvent.serializer()),
+)
+
+/** Primera tabla cuyas filas no se pueden leer (null si el problema está fuera de las tablas). */
+private fun tablaIlegible(obj: JsonObject): String? = SERIALIZADORES_TABLAS.entries.firstOrNull { (tabla, serializador) ->
+    try {
+        JsonCuentas.decodeFromJsonElement(serializador, obj.getValue(tabla))
+        false
+    } catch (e: IllegalArgumentException) {
+        true
+    }
+}?.key
+
+/** El detalle técnico de kotlinx (en inglés) no se muestra: solo qué tabla falla. */
 private fun decodificar(obj: JsonObject): ValidacionRespaldo = try {
     ValidacionRespaldo.Ok(JsonCuentas.decodeFromJsonElement(BackupFile.serializer(), obj))
-} catch (e: SerializationException) {
-    ValidacionRespaldo.Error("El respaldo tiene datos ilegibles: ${e.message}")
 } catch (e: IllegalArgumentException) {
-    ValidacionRespaldo.Error("El respaldo tiene datos ilegibles: ${e.message}")
+    // SerializationException es subclase de IllegalArgumentException.
+    val tabla = tablaIlegible(obj)
+    ValidacionRespaldo.Error(
+        if (tabla != null) "El respaldo tiene datos ilegibles en la tabla \"$tabla\"" else "El respaldo tiene datos ilegibles",
+    )
 }
 
 /** Como `String(version)` de la web: la primitiva sin comillas; ausente → «undefined». */
@@ -79,12 +107,13 @@ fun validateBackup(data: JsonElement?): ValidacionRespaldo {
     }
 }
 
-/** Texto del archivo → validación. Cualquier JSON roto es «no es un respaldo». */
+/** Texto del archivo → validación. JSON sintácticamente roto → «no es un JSON válido» (como la web);
+ *  JSON válido que no es un respaldo → «no es un respaldo de Cuentas Claras». */
 fun leerRespaldo(texto: String): ValidacionRespaldo {
     val elemento = try {
-        JsonCuentas.parseToJsonElement(texto.removePrefix("﻿"))
+        JsonCuentas.parseToJsonElement(texto.removePrefix("\uFEFF"))
     } catch (e: SerializationException) {
-        return ValidacionRespaldo.Error(NO_ES_RESPALDO)
+        return ValidacionRespaldo.Error(JSON_INVALIDO)
     }
     return validateBackup(elemento)
 }
