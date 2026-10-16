@@ -26,6 +26,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cuentasclaras.app.backup.Conteos
 import com.cuentasclaras.app.backup.RespaldoSeguridad
 import com.cuentasclaras.app.domain.fechaCorta
+import com.cuentasclaras.app.ui.componentes.AvisosDeCapa
 import com.cuentasclaras.app.ui.componentes.BotonPeligro
 import com.cuentasclaras.app.ui.componentes.BotonSecundario
 import com.cuentasclaras.app.ui.componentes.DialogoConfirmacion
@@ -126,14 +127,18 @@ fun RespaldoSeccion() {
             textContentColor = c.texto,
             title = { Text("Restaurar respaldo", style = CuentasTema.tipografia.titulo) },
             text = {
-                Text(
-                    buildAnnotatedString {
-                        append("Vas a ")
-                        withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append("reemplazar TODOS los datos actuales") }
-                        append(" por: ${pendiente.resumen}. Antes se guardará un respaldo de seguridad de lo actual.")
-                    },
-                    style = CuentasTema.tipografia.cuerpo,
-                )
+                Column {
+                    Text(
+                        buildAnnotatedString {
+                            append("Vas a ")
+                            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append("reemplazar TODOS los datos actuales") }
+                            append(" por: ${pendiente.resumen}. Antes se guardará un respaldo de seguridad de lo actual.")
+                        },
+                        style = CuentasTema.tipografia.cuerpo,
+                    )
+                    // D2: si la restauración falla, el diálogo sigue abierto y el aviso se pinta aquí.
+                    AvisosDeCapa()
+                }
             },
             confirmButton = {
                 BotonPeligro("Sí, reemplazar todo", onClick = vm::restaurar, enabled = !estado.guardando)

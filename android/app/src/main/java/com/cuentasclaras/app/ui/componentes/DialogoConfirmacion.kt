@@ -1,5 +1,6 @@
 package com.cuentasclaras.app.ui.componentes
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,7 +26,13 @@ fun DialogoConfirmacion(
     AlertDialog(
         onDismissRequest = onCancelar,
         title = { Text(titulo, style = CuentasTema.tipografia.subtitulo) },
-        text = { Text(texto, style = CuentasTema.tipografia.cuerpo, color = c.textoSecundario) },
+        text = {
+            Column {
+                Text(texto, style = CuentasTema.tipografia.cuerpo, color = c.textoSecundario)
+                // D2: el diálogo es otra ventana y atenúa el aviso raíz; mientras está abierto, lo pinta él.
+                AvisosDeCapa()
+            }
+        },
         confirmButton = {
             if (peligro) {
                 BotonPeligro(textoConfirmar, onClick = onConfirmar, enabled = habilitado)

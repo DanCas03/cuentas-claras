@@ -10,10 +10,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,7 +30,9 @@ import com.cuentasclaras.app.data.seedIfEmpty
 import com.cuentasclaras.app.domain.todayIso
 import com.cuentasclaras.app.rates.proveedoresPorDefecto
 import com.cuentasclaras.app.rates.refreshRatesOncePerDay
-import com.cuentasclaras.app.ui.Avisos
+import com.cuentasclaras.app.ui.componentes.AvisosRaiz
+import com.cuentasclaras.app.ui.componentes.LocalAvisos
+import com.cuentasclaras.app.ui.componentes.rememberAnfitrionAvisos
 import com.cuentasclaras.app.ui.nav.BarraInferior
 import com.cuentasclaras.app.capture.Notificador
 import com.cuentasclaras.app.ui.nav.CuentasNavHost
@@ -148,18 +149,20 @@ private fun PantallaErrorInicio() {
 @Composable
 private fun RaizApp(capturaPedida: MutableStateFlow<String?>) {
     val nav = rememberNavController()
-    val snackbar = remember { SnackbarHostState() }
-    LaunchedEffect(Unit) { Avisos.mensajes.collect { snackbar.showSnackbar(it) } }
+    // D2: una sola cola de avisos; la pinta la raíz o, si hay una hoja o un diálogo abiertos, el de más arriba.
+    val avisos = rememberAnfitrionAvisos()
     LaunchedEffect(Unit) {
         capturaPedida.filterNotNull().collect { id ->
             nav.navigate(Rutas.nuevo(capturaId = id)) { launchSingleTop = true }
             capturaPedida.value = null
         }
     }
-    Scaffold(
-        bottomBar = { BarraInferior(nav) },
-        snackbarHost = { SnackbarHost(snackbar) },
-    ) { relleno ->
-        CuentasNavHost(nav, Modifier.padding(relleno))
+    CompositionLocalProvider(LocalAvisos provides avisos) {
+        Scaffold(
+            bottomBar = { BarraInferior(nav) },
+            snackbarHost = { AvisosRaiz(avisos) },
+        ) { relleno ->
+            CuentasNavHost(nav, Modifier.padding(relleno))
+        }
     }
 }

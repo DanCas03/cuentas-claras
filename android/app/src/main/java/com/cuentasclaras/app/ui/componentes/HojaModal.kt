@@ -1,5 +1,6 @@
 package com.cuentasclaras.app.ui.componentes
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -34,6 +35,9 @@ import kotlinx.coroutines.launch
 /**
  * Hoja de edición: `ModalBottomSheet` siempre expandida, con título, botón «Cerrar», contenido desplazable e
  * `imePadding()` para que el teclado no tape los campos. Cerrar anima la salida antes de avisar con `onCerrar`.
+ *
+ * La hoja es otra ventana encima de la de la actividad y tapa el `SnackbarHost` raíz (D2): mientras está abierta,
+ * los avisos de `Avisos.avisar` los pinta ella misma ([AvisosDeCapa]), abajo y por encima del teclado.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,29 +54,36 @@ fun HojaModal(titulo: String, onCerrar: () -> Unit, contenido: @Composable Colum
         contentColor = c.texto,
         dragHandle = { BottomSheetDefaults.DragHandle(color = c.borde) },
     ) {
-        Column(
+        // `imePadding` en la caja (fuera del desplazamiento, como antes) para que el aviso quede sobre el teclado.
+        Box(
             Modifier
                 .fillMaxWidth()
-                .imePadding()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = e.m)
-                .padding(bottom = e.l),
+                .imePadding(),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    titulo,
-                    style = CuentasTema.tipografia.titulo,
-                    color = c.texto,
-                    modifier = Modifier.weight(1f).semantics { heading() },
-                )
-                IconButton(onClick = {
-                    alcance.launch { estado.hide() }.invokeOnCompletion { onCerrar() }
-                }) {
-                    Icon(painterResource(R.drawable.ic_cerrar), contentDescription = "Cerrar", tint = c.textoSecundario)
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = e.m)
+                    .padding(bottom = e.l),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        titulo,
+                        style = CuentasTema.tipografia.titulo,
+                        color = c.texto,
+                        modifier = Modifier.weight(1f).semantics { heading() },
+                    )
+                    IconButton(onClick = {
+                        alcance.launch { estado.hide() }.invokeOnCompletion { onCerrar() }
+                    }) {
+                        Icon(painterResource(R.drawable.ic_cerrar), contentDescription = "Cerrar", tint = c.textoSecundario)
+                    }
                 }
+                Spacer(Modifier.height(e.m))
+                contenido()
             }
-            Spacer(Modifier.height(e.m))
-            contenido()
+            AvisosDeCapa(Modifier.align(Alignment.BottomCenter))
         }
     }
 }
