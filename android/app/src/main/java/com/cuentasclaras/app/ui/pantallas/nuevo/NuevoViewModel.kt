@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
@@ -133,6 +134,13 @@ class NuevoViewModel(
         ),
     )
     private val seleccion = MutableStateFlow(SeleccionEvento())
+
+    /**
+     * El formulario tal como lo edita el usuario, sin pasar por [estado]. Los campos de texto (la nota) leen de
+     * aquí: [estado] se calcula en `Dispatchers.Default` y llega con retraso, y un `TextField` que recibe un valor
+     * atrasado entre dos pulsaciones lo toma como un cambio externo, pierde caracteres y mueve el cursor (D1).
+     */
+    val formularioActual: StateFlow<Formulario> = formulario.asStateFlow()
 
     private val ocupacion = Ocupacion({ formulario.value.guardando }) { g -> formulario.update { it.copy(guardando = g) } }
 

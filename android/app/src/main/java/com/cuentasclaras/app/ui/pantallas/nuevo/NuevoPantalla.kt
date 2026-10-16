@@ -80,6 +80,8 @@ fun NuevoPantalla(nav: NavHostController) {
     val vmTransferir = vmCon { c, _ -> TransferirViewModel(c.repo) }
     val vmAjustar = vmCon { c, _ -> AjustarViewModel(c.repo) }
     val estado by vm.estado.collectAsStateWithLifecycle()
+    // D1: la nota se lee del formulario síncrono, no de `estado` (que se calcula en otro hilo y llega atrasado).
+    val formulario by vm.formularioActual.collectAsStateWithLifecycle()
     // Con launchSingleTop la entrada se reutiliza con argumentos nuevos: el prellenado sigue al `capturaId` de la ruta.
     val entrada by nav.currentBackStackEntryAsState()
     val capturaRuta = entrada?.arguments?.getString("capturaId")
@@ -142,7 +144,7 @@ fun NuevoPantalla(nav: NavHostController) {
                     )
                     Box(Modifier.weight(2f), contentAlignment = Alignment.BottomEnd) {
                         Chip(
-                            texto = f.nota.trim().ifEmpty { "+ Nota" },
+                            texto = formulario.nota.trim().ifEmpty { "+ Nota" },
                             onClick = { notaAbierta = !notaAbierta },
                             activo = notaAbierta,
                         )
@@ -150,7 +152,7 @@ fun NuevoPantalla(nav: NavHostController) {
                 }
                 if (notaAbierta) {
                     CampoTexto(
-                        valor = f.nota,
+                        valor = formulario.nota,
                         onCambio = vm::cambiarNota,
                         etiqueta = "Nota (opcional)",
                         placeholder = "¿En qué fue?",

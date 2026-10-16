@@ -36,6 +36,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
@@ -114,6 +115,13 @@ class CalendarioViewModel(private val repo: CuentasRepo, args: SavedStateHandle)
         val dia = pedido ?: if (h.startsWith(mes)) h else primerDiaMes(mes)
         MutableStateFlow(Ui(mes, dia, editando = if (args.get<String>("nuevo") == "1") borradorNuevo(h) else null))
     }
+
+    /**
+     * La UI tal como la edita el usuario, sin pasar por [estado]. El editor de evento (título, monto, días) lee el
+     * borrador de aquí: [estado] se calcula en `Dispatchers.Default` y llega con retraso, y un `TextField` que recibe
+     * un valor atrasado entre dos pulsaciones pierde caracteres y mueve el cursor (D1).
+     */
+    val uiActual: StateFlow<Ui> = ui.asStateFlow()
 
     /** E18: las ocurrencias se derivan de las transacciones CRUDAS (`txs`), nunca de `txsEfectivas()`. */
     val estado: StateFlow<Estado> = combine(ui, repo.instantanea, hoy) { u, i, h ->

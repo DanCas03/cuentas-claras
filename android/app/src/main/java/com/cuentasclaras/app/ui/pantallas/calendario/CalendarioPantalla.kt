@@ -107,6 +107,8 @@ fun CalendarioPantalla(nav: NavHostController) {
     // I1: al volver a la app (quizá al día siguiente, con el proceso vivo) se toma de nuevo la fecha de hoy.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { vm.refrescarHoy() }
     val ui = estado.ui
+    // D1: el editor lee el borrador de la UI síncrona, no de `estado` (que se calcula en otro hilo y llega atrasado).
+    val uiActual by vm.uiActual.collectAsStateWithLifecycle()
     val datos = estado.datos
     val e = CuentasTema.espacios
     val c = CuentasTema.colores
@@ -193,13 +195,13 @@ fun CalendarioPantalla(nav: NavHostController) {
             }
         }
 
-        ui.editando?.let { borrador ->
+        uiActual.editando?.let { borrador ->
             EditorEvento(
                 borrador = borrador,
                 cuentas = datos?.cuentas ?: emptyList(),
                 categorias = datos?.categorias ?: emptyList(),
                 movimientosAsignados = datos?.txs?.count { it.eventId == borrador.id } ?: 0,
-                guardando = ui.guardando,
+                guardando = uiActual.guardando,
                 onCambio = vm::cambiarBorrador,
                 onCerrar = vm::cerrarEditor,
                 onGuardar = { vm.guardarBorrador(alGuardar = vm::cerrarEditor) },
