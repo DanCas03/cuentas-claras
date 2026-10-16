@@ -30,7 +30,8 @@ val RECURRENCIA_QUINCENAL: Recurrence = Recurrence.Monthly(listOf(15, 31))
 
 fun esQuincenal(r: Recurrence): Boolean = r is Recurrence.Monthly && r.days == listOf(15, 31)
 
-private val SEPARADOR_DIAS = Regex("""[\s,;]+""")
+/** `(?U)` hace que `\s` sea Unicode (NBSP, U+202F...) como el `\s` de JS; U+FEFF también cuenta como espacio en JS. */
+private val SEPARADOR_DIAS = Regex("""(?U)[\s﻿,;]+""")
 private val DIA_TEXTO = Regex("""^\d{1,2}$""")
 
 /** '15, 31' → [15, 31]. Ordena y deduplica. Lanza si está vacío o hay algo fuera de 1..31. */

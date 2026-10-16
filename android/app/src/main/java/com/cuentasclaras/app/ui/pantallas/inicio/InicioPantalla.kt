@@ -56,7 +56,7 @@ fun InicioPantalla(nav: NavHostController) {
                 onCategoria = { id, mes -> nav.navigate(Rutas.movimientos(categoria = id, mes = mes)) },
             )
         }
-        item(key = "semana") { SemanaTarjeta() }
+        item(key = "semana") { SemanaTarjeta(onCalendario = { nav.navigate(Rutas.calendario()) }) }
         item(key = "deudas") { DeudasTarjeta(estado, nav) }
     }
 }
