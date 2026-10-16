@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.SpanStyle
@@ -13,7 +12,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.withStyle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavHostController
 import com.cuentasclaras.app.domain.formatMoney
 import com.cuentasclaras.app.ui.componentes.Banner
 import com.cuentasclaras.app.ui.componentes.BotonPrincipal
@@ -21,14 +19,11 @@ import com.cuentasclaras.app.ui.componentes.CampoTexto
 import com.cuentasclaras.app.ui.componentes.Selector
 import com.cuentasclaras.app.ui.componentes.TipoBanner
 import com.cuentasclaras.app.ui.theme.CuentasTema
-import com.cuentasclaras.app.ui.vmCon
 
-/** Formulario «Ajustar» (AjusteForm.tsx): cuadra el saldo de una cuenta con el saldo real. */
+/** Formulario «Ajustar» (AjusteForm.tsx): cuadra el saldo de una cuenta con el saldo real. El VM y su `salir` los gestiona NuevoPantalla. */
 @Composable
-fun AjustarFormulario(nav: NavHostController) {
-    val vm = vmCon { c, _ -> AjustarViewModel(c.repo) }
+fun AjustarFormulario(vm: AjustarViewModel) {
     val estado by vm.estado.collectAsStateWithLifecycle()
-    LaunchedEffect(Unit) { vm.salir.collect { volverAInicio(nav) } }
 
     val c = CuentasTema.colores
     val cuenta = estado.cuenta

@@ -78,7 +78,7 @@ private fun CeldaCategoria(categoria: Category, enabled: Boolean, onElegir: (Str
         modifier
             .clip(CuentasTema.formas.control)
             .clickable(enabled = enabled, role = Role.Button) { onElegir(categoria.id) }
-            .padding(vertical = e.s, horizontal = e.xs),
+            .padding(vertical = e.xs, horizontal = e.xs),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
@@ -93,7 +93,6 @@ private fun CeldaCategoria(categoria: Category, enabled: Boolean, onElegir: (Str
             style = CuentasTema.tipografia.etiqueta,
             color = c.texto,
             maxLines = 2,
-            minLines = 2,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
         )

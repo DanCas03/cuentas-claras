@@ -21,6 +21,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cuentasclaras.app.R
@@ -28,6 +29,9 @@ import com.cuentasclaras.app.ui.theme.CuentasTema
 
 /** Alto de cada tecla: ≥ 56 dp (brief). Cuatro filas + separaciones = 248 dp. */
 private val ALTO_TECLA = 56.dp
+
+/** Alto compacto (Nuevo, DESIGN.md §4): cuatro filas + separaciones = 232 dp. Nunca menos de 48 dp. */
+private val ALTO_TECLA_COMPACTO = 52.dp
 
 private const val TECLA_COMA = ","
 private const val TECLA_BORRAR = "⌫"
@@ -44,19 +48,20 @@ private val FILAS_TECLADO = listOf(
  * `"⌫"`. Las teclas especiales llevan `contentDescription` «coma» y «borrar». Vibración corta de tecla.
  */
 @Composable
-fun Teclado(onTecla: (String) -> Unit, modifier: Modifier = Modifier) {
+fun Teclado(onTecla: (String) -> Unit, modifier: Modifier = Modifier, compacto: Boolean = false) {
     val separacion = CuentasTema.espacios.s
+    val alto = if (compacto) ALTO_TECLA_COMPACTO else ALTO_TECLA
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(separacion)) {
         FILAS_TECLADO.forEach { fila ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(separacion)) {
-                fila.forEach { tecla -> Tecla(tecla, onTecla, Modifier.weight(1f)) }
+                fila.forEach { tecla -> Tecla(tecla, alto, onTecla, Modifier.weight(1f)) }
             }
         }
     }
 }
 
 @Composable
-private fun Tecla(tecla: String, onTecla: (String) -> Unit, modifier: Modifier) {
+private fun Tecla(tecla: String, alto: Dp, onTecla: (String) -> Unit, modifier: Modifier) {
     val c = CuentasTema.colores
     val vista = LocalView.current
     val descripcion = when (tecla) {
@@ -66,7 +71,7 @@ private fun Tecla(tecla: String, onTecla: (String) -> Unit, modifier: Modifier) 
     }
     Box(
         modifier
-            .height(ALTO_TECLA)
+            .height(alto)
             .clip(CuentasTema.formas.control)
             .background(c.superficieElevada)
             .clickable {

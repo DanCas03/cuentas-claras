@@ -60,9 +60,10 @@ class NuevoViewModel(private val repo: CuentasRepo, args: SavedStateHandle) : Vi
         Formulario(
             modo = if (args.get<String>("tipo") == "ingreso") Modo.INGRESO else Modo.GASTO,
             // Prefill de captura: solo al crear el VM; lo que el usuario edite después manda.
-            entrada = args.get<String>("monto")?.takeIf { it.matches(Regex("^\\d+$")) }?.let { montoEditable(it.toLong()) } ?: "",
+            entrada = args.get<String>("monto")?.takeIf { it.matches(Regex("^\\d+$")) }
+                ?.toLongOrNull()?.let { montoEditable(it) } ?: "",
             nota = args.get<String>("nota") ?: "",
-            cuentaId = args.get<String>("cuenta"),
+            cuentaId = args.get<String>("cuenta")?.takeIf { it.isNotEmpty() },
         ),
     )
 

@@ -3,12 +3,10 @@ package com.cuentasclaras.app.ui.pantallas.nuevo
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavHostController
 import com.cuentasclaras.app.domain.formatMoney
 import com.cuentasclaras.app.ui.componentes.Banner
 import com.cuentasclaras.app.ui.componentes.BotonPrincipal
@@ -16,19 +14,16 @@ import com.cuentasclaras.app.ui.componentes.CampoTexto
 import com.cuentasclaras.app.ui.componentes.Selector
 import com.cuentasclaras.app.ui.componentes.TipoBanner
 import com.cuentasclaras.app.ui.theme.CuentasTema
-import com.cuentasclaras.app.ui.vmCon
 import kotlin.math.abs
 
 /** Una tasa como la imprime JS (`111` y no `111.0`), para el rótulo y el placeholder de la web. */
 internal fun tasaTexto(tasa: Double): String =
     if (tasa == Math.rint(tasa) && abs(tasa) < 1e15) tasa.toLong().toString() else tasa.toString()
 
-/** Formulario «Transferir» (TransferForm.tsx): origen, destino, monto, tasa si cruza de moneda, nota. */
+/** Formulario «Transferir» (TransferForm.tsx): origen, destino, monto, tasa si cruza de moneda, nota. El VM y su `salir` los gestiona NuevoPantalla. */
 @Composable
-fun TransferirFormulario(nav: NavHostController) {
-    val vm = vmCon { c, _ -> TransferirViewModel(c.repo) }
+fun TransferirFormulario(vm: TransferirViewModel) {
     val estado by vm.estado.collectAsStateWithLifecycle()
-    LaunchedEffect(Unit) { vm.salir.collect { volverAInicio(nav) } }
 
     val f = estado.f
     Column(Modifier, verticalArrangement = Arrangement.spacedBy(CuentasTema.espacios.m)) {
