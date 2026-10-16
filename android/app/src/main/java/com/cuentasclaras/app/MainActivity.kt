@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.cuentasclaras.app.backup.ValidacionRespaldo
+import com.cuentasclaras.app.backup.guardarRespaldoPrevio
 import com.cuentasclaras.app.backup.importBackup
 import com.cuentasclaras.app.backup.leerRespaldo
 import com.cuentasclaras.app.data.seedIfEmpty
@@ -91,8 +92,12 @@ class MainActivity : ComponentActivity() {
         val archivo = File(filesDir, nombre)
         if (!archivo.exists()) return
         val texto = withContext(Dispatchers.IO) { archivo.readText() }
-        when (val v = leerRespaldo(texto)) {
-            is ValidacionRespaldo.Ok -> importBackup(container.db, v.backup)
+        when (val v = withContext(Dispatchers.Default) { leerRespaldo(texto) }) {
+            is ValidacionRespaldo.Ok -> {
+                // Como en la restauración normal: sin respaldo previo escrito, no se importa nada.
+                guardarRespaldoPrevio(container.db, File(filesDir, "respaldos"))
+                importBackup(container.db, v.backup)
+            }
             is ValidacionRespaldo.Error -> Log.w("CuentasClaras", "respaldoDebug inválido: ${v.mensaje}")
         }
         archivo.delete()

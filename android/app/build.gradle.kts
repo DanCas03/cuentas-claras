@@ -17,9 +17,17 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
+        manifestPlaceholders["etiquetaApp"] = "Cuentas Claras"
     }
 
     buildTypes {
+        // Build para verificaciones por adb: otro paquete y otra etiqueta, para no tocar los datos reales de la app normal.
+        create("verif") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".verif"
+            matchingFallbacks += listOf("debug")
+            manifestPlaceholders["etiquetaApp"] = "Cuentas Claras (verif)"
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
