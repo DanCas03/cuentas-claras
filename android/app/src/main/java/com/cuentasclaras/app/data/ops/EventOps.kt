@@ -35,15 +35,18 @@ suspend fun eliminarEvento(db: CuentasDb, eventId: String): Int =
         desasignadas
     }
 
-/** Asigna la tx a la ocurrencia y copia la categoría del evento. No toca monto/fecha/cuenta/tipo. */
-suspend fun asignarEvento(db: CuentasDb, txId: String, o: Ocurrencia) {
+/**
+ * Asigna la tx a la ocurrencia y le pone la categoría del evento, o `categoryId` si no es null (la categoría tocada
+ * en Nuevo manda sobre la del evento, `NuevoPage.tsx:152`). No toca monto/fecha/cuenta/tipo.
+ */
+suspend fun asignarEvento(db: CuentasDb, txId: String, o: Ocurrencia, categoryId: String? = null) {
     db.withTransaction {
-        val tx = db.transactions().porId(txId)
-        require(tx != null && (tx.type == TxType.INCOME || tx.type == TxType.EXPENSE)) { "Solo se asignan gastos e ingresos" }
+        val tx = db.transactions().porId(txId) ?: throw IllegalArgumentException("El movimiento ya no existe")
+        require(tx.type == TxType.INCOME || tx.type == TxType.EXPENSE) { "Solo se asignan gastos e ingresos" }
         val evento = db.calEvents().porId(o.eventId)?.toDomain() ?: throw IllegalArgumentException("El evento no existe")
         require(esFechaIso(o.date)) { "Fecha inválida" }
         validarAsignacion(tx.type, evento, db.categories().todas().map { it.toDomain() })
-        db.transactions().asignarEvento(txId, evento.id, o.date, evento.categoryId)
+        db.transactions().asignarEvento(txId, evento.id, o.date, categoryId ?: evento.categoryId)
     }
 }
 

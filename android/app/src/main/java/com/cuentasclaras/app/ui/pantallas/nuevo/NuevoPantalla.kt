@@ -109,6 +109,10 @@ fun NuevoPantalla(nav: NavHostController) {
             if (f.pareceImportada) {
                 Banner(texto = "Este movimiento parece ya importado del TXT del BNC.", tipo = TipoBanner.AVISO)
             }
+            // M4: sin la cuenta BNC activa no se prellena ninguna; el aviso se va al elegir una.
+            if (f.cuentaBncNoActiva && estado.cuenta == null) {
+                Banner(texto = "La cuenta BNC está archivada o no existe: elige la cuenta.", tipo = TipoBanner.AVISO)
+            }
         }
         Segmentado(
             opciones = listOf("Gasto", "Ingreso", "Transferir", "Ajustar"),

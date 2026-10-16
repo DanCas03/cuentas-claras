@@ -68,6 +68,16 @@ class CuentasRepo(val db: CuentasDb) {
     }
 
     suspend fun agregarTx(tx: Transaction) = db.transactions().insertar(tx.toEntity())
+
+    /**
+     * Alta de `tx` y su asignación a la ocurrencia `o` en UNA transacción (restricción 8): si la asignación falla
+     * (dirección incompatible, evento borrado), el movimiento tampoco queda. `categoryId` no nula manda sobre la del
+     * evento (ver [asignarEvento]).
+     */
+    suspend fun agregarTxConEvento(tx: Transaction, o: Ocurrencia, categoryId: String? = null) = db.withTransaction {
+        db.transactions().insertar(tx.toEntity())
+        asignarEvento(db, tx.id, o, categoryId)
+    }
     /**
      * Relee el movimiento DENTRO de una transacción y le aplica solo `cambios`: así un campo que el editor no toca
      * (p. ej. un `groupId` asignado mientras estaba abierto) no se pisa con una copia vieja.

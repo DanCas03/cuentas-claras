@@ -3,7 +3,6 @@ package com.cuentasclaras.app.ui.pantallas.nuevo
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.room.withTransaction
 import com.cuentasclaras.app.capture.CapturaRepo
 import com.cuentasclaras.app.data.CUENTA_BNC
 import com.cuentasclaras.app.data.CuentasRepo
@@ -79,12 +78,19 @@ class NuevoViewModel(
         val pareceImportada: Boolean = false,
         /** Día local en que llegó la captura: fecha del movimiento y de las candidatas a evento (null = hoy). */
         val fechaCaptura: String? = null,
+        /**
+         * La captura es del BNC pero `acc-bnc` está archivada o no existe (M4): no se prellena ninguna cuenta (sin
+         * caer a la primera activa) y guardar exige elegirla.
+         */
+        val cuentaBncNoActiva: Boolean = false,
     )
 
     /** Chip de una ocurrencia del calendario a la que se puede asignar el movimiento (T30). */
     data class ChipEvento(
         val o: Ocurrencia,
         val evento: CalEvent,
+        /** Dirección del evento: al guardar, el chip activo solo se asigna si coincide con el modo vigente. */
+        val kind: CategoryKind,
         val vencida: Boolean,
         /** Emoji de la categoría del evento, o «📅» si no existe. */
         val icono: String,
@@ -139,9 +145,16 @@ class NuevoViewModel(
 
     private fun kindDe(m: Modo) = if (m == Modo.INGRESO) CategoryKind.INCOME else CategoryKind.EXPENSE
 
+    /**
+     * Cuenta del formulario entre las activas. Sin cuenta elegida cae a la primera activa, salvo con la cuenta BNC
+     * no activa en una captura (M4): entonces no hay cuenta hasta que Daniel la elija.
+     */
+    private fun cuentaDe(f: Formulario, activas: List<Account>): Account? =
+        activas.firstOrNull { it.id == f.cuentaId } ?: if (f.cuentaBncNoActiva) null else activas.firstOrNull()
+
     private fun calcular(f: Formulario, i: Instantanea, s: SeleccionEvento): Estado {
         val activas = i.cuentas.filter { !it.archived }
-        val cuenta = activas.firstOrNull { it.id == f.cuentaId } ?: activas.firstOrNull()
+        val cuenta = cuentaDe(f, activas)
         val minor = parseVenezuelanAmount(f.entrada.removeSuffix(","))
         val chips =
             if (cuenta == null || (f.modo != Modo.GASTO && f.modo != Modo.INGRESO)) emptyList()
@@ -163,7 +176,7 @@ class NuevoViewModel(
      */
     private fun ctx(i: Instantanea) = CtxSugerencia(
         eventos = i.eventos.filter { esFechaIso(it.startDate) && (it.endDate == null || esFechaIso(it.endDate)) },
-        txs = i.txs.filter { it.eventId != null },
+        txs = i.txs.filter { !it.eventId.isNullOrEmpty() },
         accounts = i.cuentas,
         categories = i.categorias,
         hoy = hoy,
@@ -200,6 +213,7 @@ class NuevoViewModel(
             ChipEvento(
                 o = o,
                 evento = evento,
+                kind = kind,
                 vencida = vencida,
                 icono = i.categorias.firstOrNull { it.id == evento.categoryId }?.icon ?: "📅",
                 activo = o == s.activo,
@@ -214,7 +228,8 @@ class NuevoViewModel(
         viewModelScope.launch {
             try {
                 val ultima = repo.settings.first().lastAccountId
-                formulario.update { it.copy(cuentaId = it.cuentaId ?: ultima) }
+                // Con la cuenta BNC no activa en una captura (M4) no se prellena ninguna cuenta.
+                formulario.update { if (it.cuentaBncNoActiva) it else it.copy(cuentaId = it.cuentaId ?: ultima) }
                 if (formulario.value.capturaId == null) prefillEvento()
             } catch (e: CancellationException) {
                 throw e
@@ -256,8 +271,7 @@ class NuevoViewModel(
         val f = formulario.value
         if (f.modo != Modo.GASTO && f.modo != Modo.INGRESO) return
         val monto = parseVenezuelanAmount(f.entrada.removeSuffix(",")) ?: return
-        val activas = i.cuentas.filter { !it.archived }
-        val cuentaId = (activas.firstOrNull { it.id == f.cuentaId } ?: activas.firstOrNull())?.id ?: return
+        val cuentaId = cuentaDe(f, i.cuentas.filter { !it.archived })?.id ?: return
         if (monto <= 0 || i.eventos.isEmpty()) return
         val o = sugerirOcurrencia(TxParaSugerir(kindDe(f.modo), f.fechaCaptura ?: hoy, cuentaId, monto), ctx(i))
         seleccion.update { it.copy(sugerida = o?.ocurrencia) }
@@ -270,7 +284,9 @@ class NuevoViewModel(
      */
     fun abrirCaptura(id: String?) {
         if (id.isNullOrEmpty() || id == formulario.value.capturaId) return
-        formulario.update { it.copy(capturaId = id, pareceImportada = false, fechaCaptura = null) }
+        formulario.update {
+            it.copy(capturaId = id, pareceImportada = false, fechaCaptura = null, cuentaBncNoActiva = false)
+        }
         // La elección de evento era de la captura anterior.
         seleccion.value = SeleccionEvento()
         cargarCaptura(id)
@@ -291,14 +307,23 @@ class NuevoViewModel(
                         _salir.send(Unit)
                     }
                     c.reconocida && c.montoMinor != null -> {
-                        val importada = capturas.pareceImportada(c)
+                        // Solo es un aviso: si la consulta falla, cuenta como «no importada» y el prellenado sigue.
+                        val importada = try {
+                            capturas.pareceImportada(c)
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            false
+                        }
+                        val bncActiva = repo.cuentas.first().any { it.id == CUENTA_BNC && !it.archived }
                         if (formulario.value.capturaId != id) return@launch
                         formulario.update {
                             it.copy(
                                 modo = if (c.tipo == TipoCaptura.INGRESO) Modo.INGRESO else Modo.GASTO,
                                 entrada = montoEditable(c.montoMinor),
                                 nota = c.nota ?: "",
-                                cuentaId = CUENTA_BNC,
+                                cuentaId = if (bncActiva) CUENTA_BNC else null,
+                                cuentaBncNoActiva = !bncActiva,
                                 pareceImportada = importada,
                                 fechaCaptura = fechaLocalDeInstante(c.recibidaIso),
                             )
@@ -307,7 +332,14 @@ class NuevoViewModel(
                         val i = repo.instantanea.first()
                         if (formulario.value.capturaId == id) ofrecerSugerencia(i)
                     }
-                    else -> formulario.update { it.copy(modo = Modo.GASTO, entrada = "", nota = c.textoCrudo.take(200)) }
+                    else -> formulario.update {
+                        it.copy(
+                            modo = Modo.GASTO,
+                            entrada = "",
+                            nota = c.textoCrudo.take(200),
+                            fechaCaptura = fechaLocalDeInstante(c.recibidaIso),
+                        )
+                    }
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -347,7 +379,7 @@ class NuevoViewModel(
         }
         val minor = parseVenezuelanAmount(formulario.value.entrada.removeSuffix(","))
         if (minor != null && minor > 0) {
-            guardarCon(c.evento.categoryId, c.o, c.evento)
+            guardarCon(c.evento.categoryId, c.o)
         } else {
             seleccion.update { it.copy(activo = c.o) }
             Avisos.avisar("Escribe el monto")
@@ -358,10 +390,16 @@ class NuevoViewModel(
      * Tocar una categoría guarda (≤ 3 toques); si hay un chip activo, además asigna el movimiento a su ocurrencia.
      * D19: tras guardar bien, `guardando` se queda en true (la pantalla sigue viva ~150 ms mientras se cierra y un
      * segundo toque rápido no debe crear un movimiento duplicado).
+     *
+     * El chip activo sale de `seleccion.value`, no de `estado.value` (se calcula en otro hilo y puede ir un paso
+     * atrás, I2): se busca en la lista de chips y solo se asigna si su dirección coincide con el modo de
+     * `formulario.value` (un cobro elegido no se asigna a un gasto).
      */
     fun guardar(categoryId: String) {
-        val activo = estado.value.chips.firstOrNull { it.activo }
-        guardarCon(categoryId, activo?.o, activo?.evento)
+        val activo = seleccion.value.activo
+        val kind = kindDe(formulario.value.modo)
+        val chip = activo?.let { a -> estado.value.chips.firstOrNull { it.o == a && it.kind == kind } }
+        guardarCon(categoryId, chip?.o)
     }
 
     /**
@@ -371,12 +409,18 @@ class NuevoViewModel(
      * Con ocurrencia (restricción 8): el alta y la asignación (`asignarEvento` de T6, que valida la dirección y la
      * fecha) van en UNA transacción. La categoría tocada manda sobre la del evento (`NuevoPage.tsx:152`); la
      * asignación NO altera monto, fecha, cuenta ni tipo.
+     *
+     * La cuenta sale de `formulario.value` y de la lista de cuentas activas en el momento de guardar (I2): cambiar de
+     * cuenta y tocar la categoría en el mismo gesto guarda en la cuenta nueva.
      */
-    private fun guardarCon(categoryId: String, o: Ocurrencia?, evento: CalEvent?) {
-        val e = estado.value
-        val f = formulario.value
+    private fun guardarCon(categoryId: String, o: Ocurrencia?) {
         if (ocupacion.activa) return
-        val cuenta = e.cuenta ?: return
+        val f = formulario.value
+        val cuenta = cuentaDe(f, estado.value.cuentas)
+        if (cuenta == null) {
+            Avisos.avisar("Elige una cuenta")
+            return
+        }
         val minor = parseVenezuelanAmount(f.entrada.removeSuffix(","))
         if (minor == null || minor <= 0) {
             Avisos.avisar("Escribe el monto")
@@ -393,23 +437,12 @@ class NuevoViewModel(
                 dateIso = fecha,
                 note = f.nota.trim().takeIf { it.isNotEmpty() },
             )
-            val asignar: suspend () -> Unit = {
-                if (o != null && evento != null) {
-                    asignarEvento(repo.db, tx.id, o)
-                    if (categoryId != evento.categoryId) {
-                        repo.db.transactions().asignarEvento(tx.id, o.eventId, o.date, categoryId)
-                    }
+            when {
+                captura != null -> capturas.registrarConTx(captura, tx) {
+                    if (o != null) asignarEvento(repo.db, tx.id, o, categoryId)
                 }
-            }
-            if (captura != null) {
-                capturas.registrarConTx(captura, tx, ademas = asignar)
-            } else if (o != null && evento != null) {
-                repo.db.withTransaction {
-                    repo.agregarTx(tx)
-                    asignar()
-                }
-            } else {
-                repo.agregarTx(tx)
+                o != null -> repo.agregarTxConEvento(tx, o, categoryId)
+                else -> repo.agregarTx(tx)
             }
             // El movimiento ya está guardado: si falla solo recordar la cuenta, se avisa y se sale igual (no reintentar).
             try {
