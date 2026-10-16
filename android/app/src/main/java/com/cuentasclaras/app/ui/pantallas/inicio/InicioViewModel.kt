@@ -2,10 +2,12 @@ package com.cuentasclaras.app.ui.pantallas.inicio
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cuentasclaras.app.capture.CapturaRepo
 import com.cuentasclaras.app.data.AparienciaRepo
 import com.cuentasclaras.app.data.CuentasRepo
 import com.cuentasclaras.app.data.Instantanea
 import com.cuentasclaras.app.data.ModoTema
+import com.cuentasclaras.app.data.db.CapturaEntity
 import com.cuentasclaras.app.domain.Account
 import com.cuentasclaras.app.domain.Category
 import com.cuentasclaras.app.domain.Currency
@@ -40,6 +42,7 @@ import kotlinx.coroutines.flow.stateIn
 class InicioViewModel(
     private val repo: CuentasRepo,
     private val apariencia: AparienciaRepo,
+    private val capturas: CapturaRepo,
 ) : ViewModel() {
     data class Estado(
         val cargado: Boolean = false,
@@ -61,6 +64,8 @@ class InicioViewModel(
         val presupuestos: List<EstadoPresupuesto> = emptyList(),
         /** Un cambio de moneda o de modo está en curso: sus controles se deshabilitan (restricción 9). */
         val guardando: Boolean = false,
+        /** Capturas del BNC sin registrar ni descartar, más recientes primero. */
+        val capturasPendientes: List<CapturaEntity> = emptyList(),
     )
 
     private val hoy = todayIso()
@@ -71,6 +76,7 @@ class InicioViewModel(
     val estado: StateFlow<Estado> = combine(repo.instantanea, mesVisto) { i, visto -> calcular(i, visto) }
         .flowOn(Dispatchers.Default)
         .combine(guardando) { e, g -> e.copy(guardando = g) }
+        .combine(capturas.pendientes) { e, p -> e.copy(capturasPendientes = p) }
         .stateIn(
             viewModelScope, SharingStarted.WhileSubscribed(5_000),
             Estado(hoy = hoy, mes = monthOf(hoy), mesActual = monthOf(hoy), primerMes = monthOf(hoy)),
@@ -115,6 +121,8 @@ class InicioViewModel(
     fun alternarMoneda() = escribir(ocupacion, "No se pudo cambiar la moneda") {
         repo.cambiarSettings { it.copy(viewCurrency = if (it.viewCurrency == Currency.USD) Currency.VES else Currency.USD) }
     }
+
+    fun descartarCaptura(id: String) = escribir(ocupacion, "No se pudo descartar") { capturas.descartar(id) }
 
     /** E21: fija el modo manual OPUESTO al que se ve ahora (`oscuroAhora` = `CuentasTema.oscuro`). */
     fun alternarModo(oscuroAhora: Boolean) = escribir(ocupacion, "No se pudo cambiar el modo") {

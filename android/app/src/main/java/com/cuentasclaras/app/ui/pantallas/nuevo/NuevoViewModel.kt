@@ -3,7 +3,11 @@ package com.cuentasclaras.app.ui.pantallas.nuevo
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.room.withTransaction
+import com.cuentasclaras.app.capture.CapturaRepo
 import com.cuentasclaras.app.data.CuentasRepo
+import com.cuentasclaras.app.data.db.EstadoCaptura
+import com.cuentasclaras.app.data.db.TipoCaptura
 import com.cuentasclaras.app.domain.Account
 import com.cuentasclaras.app.domain.Category
 import com.cuentasclaras.app.domain.CategoryKind
@@ -40,13 +44,19 @@ fun aplicarTecla(entrada: String, tecla: String): String = when (tecla) {
     }
 }
 
-class NuevoViewModel(private val repo: CuentasRepo, args: SavedStateHandle) : ViewModel() {
+class NuevoViewModel(
+    private val repo: CuentasRepo,
+    private val capturas: CapturaRepo,
+    args: SavedStateHandle,
+) : ViewModel() {
     data class Formulario(
         val modo: Modo,
         val entrada: String,
         val nota: String,
         val cuentaId: String?,
         val guardando: Boolean = false,
+        /** Captura del BNC que este formulario registra (null = movimiento manual). */
+        val capturaId: String? = null,
     )
 
     data class Estado(
@@ -66,6 +76,7 @@ class NuevoViewModel(private val repo: CuentasRepo, args: SavedStateHandle) : Vi
                 ?.toLongOrNull()?.let { montoEditable(it) } ?: "",
             nota = args.get<String>("nota") ?: "",
             cuentaId = args.get<String>("cuenta")?.takeIf { it.isNotEmpty() },
+            capturaId = args.get<String>("capturaId")?.takeIf { it.isNotEmpty() },
         ),
     )
 
@@ -87,10 +98,64 @@ class NuevoViewModel(private val repo: CuentasRepo, args: SavedStateHandle) : Vi
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Estado(formulario.value))
 
     init {
+        formulario.value.capturaId?.let { cargarCaptura(it) }
         // lastAccountId solo si la ruta no trajo cuenta (igual que NuevoPage.tsx).
         viewModelScope.launch {
             val ultima = repo.settings.first().lastAccountId
             formulario.update { it.copy(cuentaId = it.cuentaId ?: ultima) }
+        }
+    }
+
+    /**
+     * Prellena el formulario desde la captura. La pantalla lo llama cuando cambia el `capturaId` de la ruta:
+     * con `launchSingleTop`, tocar la notificación de la captura B estando en Nuevo con la A reutiliza este mismo
+     * ViewModel con argumentos nuevos, y el `SavedStateHandle` ya no se actualiza.
+     */
+    fun abrirCaptura(id: String?) {
+        if (id.isNullOrEmpty() || id == formulario.value.capturaId) return
+        formulario.update { it.copy(capturaId = id) }
+        cargarCaptura(id)
+    }
+
+    private fun cargarCaptura(id: String) {
+        viewModelScope.launch {
+            try {
+                val c = capturas.porId(id)
+                // Otra captura pudo abrirse mientras tanto: esa gana.
+                if (formulario.value.capturaId != id) return@launch
+                when {
+                    c == null -> Avisos.avisar("La captura ya no existe")
+                    c.estado != EstadoCaptura.PENDIENTE -> {
+                        Avisos.avisar(
+                            if (c.estado == EstadoCaptura.REGISTRADA) "Esta notificación ya se registró" else "Esta notificación se descartó",
+                        )
+                        _salir.send(Unit)
+                    }
+                    c.reconocida && c.montoMinor != null -> formulario.update {
+                        it.copy(
+                            modo = if (c.tipo == TipoCaptura.INGRESO) Modo.INGRESO else Modo.GASTO,
+                            entrada = montoEditable(c.montoMinor),
+                            nota = c.nota ?: "",
+                            cuentaId = "acc-bnc",
+                        )
+                    }
+                    else -> formulario.update { it.copy(modo = Modo.GASTO, entrada = "", nota = c.textoCrudo.take(200)) }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Avisos.avisar(e.message ?: "No se pudo leer la captura")
+            }
+        }
+    }
+
+    /** Descarta la captura de este formulario y sale a Inicio (D19: tras salir, `guardando` se queda en true). */
+    fun descartarCaptura() {
+        val id = formulario.value.capturaId ?: return
+        escribir(ocupacion, "No se pudo descartar", reponerAlExito = false) {
+            capturas.descartar(id)
+            Avisos.avisar("Notificación descartada")
+            _salir.trySend(Unit)
         }
     }
 
@@ -122,7 +187,16 @@ class NuevoViewModel(private val repo: CuentasRepo, args: SavedStateHandle) : Vi
                 dateIso = todayIso(),
                 note = f.nota.trim().takeIf { it.isNotEmpty() },
             )
-            repo.agregarTx(tx)
+            val captura = f.capturaId
+            if (captura == null) {
+                repo.agregarTx(tx)
+            } else {
+                // Todo-o-nada: el movimiento y la marca de la captura van juntos (nunca registrada sin tx).
+                repo.db.withTransaction {
+                    repo.agregarTx(tx)
+                    repo.db.capturas().marcarRegistrada(captura, tx.id)
+                }
+            }
             // El movimiento ya está guardado: si falla solo recordar la cuenta, se avisa y se sale igual (no reintentar).
             try {
                 repo.cambiarSettings { it.copy(lastAccountId = cuenta.id) }

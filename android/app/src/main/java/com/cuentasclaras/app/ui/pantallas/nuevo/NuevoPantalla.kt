@@ -27,15 +27,18 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.cuentasclaras.app.domain.Account
 import com.cuentasclaras.app.domain.Currency
 import com.cuentasclaras.app.domain.formatMoney
+import com.cuentasclaras.app.ui.componentes.Banner
 import com.cuentasclaras.app.ui.componentes.CampoTexto
 import com.cuentasclaras.app.ui.componentes.CategoriaGrid
 import com.cuentasclaras.app.ui.componentes.Chip
 import com.cuentasclaras.app.ui.componentes.Segmentado
 import com.cuentasclaras.app.ui.componentes.Selector
 import com.cuentasclaras.app.ui.componentes.Teclado
+import com.cuentasclaras.app.ui.componentes.TipoBanner
 import com.cuentasclaras.app.ui.nav.Rutas
 import com.cuentasclaras.app.ui.theme.CuentasTema
 import com.cuentasclaras.app.ui.vmCon
@@ -69,10 +72,14 @@ internal fun volverAInicio(nav: NavHostController) {
  */
 @Composable
 fun NuevoPantalla(nav: NavHostController) {
-    val vm = vmCon { c, h -> NuevoViewModel(c.repo, h) }
+    val vm = vmCon { c, h -> NuevoViewModel(c.repo, c.capturas, h) }
     val vmTransferir = vmCon { c, _ -> TransferirViewModel(c.repo) }
     val vmAjustar = vmCon { c, _ -> AjustarViewModel(c.repo) }
     val estado by vm.estado.collectAsStateWithLifecycle()
+    // Con launchSingleTop la entrada se reutiliza con argumentos nuevos: el prellenado sigue al `capturaId` de la ruta.
+    val entrada by nav.currentBackStackEntryAsState()
+    val capturaRuta = entrada?.arguments?.getString("capturaId")
+    LaunchedEffect(capturaRuta) { vm.abrirCaptura(capturaRuta) }
     LaunchedEffect(Unit) { vm.salir.collect { volverAInicio(nav) } }
     LaunchedEffect(Unit) { vmTransferir.salir.collect { volverAInicio(nav) } }
     LaunchedEffect(Unit) { vmAjustar.salir.collect { volverAInicio(nav) } }
@@ -88,6 +95,13 @@ fun NuevoPantalla(nav: NavHostController) {
             .padding(horizontal = e.m, vertical = e.s),
         verticalArrangement = Arrangement.spacedBy(e.s),
     ) {
+        if (f.capturaId != null) {
+            Banner(
+                texto = "Desde una notificación del BNC",
+                tipo = TipoBanner.OK,
+                accion = { Chip("Descartar", onClick = vm::descartarCaptura, enabled = !f.guardando) },
+            )
+        }
         Segmentado(
             opciones = listOf("Gasto", "Ingreso", "Transferir", "Ajustar"),
             seleccion = f.modo.ordinal,
