@@ -137,7 +137,7 @@ class MovimientosViewModel(private val repo: CuentasRepo, args: SavedStateHandle
             cuentas = i.cuentas,
             categorias = i.categorias,
             eventos = i.eventos,
-            txsAsignadas = i.txs.filter { it.eventId != null },
+            txsAsignadas = i.txs.filter { !it.eventId.isNullOrEmpty() },
             residuosEditandoGrupo = u.editandoGrupo?.let { g ->
                 residuosDeGrupo(i.txs.filter { it.groupId == g.id }, i.cuentas)
             } ?: emptyList(),
@@ -188,7 +188,8 @@ class MovimientosViewModel(private val repo: CuentasRepo, args: SavedStateHandle
         val categoriaNueva = categoryId?.takeIf { it.isNotEmpty() }
         val eventId = original.eventId
         val eventDate = original.eventDate
-        val ocurrenciaOriginal = if (eventId != null && eventDate != null) Ocurrencia(eventId, eventDate) else null
+        val ocurrenciaOriginal =
+            if (!eventId.isNullOrEmpty() && eventDate != null) Ocurrencia(eventId, eventDate) else null
         val cambiaEvento = montoNuevo != null && ocurrencia != ocurrenciaOriginal
         escribir(
             ocupacion,

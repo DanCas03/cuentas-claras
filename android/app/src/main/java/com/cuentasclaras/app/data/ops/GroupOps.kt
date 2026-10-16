@@ -13,7 +13,7 @@ private suspend fun validarAgrupables(db: CuentasDb, txIds: List<String>) {
     require(txs.size == txIds.distinct().size) { "Algún movimiento ya no existe" }
     for (t in txs) {
         require(t.type == TxType.INCOME || t.type == TxType.EXPENSE) { "Solo se agrupan gastos e ingresos" }
-        require(t.groupId == null) { "Algún movimiento ya pertenece a un grupo" }
+        require(t.groupId.isNullOrEmpty()) { "Algún movimiento ya pertenece a un grupo" }
     }
 }
 
@@ -49,7 +49,11 @@ suspend fun anadirAGrupo(db: CuentasDb, groupId: String, txIds: List<String>) {
 /** Saca movimientos de sus grupos; un grupo que baja de 2 miembros se disuelve. */
 suspend fun quitarDeGrupo(db: CuentasDb, txIds: List<String>) {
     db.withTransaction {
-        val gruposTocados = db.transactions().porIds(txIds).mapNotNull { it.groupId }.distinct()
+        // `groupId` vacío = sin grupo (como `esAgrupable` y el `!t.groupId` de la web).
+        val gruposTocados = db.transactions().porIds(txIds)
+            .mapNotNull { it.groupId }
+            .filter { it.isNotEmpty() }
+            .distinct()
         db.transactions().limpiarGrupo(txIds)
         for (gid in gruposTocados) {
             val restantes = db.transactions().idsDelGrupo(gid)
