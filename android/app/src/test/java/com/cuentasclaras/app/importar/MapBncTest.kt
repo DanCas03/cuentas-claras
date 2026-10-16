@@ -1,6 +1,7 @@
 package com.cuentasclaras.app.importar
 
 import com.cuentasclaras.app.data.db.ReferenciaCapturada
+import com.cuentasclaras.app.data.db.TipoCaptura
 import com.cuentasclaras.app.domain.Category
 import com.cuentasclaras.app.domain.CategoryKind
 import com.cuentasclaras.app.domain.Rule
@@ -52,9 +53,9 @@ class MapBncTest {
 
     @Test fun `fila ya registrada por captura aunque cambien los ceros, pero no su comision`() {
         val d = mapear(capturadas = listOf(
-            ReferenciaCapturada("0100000007", 150000),   // abono pago móvil, ref con un cero de más
-            ReferenciaCapturada("00100000004", 120000),  // cargo de 1.200,00; su comisión (3,60) comparte ref
-            ReferenciaCapturada("0", 10),                // ref "0" y el monto de la fila de 0,10: nunca coincide
+            ReferenciaCapturada("0100000007", 150000, TipoCaptura.INGRESO),   // abono pago móvil, ref con un cero de más
+            ReferenciaCapturada("00100000004", 120000, TipoCaptura.GASTO),    // cargo de 1.200,00; su comisión (3,60) comparte ref
+            ReferenciaCapturada("0", 10, TipoCaptura.GASTO),                  // ref "0" y el monto de la fila de 0,10: nunca coincide
         ))
         assertEquals(MOTIVO_POR_CAPTURA, d[0].motivoDuplicado)
         assertEquals(true, d[0].duplicate)
@@ -65,6 +66,31 @@ class MapBncTest {
         assertEquals(false, comision.duplicate)
         assertNull(comision.motivoDuplicado)
         assertEquals(false, d.first { it.tx.amountMinor == 10L }.duplicate)
+    }
+
+    @Test fun `un reverso con misma referencia y monto pero sentido opuesto no sale duplicado`() {
+        val cargo = rows.first { it.referencia == "100000004" && it.amountMinor == -120000L }
+        val reverso = cargo.copy(date = "2026-06-24", time = "09:00:00.000", amountMinor = 120000L)
+        val d = mapBncRows(listOf(cargo, reverso), "acc-bnc", emptySet(), reglas, categorias,
+            listOf(ReferenciaCapturada("100000004", 120000, TipoCaptura.GASTO)))
+        assertEquals(true, d[0].duplicate)
+        assertEquals(MOTIVO_POR_CAPTURA, d[0].motivoDuplicado)
+        assertEquals(false, d[1].duplicate)
+        assertNull(d[1].motivoDuplicado)
+    }
+
+    @Test fun `una sola captura marca como mucho una fila de dos identicas`() {
+        val cargo = rows.first { it.referencia == "100000004" && it.amountMinor == -120000L }
+        val gemela = cargo.copy(time = "08:00:06.000")
+        val d = mapBncRows(listOf(cargo, gemela), "acc-bnc", emptySet(), reglas, categorias,
+            listOf(ReferenciaCapturada("100000004", 120000, TipoCaptura.GASTO)))
+        assertEquals(true, d[0].duplicate)
+        assertEquals(false, d[1].duplicate)
+        val dos = mapBncRows(listOf(cargo, gemela), "acc-bnc", emptySet(), reglas, categorias, listOf(
+            ReferenciaCapturada("100000004", 120000, TipoCaptura.GASTO),
+            ReferenciaCapturada("0100000004", 120000, TipoCaptura.GASTO),
+        ))
+        assertEquals(listOf(true, true), dos.map { it.duplicate })
     }
 
     @Test fun `detectGap distingue los cuatro estados`() {

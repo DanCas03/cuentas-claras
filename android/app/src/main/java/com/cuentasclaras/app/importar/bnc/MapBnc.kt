@@ -1,6 +1,7 @@
 package com.cuentasclaras.app.importar.bnc
 
 import com.cuentasclaras.app.data.db.ReferenciaCapturada
+import com.cuentasclaras.app.data.db.TipoCaptura
 import com.cuentasclaras.app.domain.Category
 import com.cuentasclaras.app.domain.Rule
 import com.cuentasclaras.app.domain.Transaction
@@ -43,11 +44,14 @@ fun mapBncRows(
     val porReferencia = rows.filter { it.referencia != "" && it.referencia != "0" }.groupingBy { it.referencia }.eachCount()
     val idComisiones = categories.firstOrNull { it.id == "cat-comisiones" }?.id
     val idPagoMovil = categories.firstOrNull { it.id == "cat-pago-movil-recibido" }?.id
-    // D8: referencia normalizada + monto absoluto exacto (la comisión comparte referencia con su cargo).
-    val capturadasPorRef = capturadas
-        .filter { normalizarReferencia(it.referencia).isNotEmpty() }
-        .map { normalizarReferencia(it.referencia) to it.montoMinor }
-        .toSet()
+    // D8 + E24: referencia normalizada + monto absoluto + sentido. Cada captura marca como mucho una fila
+    // (multiset que se consume, en el orden de las filas): un reverso con el sentido opuesto no coincide.
+    val disponibles = mutableMapOf<Triple<String, Long, TipoCaptura>, Int>()
+    for (c in capturadas) {
+        val ref = normalizarReferencia(c.referencia)
+        if (ref.isEmpty()) continue
+        disponibles.merge(Triple(ref, c.montoMinor, c.tipo), 1, Int::plus)
+    }
 
     return rows.filter { it.amountMinor != 0L }.map { r ->
         val texto = "${r.tipOperacion} ${r.descripcion}"
@@ -61,7 +65,10 @@ fun mapBncRows(
         val importKey = bncImportKey(r)
         val refNorm = normalizarReferencia(r.referencia)
         val porImportKey = importKey in existingKeys
-        val porCaptura = refNorm.isNotEmpty() && (refNorm to abs(r.amountMinor)) in capturadasPorRef
+        val claveCaptura = Triple(refNorm, abs(r.amountMinor), if (esIngreso) TipoCaptura.INGRESO else TipoCaptura.GASTO)
+        // Una fila ya duplicada por importKey no consume captura: la captura queda para otra fila real.
+        val porCaptura = !porImportKey && refNorm.isNotEmpty() && (disponibles[claveCaptura] ?: 0) > 0
+        if (porCaptura) disponibles.merge(claveCaptura, -1, Int::plus)
         BncDraft(
             tx = Transaction(
                 id = nuevoId(),

@@ -141,8 +141,8 @@ interface CapturaDao {
     suspend fun contarRecientes(hash: String, desdeIso: String): Int
     /** E19: solo cuentan las registradas cuyo movimiento sigue existiendo (un respaldo restaurado puede dejar txId huérfanos). */
     @Query(
-        "SELECT referencia, montoMinor FROM capturas WHERE estado = 'REGISTRADA' AND referencia IS NOT NULL " +
-            "AND montoMinor IS NOT NULL AND txId IS NOT NULL AND EXISTS (SELECT 1 FROM transactions WHERE transactions.id = capturas.txId)",
+        "SELECT referencia, montoMinor, tipo FROM capturas WHERE estado = 'REGISTRADA' AND referencia IS NOT NULL " +
+            "AND montoMinor IS NOT NULL AND tipo IS NOT NULL AND txId IS NOT NULL AND EXISTS (SELECT 1 FROM transactions WHERE transactions.id = capturas.txId)",
     )
     suspend fun registradas(): List<ReferenciaCapturada>
     @Insert suspend fun insertar(fila: CapturaEntity)
@@ -151,4 +151,4 @@ interface CapturaDao {
 }
 
 /** Proyección para la deduplicación captura ↔ import (D8). */
-data class ReferenciaCapturada(val referencia: String, val montoMinor: Long)
+data class ReferenciaCapturada(val referencia: String, val montoMinor: Long, val tipo: TipoCaptura)

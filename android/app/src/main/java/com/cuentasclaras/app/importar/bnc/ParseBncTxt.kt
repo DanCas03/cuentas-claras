@@ -31,7 +31,7 @@ fun parseBncTxt(text: String): BncParseResult {
     val rows = mutableListOf<BncRow>()
     val unparsed = mutableListOf<BncUnparsed>()
 
-    text.removePrefix("﻿").split(SALTO).forEachIndexed { idx, linea ->
+    text.removePrefix("\uFEFF").split(SALTO).forEachIndexed { idx, linea ->
         val lineNumber = idx + 1
         val raw = linea.trimEnd()
         if (raw.isBlank()) return@forEachIndexed
