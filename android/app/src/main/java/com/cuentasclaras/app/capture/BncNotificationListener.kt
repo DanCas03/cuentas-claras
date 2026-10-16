@@ -12,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import java.time.Instant
 
 /** Texto estable de una notificación (E29): título + cuerpo, donde el cuerpo es BIG_TEXT si existe
  *  y si no TEXT. Así una reemisión con o sin BIG_TEXT produce el mismo hash. */
@@ -46,6 +47,15 @@ class BncNotificationListener : NotificationListenerService() {
         container.estadoListener.marcarEnlazado(true)
         Log.i("CuentasClaras", "Listener conectado")
         conLog("No se pudo guardar el latido") { container.estadoListener.latido() }
+        // D4: los avisos del BNC que llegaron con el listener caído siguen en la cortina; se capturan ahora por el
+        // mismo camino que onNotificationPosted. Los ya capturados no se duplican: `registrar` deduplica por el hash
+        // del texto en las 24 h anteriores a `ahora`, y aquí `ahora` es la hora en que se publicó la notificación.
+        conLog("No se pudieron revisar las notificaciones activas") {
+            for (sbn in activeNotifications.orEmpty()) {
+                val texto = textoCapturable(sbn) ?: continue
+                capturar(texto, Instant.ofEpochMilli(sbn.postTime))
+            }
+        }
     }
 
     override fun onListenerDisconnected() {
@@ -61,24 +71,31 @@ class BncNotificationListener : NotificationListenerService() {
                 ultimoLatidoMs = ahora
                 conLog("No se pudo guardar el latido") { container.estadoListener.latido() }
             }
-            if (sbn.packageName !in paquetesCapturables()) return
-            // Resúmenes de grupo y notificaciones en curso (progreso, sesión) no son movimientos: sin esto
-            // crearían capturas «sin reconocer».
-            if ((sbn.notification.flags and NO_SON_MOVIMIENTOS) != 0) return
-            val texto = textoDeNotificacion(sbn.notification.extras)
-            if (texto.isBlank()) return
-            scope.launch {
-                try {
-                    val captura = container.capturas.registrar(texto) ?: return@launch
-                    Notificador.publicar(this@BncNotificationListener, captura)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    Log.w("CuentasClaras", "No se pudo guardar la captura", e)
-                }
-            }
+            val texto = textoCapturable(sbn) ?: return
+            scope.launch { capturar(texto, Instant.now()) }
         } catch (e: Exception) {
             Log.w("CuentasClaras", "Notificación ignorada por error", e)
+        }
+    }
+
+    /** Texto de `sbn` si es un movimiento que se captura; null si no (otro paquete, resumen, en curso o vacío). */
+    private fun textoCapturable(sbn: StatusBarNotification): String? {
+        if (sbn.packageName !in paquetesCapturables()) return null
+        // Resúmenes de grupo y notificaciones en curso (progreso, sesión) no son movimientos: sin esto
+        // crearían capturas «sin reconocer».
+        if ((sbn.notification.flags and NO_SON_MOVIMIENTOS) != 0) return null
+        return textoDeNotificacion(sbn.notification.extras).takeIf { it.isNotBlank() }
+    }
+
+    /** Guarda la captura (con su dedupe) y, si es nueva, publica la notificación propia. Los fallos van a logcat. */
+    private suspend fun capturar(texto: String, ahora: Instant) {
+        try {
+            val captura = container.capturas.registrar(texto, ahora) ?: return
+            Notificador.publicar(this, captura)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w("CuentasClaras", "No se pudo guardar la captura", e)
         }
     }
 
