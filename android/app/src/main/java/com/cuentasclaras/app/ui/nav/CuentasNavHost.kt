@@ -9,7 +9,6 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.cuentasclaras.app.ui.componentes.Proximamente
 import com.cuentasclaras.app.ui.pantallas.ajustes.AjustesPantalla
 import com.cuentasclaras.app.ui.pantallas.calendario.CalendarioPantalla
 import com.cuentasclaras.app.ui.pantallas.deudas.DeudasPantalla
@@ -17,6 +16,7 @@ import com.cuentasclaras.app.ui.pantallas.importar.ImportarPantalla
 import com.cuentasclaras.app.ui.pantallas.inicio.InicioPantalla
 import com.cuentasclaras.app.ui.pantallas.movimientos.MovimientosPantalla
 import com.cuentasclaras.app.ui.pantallas.nuevo.NuevoPantalla
+import com.cuentasclaras.app.ui.pantallas.permisos.PermisosPantalla
 import com.cuentasclaras.app.ui.theme.Movimiento
 
 /** Argumentos de texto opcionales de una ruta con parámetros de consulta (nulos si no vienen). */
@@ -45,6 +45,6 @@ fun CuentasNavHost(nav: NavHostController, modifier: Modifier = Modifier) {
         composable(Rutas.IMPORTAR) { ImportarPantalla(nav) }
         composable(Rutas.DEUDAS) { DeudasPantalla(nav) }
         composable(Rutas.CALENDARIO, arguments = argumentos(Rutas.ARGS_CALENDARIO)) { CalendarioPantalla(nav) }
-        composable(Rutas.PERMISOS) { Proximamente("Permisos de captura llega en la fase 3") }
+        composable(Rutas.PERMISOS) { PermisosPantalla(nav) }
     }
 }
