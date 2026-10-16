@@ -71,4 +71,9 @@ class CalendarTest {
         assertEquals(true, o.first { it.date == "2026-09-07" }.fueraDeRegla)
         assertEquals(false, quincena.fueraDeRegla)
     }
+
+    @Test fun `parseDias acepta NBSP y U+202F como separadores, como JS`() {
+        assertEquals(listOf(15, 31), parseDias("15\u00A031"))
+        assertEquals(listOf(5, 15), parseDias("5\u202F15"))
+    }
 }

@@ -30,7 +30,8 @@ import com.cuentasclaras.app.domain.primerDiaMes
 import com.cuentasclaras.app.domain.todayIso
 import com.cuentasclaras.app.domain.ultimoDiaMes
 import com.cuentasclaras.app.ui.Avisos
-import kotlinx.coroutines.CancellationException
+import com.cuentasclaras.app.ui.Ocupacion
+import com.cuentasclaras.app.ui.escribir
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -39,7 +40,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 
 enum class Repetir { ONCE, WEEKLY, MONTHLY, QUINCENAL, YEARLY }
 
@@ -127,26 +127,14 @@ class CalendarioViewModel(private val repo: CuentasRepo, args: SavedStateHandle)
     fun cerrarEditor() = ui.update { it.copy(editando = null) }
     fun cambiarBorrador(cambio: (BorradorEvento) -> BorradorEvento) = ui.update { u -> u.copy(editando = u.editando?.let(cambio)) }
 
-    /**
-     * Guard `guardando` ANTES de todo (restricción 9, E7). `alExito` corre tras escribir; si falla, nada se cierra
-     * y el aviso lleva `e.message`.
-     */
+    private val ocupacion = Ocupacion({ ui.value.guardando }) { g -> ui.update { it.copy(guardando = g) } }
+
+    /** Guard primero (restricción 9, E7) vía `escribir`; el aviso de éxito va tras `alExito` (la hoja ya cerrada). */
     private fun conGuard(exito: String, fallo: String, alExito: () -> Unit = {}, trabajo: suspend () -> Unit) {
-        if (ui.value.guardando) return
-        ui.update { it.copy(guardando = true) }
-        viewModelScope.launch {
-            try {
-                trabajo()
-                alExito()
-                Avisos.avisar(exito)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Avisos.avisar(e.message ?: fallo)
-            } finally {
-                ui.update { it.copy(guardando = false) }
-            }
-        }
+        escribir(ocupacion, fallo, alTerminar = {
+            alExito()
+            Avisos.avisar(exito)
+        }, trabajo = trabajo)
     }
 
     /** La hoja se cierra solo desde `alGuardar`, tras guardar con éxito; si falla queda abierta con lo escrito. */
@@ -174,21 +162,11 @@ class CalendarioViewModel(private val repo: CuentasRepo, args: SavedStateHandle)
 
     /** La UI confirma ANTES: «¿Eliminar «titulo»? N movimientos quedarán sin evento (conservan su categoría).» */
     fun eliminarEvento(id: String, alEliminar: () -> Unit) {
-        if (ui.value.guardando) return
-        ui.update { it.copy(guardando = true) }
-        viewModelScope.launch {
-            try {
-                val n = eliminarEventoOp(repo.db, id)
-                alEliminar()
-                Avisos.avisar(if (n > 0) "Evento eliminado · $n movimientos desasignados" else "Evento eliminado")
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Avisos.avisar(e.message ?: "No se pudo eliminar")
-            } finally {
-                ui.update { it.copy(guardando = false) }
-            }
-        }
+        var n = 0
+        escribir(ocupacion, "No se pudo eliminar", alTerminar = {
+            alEliminar()
+            Avisos.avisar(if (n > 0) "Evento eliminado · $n movimientos desasignados" else "Evento eliminado")
+        }) { n = eliminarEventoOp(repo.db, id) }
     }
 
     fun omitir(o: OcurrenciaVista) =
