@@ -5,6 +5,8 @@ import com.cuentasclaras.app.data.db.TipoCaptura
 import com.cuentasclaras.app.domain.Category
 import com.cuentasclaras.app.domain.CategoryKind
 import com.cuentasclaras.app.domain.Rule
+import com.cuentasclaras.app.domain.Transaction
+import com.cuentasclaras.app.domain.TxSource
 import com.cuentasclaras.app.domain.TxType
 import com.cuentasclaras.app.importar.bnc.GapStatus
 import com.cuentasclaras.app.importar.bnc.MOTIVO_POR_CAPTURA
@@ -13,6 +15,7 @@ import com.cuentasclaras.app.importar.bnc.bncImportKey
 import com.cuentasclaras.app.importar.bnc.detectGap
 import com.cuentasclaras.app.importar.bnc.mapBncRows
 import com.cuentasclaras.app.importar.bnc.parseBncTxt
+import com.cuentasclaras.app.importar.bnc.referenciaImportada
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -91,6 +94,20 @@ class MapBncTest {
             ReferenciaCapturada("0100000004", 120000, TipoCaptura.GASTO),
         ))
         assertEquals(listOf(true, true), dos.map { it.duplicate })
+    }
+
+    @Test fun `referenciaImportada saca la referencia normalizada del importKey aunque la hora lleve dos puntos`() {
+        val importada = Transaction(
+            "t1", TxType.INCOME, "acc-bnc", 150000, "2026-07-02", time = "16:20:30.900", source = TxSource.BNC,
+            importKey = "bnc:2026-07-02:0100000007:16:20:30.900:150000",
+        )
+        assertEquals("100000007", referenciaImportada(importada))
+        // Sin hora en el movimiento, la referencia es el primer campo tras la fecha.
+        assertEquals("100000007", referenciaImportada(importada.copy(time = null)))
+        // La clave real de una fila del TXT da su referencia.
+        assertEquals("100000007", referenciaImportada(mapear()[0].tx))
+        // Un movimiento manual (sin importKey del BNC) no tiene referencia importada.
+        assertNull(referenciaImportada(importada.copy(importKey = null)))
     }
 
     @Test fun `detectGap distingue los cuatro estados`() {

@@ -1,6 +1,9 @@
 package com.cuentasclaras.app.data
 
+import com.cuentasclaras.app.capture.CapturaRepo
+import com.cuentasclaras.app.capture.MENSAJE_CAPTURA_RESUELTA
 import com.cuentasclaras.app.data.db.CuentasDb
+import com.cuentasclaras.app.data.db.EstadoCaptura
 import com.cuentasclaras.app.data.db.toEntity
 import com.cuentasclaras.app.data.ops.ParcheCuentaBnc
 import com.cuentasclaras.app.data.ops.agruparTxs
@@ -27,7 +30,9 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
 class OpsTodoONadaTest {
@@ -113,5 +118,46 @@ class OpsTodoONadaTest {
         assertFailsWith<Exception> { eliminarEvento(db, "e1") }
         assertEquals("e1", db.transactions().porId("ing")?.eventId)
         assertEquals(1, db.calEvents().contar())
+    }
+
+    @Test fun `registrarConTx no deja el movimiento ni registra la captura si falla lo de ademas`() = runBlocking {
+        val resueltas = mutableListOf<String>()
+        val capturas = CapturaRepo(db) { resueltas += it }
+        val c = assertNotNull(capturas.registrar("BNC Pago movil recibido de prueba"))
+        val e = assertFailsWith<IllegalStateException> {
+            capturas.registrarConTx(c.id, tx("n1", importKey = null)) { error("falla en ademas") }
+        }
+        assertEquals("falla en ademas", e.message)
+        assertNull(db.transactions().porId("n1"))
+        assertEquals(EstadoCaptura.PENDIENTE, db.capturas().porId(c.id)?.estado)
+        assertTrue(resueltas.isEmpty())
+    }
+
+    @Test fun `registrarConTx con una captura ya registrada lanza y no inserta`() = runBlocking {
+        val capturas = CapturaRepo(db)
+        val c = assertNotNull(capturas.registrar("BNC Pago movil recibido de prueba"))
+        capturas.registrarConTx(c.id, tx("n1", importKey = null))
+        val e = assertFailsWith<IllegalStateException> { capturas.registrarConTx(c.id, tx("n2", importKey = null)) }
+        assertEquals(MENSAJE_CAPTURA_RESUELTA, e.message)
+        assertNull(db.transactions().porId("n2"))
+        assertEquals(1, db.transactions().contar())
+        assertEquals("n1", db.capturas().porId(c.id)?.txId)
+    }
+
+    @Test fun `actualizarTxConEvento con un evento inexistente no escribe nota ni fecha y conserva el grupo`() = runBlocking {
+        db.transactions().insertarTodas(listOf(tx("m1", TxType.INCOME, null), tx("m2", TxType.EXPENSE, null)).map { it.toEntity() })
+        val gid = agruparTxs(db, listOf("m1", "m2"), "leche")
+        val repo = CuentasRepo(db)
+        val e = assertFailsWith<IllegalArgumentException> {
+            repo.actualizarTxConEvento("m2", Ocurrencia("no-existe", "2026-09-15")) {
+                it.copy(note = "nota nueva", date = "2026-09-20", groupId = null)
+            }
+        }
+        assertEquals("El evento no existe", e.message)
+        val m2 = db.transactions().porId("m2")
+        assertNull(m2?.note)
+        assertEquals("2026-07-01", m2?.date)
+        assertEquals(gid, m2?.groupId)
+        assertNull(m2?.eventId)
     }
 }
