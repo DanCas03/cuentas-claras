@@ -26,8 +26,9 @@ import com.cuentasclaras.app.ui.theme.CuentasTema
 
 /**
  * Selector desplegable: `ExposedDropdownMenuBox` de Material 3 con un `TextField` de solo lectura, con el mismo
- * aspecto que `CampoTexto` (etiqueta encima, relleno de controles). `contentDescription` (E6, T31) sustituye a
- * la etiqueta como nombre accesible del campo cuando hace falta otro texto (p. ej. «Cuenta de origen»).
+ * aspecto que `CampoTexto` (etiqueta encima, relleno de controles). Sin `contentDescription` el campo lo nombra la
+ * etiqueta visible (tocarla abre el menú). `contentDescription` (E6, T31) solo cuando dos selectores comparten
+ * etiqueta y hace falta distinguirlos (p. ej. «Cuenta de origen»): debe empezar con la etiqueta.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,9 +43,8 @@ fun <T> Selector(
 ) {
     val c = CuentasTema.colores
     var abierto by remember { mutableStateOf(false) }
-    val nombreAccesible = contentDescription ?: etiqueta
     Column(modifier.fillMaxWidth()) {
-        EtiquetaCampo(etiqueta)
+        EtiquetaCampo(etiqueta) { abierto = true }
         ExposedDropdownMenuBox(expanded = abierto, onExpandedChange = { abierto = it }) {
             TextField(
                 value = seleccion?.let(texto) ?: "",
@@ -61,7 +61,13 @@ fun <T> Selector(
                     .fillMaxWidth()
                     .heightIn(min = ALTO_CAMPO)
                     .border(2.dp, if (abierto) c.primario else Color.Transparent, CuentasTema.formas.control)
-                    .semantics { this.contentDescription = nombreAccesible },
+                    .then(
+                        if (contentDescription != null) {
+                            Modifier.semantics { this.contentDescription = contentDescription }
+                        } else {
+                            Modifier
+                        },
+                    ),
             )
             ExposedDropdownMenu(
                 expanded = abierto,

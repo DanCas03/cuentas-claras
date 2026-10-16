@@ -2,6 +2,7 @@ package com.cuentasclaras.app.ui.componentes
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Column
@@ -19,10 +20,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -37,8 +37,9 @@ private val ANILLO_FOCO = 2.dp
 
 /**
  * Campo de texto con la etiqueta ENCIMA (nunca flotante). Relleno de controles (`borde`), sin línea inferior;
- * al enfocar aparece un anillo de 2 dp en `primario`. La etiqueta visible se oculta a la accesibilidad y pasa
- * como `contentDescription` del propio campo, así lectores de pantalla y `tocar "Etiqueta"` apuntan al campo.
+ * al enfocar aparece un anillo de 2 dp en `primario`. El campo editable NO lleva `contentDescription` (TalkBack
+ * lee su valor); lo nombra la etiqueta visible, que es un nodo propio y al tocarla enfoca el campo (así
+ * `tocar "Etiqueta"` de la verificación por adb lo alcanza).
  */
 @Composable
 fun CampoTexto(
@@ -60,8 +61,9 @@ fun CampoTexto(
         label = "anilloCampo",
     )
     val forma = CuentasTema.formas.control
+    val foco = remember { FocusRequester() }
     Column(modifier.fillMaxWidth()) {
-        EtiquetaCampo(etiqueta)
+        EtiquetaCampo(etiqueta) { foco.requestFocus() }
         TextField(
             value = valor,
             onValueChange = onCambio,
@@ -69,7 +71,7 @@ fun CampoTexto(
                 .fillMaxWidth()
                 .heightIn(min = ALTO_CAMPO)
                 .border(ANILLO_FOCO, anillo, forma)
-                .semantics { contentDescription = etiqueta },
+                .focusRequester(foco),
             textStyle = CuentasTema.tipografia.cuerpo,
             placeholder = if (placeholder.isNotEmpty()) {
                 { Text(placeholder, style = CuentasTema.tipografia.cuerpo) }
@@ -86,14 +88,19 @@ fun CampoTexto(
     }
 }
 
-/** Etiqueta visible encima de un campo; la accesibilidad la recibe el propio campo. */
+/**
+ * Etiqueta visible encima de un campo. Es un nodo accesible con su texto (nombra al campo y es lo que busca
+ * `tocar`); tocarla ejecuta `alTocar` (enfocar el campo, abrir el menú o el selector de fecha).
+ */
 @Composable
-internal fun EtiquetaCampo(etiqueta: String) {
+internal fun EtiquetaCampo(etiqueta: String, alTocar: () -> Unit) {
     Text(
         etiqueta,
         style = CuentasTema.tipografia.etiqueta,
         color = CuentasTema.colores.textoSecundario,
-        modifier = Modifier.padding(bottom = CuentasTema.espacios.xs + 2.dp).clearAndSetSemantics { },
+        modifier = Modifier
+            .padding(bottom = CuentasTema.espacios.xs + 2.dp)
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = alTocar),
     )
 }
 

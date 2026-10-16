@@ -34,6 +34,7 @@ private val LocalColores = staticCompositionLocalOf { paletaPorId(null, oscura =
 private val LocalTipografia = staticCompositionLocalOf { TipografiaSistema }
 private val LocalFormas = staticCompositionLocalOf { FormasCuentas }
 private val LocalEspacios = staticCompositionLocalOf { EspaciosCuentas }
+private val LocalOscuro = staticCompositionLocalOf { true }
 
 /**
  * Tema de la app (E20: ya no es único). Lee la apariencia guardada (modo + paleta oscura + paleta clara) del
@@ -75,6 +76,7 @@ fun CuentasTemaConPaleta(paleta: Paleta, content: @Composable () -> Unit) {
         LocalTipografia provides tipografia,
         LocalFormas provides FormasCuentas,
         LocalEspacios provides EspaciosCuentas,
+        LocalOscuro provides paleta.esOscura,
     ) {
         MaterialTheme(
             colorScheme = esquemaMaterial(paleta),
@@ -91,6 +93,9 @@ object CuentasTema {
     val tipografia: Tipografia @Composable @ReadOnlyComposable get() = LocalTipografia.current
     val formas: Formas @Composable @ReadOnlyComposable get() = LocalFormas.current
     val espacios: Espacios @Composable @ReadOnlyComposable get() = LocalEspacios.current
+
+    /** `true` si la paleta activa es oscura (p. ej. para el botón sol/luna de Inicio, E21). */
+    val oscuro: Boolean @Composable @ReadOnlyComposable get() = LocalOscuro.current
 }
 
 /** Íconos de la barra de estado y de navegación acordes al modo activo (barras transparentes, edge-to-edge). */
@@ -118,7 +123,8 @@ private fun esquemaMaterial(paleta: Paleta): ColorScheme {
         onPrimary = c.sobrePrimario,
         primaryContainer = contenedorPrimario,
         onPrimaryContainer = c.texto,
-        inversePrimary = c.primario,
+        // Acción del Snackbar sobre `inverseSurface` (= texto): `sobrePrimario` da ≥ 13,8:1 en las 11 paletas.
+        inversePrimary = c.sobrePrimario,
         secondary = c.primario,
         onSecondary = c.sobrePrimario,
         secondaryContainer = contenedorPrimario,

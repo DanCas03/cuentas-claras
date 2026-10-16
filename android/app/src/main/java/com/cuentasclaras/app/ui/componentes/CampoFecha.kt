@@ -54,7 +54,11 @@ private val FORMATO_FECHA: DateTimeFormatter =
 private fun fechaLegible(iso: String): String =
     runCatching { LocalDate.parse(iso).format(FORMATO_FECHA) }.getOrDefault(iso)
 
-/** Campo de fecha (`yyyy-mm-dd`) que abre el `DatePickerDialog` de Material 3. */
+/**
+ * Campo de fecha (`yyyy-mm-dd`) que abre el `DatePickerDialog` de Material 3. No es editable: su descripción
+ * accesible empieza con la etiqueta («Fecha: jueves 15 de octubre de 2026»). Tocar la etiqueta visible también
+ * abre el selector.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CampoFecha(etiqueta: String, iso: String, onCambio: (String) -> Unit, modifier: Modifier = Modifier) {
@@ -63,7 +67,7 @@ fun CampoFecha(etiqueta: String, iso: String, onCambio: (String) -> Unit, modifi
     var abierto by remember { mutableStateOf(false) }
     val legible = fechaLegible(iso)
     Column(modifier.fillMaxWidth()) {
-        EtiquetaCampo(etiqueta)
+        EtiquetaCampo(etiqueta) { abierto = true }
         Row(
             Modifier
                 .fillMaxWidth()

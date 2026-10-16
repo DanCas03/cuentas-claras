@@ -154,5 +154,7 @@ val PALETAS_CLARAS: List<Paleta> = PALETAS.filter { !it.esOscura }
 fun paletaPorId(id: String?, oscura: Boolean): Paleta {
     val grupo = if (oscura) PALETAS_OSCURAS else PALETAS_CLARAS
     val porDefecto = if (oscura) ID_PALETA_OSCURA_POR_DEFECTO else ID_PALETA_CLARA_POR_DEFECTO
-    return grupo.firstOrNull { it.id == id } ?: grupo.first { it.id == porDefecto }
+    return grupo.firstOrNull { it.id == id }
+        ?: grupo.firstOrNull { it.id == porDefecto }
+        ?: grupo.first()
 }

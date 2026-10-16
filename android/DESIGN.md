@@ -112,6 +112,11 @@ pone texto `primario` sobre relleno de controles**; un chip o segmento activo us
   la oscura se eligen **por separado**; el modo decide cuál se ve.
 - `CuentasTema { … }` lee todo eso solo; las pantallas nunca deciden colores por su cuenta. Para pintar una
   muestra de otra paleta (selector de Ajustes) se usa `CuentasTemaConPaleta(paleta) { … }`.
+- **`CuentasTema.oscuro: Boolean`** dice si la paleta activa es oscura (resultado del modo + sistema). Es la única
+  fuente para decidir algo según claro/oscuro (p. ej. el ícono sol/luna); nunca se repite la lógica de
+  `ModoTema` / `isSystemInDarkTheme()` en una pantalla.
+- Snackbar: `inverseSurface` = `texto`, `inverseOnSurface` = `fondo` y la acción (`inversePrimary`) =
+  `sobrePrimario` (≥ 13,8:1 en todas las paletas).
 - Barras del sistema transparentes (edge-to-edge) con íconos acordes al modo activo (`enableEdgeToEdge` con
   `SystemBarStyle.dark/light`). La ventana de arranque usa `@color/fondo_arranque` (`values` / `values-night`):
   con modo manual opuesto al del sistema hay un destello breve, aceptado.
@@ -161,6 +166,17 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
   `cifraGrande`. `POSITIVO` → «+» y `ingreso`; `NEGATIVO` → «−» (U+2212) y `gasto`; `NINGUNO` → `formatMoney` tal
   cual en `texto`. En filas de movimientos el monto va acompañado SIEMPRE de un ícono `ic_entra` / `ic_sale` (16 dp,
   mismo color): el color nunca es la única señal.
+  **Criterio único de signo (no mezclar):**
+  - `Monto(signo = POSITIVO/NEGATIVO)` → «+$120.00» / «−Bs 12,50» (signo delante de la moneda, U+2212): para
+    **flujos con dirección** que se pintan en `ingreso`/`gasto`: filas de movimientos, «Este mes» (ingresos /
+    gastos), totales de un día o de una categoría, cuotas de deudas. Se pasa el valor absoluto o el con signo; el
+    `signo` manda.
+  - `formatMoney` / `Monto(signo = NINGUNO)` → «Bs -12,50» / «-$5.00» (guion tras la moneda, en `texto`): para
+    **saldos y cantidades de estado** que pueden ser negativas por sí mismas (saldo de cuenta, patrimonio, saldo
+    del BNC, diferencia de un descuadre) y para **todo texto de campos y mensajes de formulario** (E3:
+    `NuevoPage.tsx:186`).
+  - Nunca se escribe un signo a mano delante de `formatMoney`: o se usa `Monto(signo)` o el formato de
+    `formatMoney` tal cual.
 - **Botones** (`BotonPrincipal`, `BotonSecundario`, `BotonPeligro`; `(texto, onClick, enabled = true, modifier)`):
   píldora, alto mínimo 52 dp, relleno horizontal 24 dp, texto `cuerpo` 600. Principal `primario`/`sobrePrimario`;
   secundario `borde`/`texto`; peligro `error`/`sobreError()`. Al presionar se hunden a escala 0,97 con resorte;
@@ -180,8 +196,17 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
 - **Campos** (`CampoTexto(valor, onCambio, etiqueta, placeholder = "", teclado = KeyboardType.Text, singleLine = true, minLines = 1)`
   — E6 —, `Selector<T>(etiqueta, opciones, seleccion, texto, onSeleccion, contentDescription: String? = null)` — E6 —,
   `CampoFecha(etiqueta, iso, onCambio)`): etiqueta ENCIMA en `etiqueta` + `textoSecundario` (nunca flotante), campo
-  de ≥ 56 dp con relleno `borde`, radio `control`, sin línea inferior; foco = anillo de 2 dp en `primario`. La
-  etiqueta pasa como `contentDescription` del campo. Error de validación: `Banner` de tipo `ERROR` justo debajo
+  de ≥ 56 dp con relleno `borde`, radio `control`, sin línea inferior; foco = anillo de 2 dp en `primario`.
+  **Accesibilidad de campos (criterio único):** la etiqueta visible es un nodo propio con su texto y nombra al
+  campo; tocarla enfoca el campo (`CampoTexto`), abre el menú (`Selector`) o el calendario (`CampoFecha`).
+  - Campos **editables** (`CampoTexto`): SIN `contentDescription` (TalkBack lee el valor que se escribe).
+  - Campos **no editables**: `CampoFecha` lleva una descripción que EMPIEZA con la etiqueta
+    («Fecha: jueves 15 de octubre de 2026»); `Selector` no lleva descripción salvo que dos selectores compartan
+    etiqueta, y entonces el `contentDescription` (E6) también empieza con ella («Cuenta de origen»).
+  - Verificación por adb: `tocar "Monto"` toca el texto visible de la etiqueta (coincidencia exacta de `text`)
+    y eso enfoca o abre el campo; después `escribir "120"`. Nunca se busca un campo por su valor.
+
+  Error de validación: `Banner` de tipo `ERROR` justo debajo
   del campo. `Selector` usa `ExposedDropdownMenuBox` con menú en `superficieElevada`. `CampoFecha` muestra
   «jueves 15 de octubre de 2026» con `ic_calendario` y abre el `DatePickerDialog` de Material 3; conversión con
   `isoDesdeDatePicker` / `millisParaDatePicker` (UTC, nunca la zona local).
