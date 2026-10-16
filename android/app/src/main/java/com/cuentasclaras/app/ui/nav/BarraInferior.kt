@@ -51,7 +51,6 @@ private val ICONO_MAS = 28.dp
 private val GROSOR_DIVISOR = 1.dp
 private val ANCHO_INDICADOR = 56.dp
 private val ALTO_INDICADOR = 32.dp
-private const val TINTE_ACTIVO = 0.14f
 
 /** `restaurar = false`: la pestaña siempre abre limpia (Movs sin filtros, E25), sin estado guardado. */
 private class Pestana(
@@ -147,9 +146,14 @@ private fun RowScope.ItemPestana(pestana: Pestana, activa: Boolean, onClick: () 
     val tinta by animateColorAsState(
         if (activa) c.primario else c.textoSecundario, Movimiento.transicion(Movimiento.MEDIO), label = "tintaPestana",
     )
+    // Píldora activa en `primario` sólido con el ícono en `sobrePrimario` (V9): ≥ 4,99:1 frente a la barra
+    // (`superficieElevada`) en todas las paletas; el tinte al 14 % se quedaba en 1,2-1,45:1 y no se veía.
     val indicador by animateColorAsState(
-        if (activa) c.primario.copy(alpha = TINTE_ACTIVO) else c.primario.copy(alpha = 0f),
+        if (activa) c.primario else c.primario.copy(alpha = 0f),
         Movimiento.transicion(Movimiento.MEDIO), label = "indicadorPestana",
+    )
+    val tintaIcono by animateColorAsState(
+        if (activa) c.sobrePrimario else c.textoSecundario, Movimiento.transicion(Movimiento.MEDIO), label = "iconoPestana",
     )
     Column(
         Modifier
@@ -163,7 +167,7 @@ private fun RowScope.ItemPestana(pestana: Pestana, activa: Boolean, onClick: () 
             Modifier.width(ANCHO_INDICADOR).height(ALTO_INDICADOR).clip(CuentasTema.formas.pildora).background(indicador),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(painterResource(pestana.icono), contentDescription = null, tint = tinta, modifier = Modifier.size(ICONO_PESTANA))
+            Icon(painterResource(pestana.icono), contentDescription = null, tint = tintaIcono, modifier = Modifier.size(ICONO_PESTANA))
         }
         Text(
             pestana.texto,

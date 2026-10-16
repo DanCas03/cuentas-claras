@@ -69,6 +69,7 @@ import com.cuentasclaras.app.domain.mesSiguiente
 import com.cuentasclaras.app.domain.monthOf
 import com.cuentasclaras.app.domain.nombreMes
 import com.cuentasclaras.app.domain.partsOf
+import com.cuentasclaras.app.ui.componentes.BotonChevron
 import com.cuentasclaras.app.ui.componentes.BotonPrincipal
 import com.cuentasclaras.app.ui.componentes.Chip
 import com.cuentasclaras.app.ui.componentes.FilaConFinal
@@ -81,7 +82,6 @@ import com.cuentasclaras.app.ui.vmCon
 /** Medidas de la cuadrícula y de las filas (DESIGN.md §4 y §6): celdas táctiles holgadas, puntos de 6 dp. */
 private val ALTO_CELDA = 56.dp
 private val LADO_PUNTO = 6.dp
-private val BOTON_MES = 48.dp
 private val CUADRO_ICONO = 44.dp
 private val EMOJI_FILA = 22.sp
 private val ICONO_CHEVRON = 24.dp
@@ -223,7 +223,7 @@ private fun NavegacionMes(
 ) {
     val c = CuentasTema.colores
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(CuentasTema.espacios.s)) {
-        BotonChevron("Mes anterior", girar = 90f, onClick = onAnterior)
+        BotonChevron("Mes anterior", haciaLaIzquierda = true, onClick = onAnterior)
         Text(
             nombreMes(mes),
             style = CuentasTema.tipografia.subtitulo,
@@ -231,28 +231,8 @@ private fun NavegacionMes(
             textAlign = TextAlign.Center,
             modifier = Modifier.weight(1f).semantics { heading() },
         )
-        BotonChevron("Mes siguiente", girar = -90f, onClick = onSiguiente)
+        BotonChevron("Mes siguiente", haciaLaIzquierda = false, onClick = onSiguiente)
         if (!esMesActual) Chip("hoy", onClick = onHoy)
-    }
-}
-
-/** Chevron de `ic_expandir` (apunta hacia abajo) girado para mirar a un lado. */
-@Composable
-private fun BotonChevron(descripcion: String, girar: Float, onClick: () -> Unit) {
-    Box(
-        Modifier
-            .size(BOTON_MES)
-            .clip(CircleShape)
-            .clickable(role = Role.Button, onClick = onClick)
-            .semantics { contentDescription = descripcion },
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            painterResource(R.drawable.ic_expandir),
-            contentDescription = null,
-            tint = CuentasTema.colores.texto,
-            modifier = Modifier.size(ICONO_CHEVRON).graphicsLayer { rotationZ = girar },
-        )
     }
 }
 

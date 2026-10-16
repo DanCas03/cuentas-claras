@@ -7,11 +7,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,16 +19,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -48,11 +43,13 @@ import com.cuentasclaras.app.domain.mesSiguiente
 import com.cuentasclaras.app.domain.nombreMes
 import com.cuentasclaras.app.ui.componentes.Banner
 import com.cuentasclaras.app.ui.componentes.Barras
+import com.cuentasclaras.app.ui.componentes.BotonChevron
 import com.cuentasclaras.app.ui.componentes.Chip
 import com.cuentasclaras.app.ui.componentes.CurvaAcumulada
 import com.cuentasclaras.app.ui.componentes.Dona
 import com.cuentasclaras.app.ui.componentes.FilaConFinal
 import com.cuentasclaras.app.ui.componentes.GrupoBarras
+import com.cuentasclaras.app.ui.componentes.LineaProgreso
 import com.cuentasclaras.app.ui.componentes.Monto
 import com.cuentasclaras.app.ui.componentes.SegmentoDona
 import com.cuentasclaras.app.ui.componentes.Signo
@@ -76,9 +73,6 @@ private val ICONO_FILA = 24.dp
 
 /** Tamaño del emoji dentro de su cuadro. */
 private val EMOJI_FILA = 20.sp
-
-/** Alto de las líneas de progreso (DESIGN.md §7: 6 dp, píldora). */
-private val ALTO_PROGRESO = 6.dp
 
 /** Umbral de aviso de un presupuesto (DESIGN.md §7: pasa del 80 %). */
 private const val UMBRAL_AVISO = 0.8
@@ -127,7 +121,7 @@ private fun TarjetaEsteMes(
             if (resumen.incomeMinor > 0L) {
                 val pct = Math.round(resumen.expenseMinor * 100.0 / resumen.incomeMinor)
                 Column(verticalArrangement = Arrangement.spacedBy(e.xs)) {
-                    LineaProgreso((resumen.expenseMinor.toDouble() / resumen.incomeMinor).toFloat(), c.gasto, c.fondo)
+                    LineaProgreso((resumen.expenseMinor.toDouble() / resumen.incomeMinor).toFloat(), c.gasto)
                     Text(
                         "Gastaste el $pct % de lo que entró",
                         style = t.etiqueta.copy(fontFeatureSettings = "tnum"),
@@ -196,12 +190,15 @@ private fun TarjetaEsteMes(
     }
 }
 
-/** «‹ Este mes ›» y el chip «hoy» fuera del mes actual. Los extremos quedan deshabilitados en el rango. */
+/**
+ * «‹ Este mes ›» con los mismos chevrons vectoriales que Calendario (`BotonChevron`) y el chip «hoy» fuera del mes
+ * actual. Los extremos quedan deshabilitados en el rango.
+ */
 @Composable
 private fun NavegadorMes(mes: String, mesActual: String, primerMes: String, onMes: (String) -> Unit) {
     val c = CuentasTema.colores
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        BotonMes("‹", "Mes anterior", habilitado = mes > primerMes) { onMes(mesAnterior(mes)) }
+        BotonChevron("Mes anterior", haciaLaIzquierda = true, onClick = { onMes(mesAnterior(mes)) }, habilitado = mes > primerMes)
         Text(
             if (mes == mesActual) "Este mes" else nombreMes(mes),
             style = CuentasTema.tipografia.subtitulo,
@@ -211,29 +208,10 @@ private fun NavegadorMes(mes: String, mesActual: String, primerMes: String, onMe
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f).semantics { heading() },
         )
-        BotonMes("›", "Mes siguiente", habilitado = mes < mesActual) { onMes(mesSiguiente(mes)) }
+        BotonChevron("Mes siguiente", haciaLaIzquierda = false, onClick = { onMes(mesSiguiente(mes)) }, habilitado = mes < mesActual)
         if (mes != mesActual) {
             Chip("hoy", onClick = { onMes(mesActual) }, modifier = Modifier.padding(start = CuentasTema.espacios.xs))
         }
-    }
-}
-
-@Composable
-private fun BotonMes(glifo: String, descripcion: String, habilitado: Boolean, onClick: () -> Unit) {
-    Box(
-        Modifier
-            .size(CuentasTema.medidas.tactilMinimo)
-            .clip(CircleShape)
-            .alpha(if (habilitado) 1f else 0.38f)
-            .clickable(enabled = habilitado, role = Role.Button, onClick = onClick)
-            .clearAndSetSemantics {
-                contentDescription = descripcion
-                role = Role.Button
-                if (!habilitado) disabled()
-            },
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(glifo, style = CuentasTema.tipografia.titulo, color = CuentasTema.colores.texto)
     }
 }
 
@@ -280,30 +258,6 @@ private fun Subtitulo(texto: String) {
         color = CuentasTema.colores.texto,
         modifier = Modifier.padding(top = CuentasTema.espacios.s).semantics { heading() },
     )
-}
-
-/** Línea de progreso de 6 dp en píldora; `fraccion` se acota a [0, 1]. */
-@Composable
-private fun LineaProgreso(fraccion: Float, relleno: Color, pista: Color, modifier: Modifier = Modifier) {
-    val pildora = CuentasTema.formas.pildora
-    Box(
-        modifier
-            .fillMaxWidth()
-            .height(ALTO_PROGRESO)
-            .clip(pildora)
-            .background(pista),
-    ) {
-        val f = fraccion.coerceIn(0f, 1f)
-        if (f > 0f) {
-            Box(
-                Modifier
-                    .fillMaxWidth(f)
-                    .height(ALTO_PROGRESO)
-                    .clip(pildora)
-                    .background(relleno),
-            )
-        }
-    }
 }
 
 /**
@@ -363,7 +317,7 @@ private fun FilaCategoria(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    LineaProgreso((if (total > 0L) minor.toDouble() / total else 0.0).toFloat(), color, c.fondo)
+                    LineaProgreso((if (total > 0L) minor.toDouble() / total else 0.0).toFloat(), color)
                 }
             },
             final = {
@@ -450,7 +404,8 @@ private fun TarjetaPresupuestos(presupuestos: List<EstadoPresupuesto>, mes: Stri
                         final = {
                             Text(
                                 "${formatMoney(p.gastoUsdMinor, Currency.USD)} / ${formatMoney(p.presupuestoMinor, Currency.USD)}",
-                                style = t.cuerpo.copy(fontFeatureSettings = "tnum"),
+                                // Cifra de dinero: `cifra` (DESIGN.md §3), el dato principal de la fila.
+                                style = t.cifra,
                                 color = if (excedido) c.gasto else c.texto,
                                 maxLines = 1,
                                 softWrap = false,
@@ -466,7 +421,6 @@ private fun TarjetaPresupuestos(presupuestos: List<EstadoPresupuesto>, mes: Stri
                             p.ratio > UMBRAL_AVISO -> c.aviso
                             else -> c.gasto
                         },
-                        pista = c.fondo,
                     )
                 }
             }

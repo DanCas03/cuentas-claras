@@ -24,11 +24,14 @@ los radios y la densidad son comunes a toda la app; **el color sale de paletas**
 - Inicio: rótulo «PATRIMONIO» (`etiqueta`, mayúsculas, tracking 0,12 em, `textoSecundario`), cifra en
   `cifraGrande` **sin caja**, equivalencia en la otra moneda en `cuerpo` + `textoSecundario`. Luego `Tarjeta`
   «Este mes» con dos columnas (ingresos / gastos, cada una con flecha y signo) y **la línea de progreso** debajo
-  (pista `fondo`, relleno `gasto`, 6 dp, píldora) con la frase «Gastaste el N % de lo que entró». Después la
+  (`LineaProgreso`: relleno `gasto` de 6 dp en píldora sobre una pista de 2 dp en `textoSecundario`, §7) con la
+  frase «Gastaste el N % de lo que entró». El navegador de mes usa `BotonChevron`, igual que Calendario. Después la
   `Tarjeta` de movimientos recientes.
 - Barra inferior (`ui/nav/BarraInferior.kt`): franja de 64 dp en `superficieElevada` con divisor de 1 dp en `borde`,
-  cuatro destinos (Inicio, Movs, Importar, Ajustes: ícono de 24 dp + texto `etiqueta`; activo en `primario` con
-  píldora de tinte `primario` al 14 % tras el ícono, así el estado no depende solo del color) y, al centro, el «+»
+  cuatro destinos (Inicio, Movs, Importar, Ajustes: ícono de 24 dp + texto `etiqueta`; activo: texto en `primario` y
+  píldora de 56×32 dp en `primario` sólido tras el ícono, con el ícono en `sobrePrimario`, así el estado no depende
+  solo del color del texto; la píldora da ≥ 4,99:1 frente a `superficieElevada` en todas las paletas, WCAG 1.4.11
+  pide ≥ 3:1 en indicadores de estado y el tinte al 14 % de antes se quedaba en 1,2-1,45:1) y, al centro, el «+»
   como disco de 56 dp en `primario` con el ícono en `sobrePrimario`. El disco sobresale 14 dp: esa franja de 14 dp
   es parte de la barra (transparente) para que el disco entero reciba toques y el contenido no quede tapado. Se
   reserva el alto con `navigationBarsPadding()`. Se oculta en `nuevo`.
@@ -206,6 +209,10 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
 - **`Chip(texto, onClick = null, activo = false, enabled = true, sugerido = false)`** (E6): píldora de 36 dp de alto
   visual (área táctil 48 dp si es tocable), texto `etiqueta` 600 con dígitos tabulares (`tnum`). Normal `borde`/`texto`; activo
   `primario`/`sobrePrimario`; sugerido: tinte `primario` al 14 % + contorno `primario` de 1 dp + `texto`.
+- **`LineaProgreso(fraccion, relleno)`**: la línea de «Este mes» y de los presupuestos (§7).
+- **`BotonChevron(descripcion, haciaLaIzquierda, onClick, habilitado = true)`**: flecha de mes anterior / siguiente
+  (Calendario y «Este mes»): `ic_expandir` girado ±90° en `texto`, objetivo circular de 48 dp, deshabilitado al
+  38 % y anunciado como tal. Nunca glifos «‹ ›».
 - **`Banner(texto, tipo: TipoBanner, accion = null)`** (`OK`, `AVISO`, `ERROR`): radio `control`, fondo con tinte del
   12 % del color del tipo (`ingreso`, `aviso`, `error`) sobre `superficieElevada`, ícono `ic_ok` / `ic_aviso` /
   `ic_error` en círculo de 32 dp con descripción «Correcto» / «Aviso» / «Error», texto `cuerpo` en `texto` con
@@ -291,14 +298,19 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
 
 - Dona de gastos por categoría: **usa los colores de categoría del usuario** (`colorDeCategoria`), grosor de anillo
   20 dp, separación entre porciones de 2° en el color `superficieElevada`; centro con el total en `cifra`.
-  Máximo 6 porciones + «Otras» en `textoSecundario`. Leyenda debajo, en filas con el color, el nombre y la línea
+  Máximo 7 porciones: 6 + «Otras» en `textoSecundario`, o 7 con nombre (con 7 categorías o menos se dibujan
+  todas; «Otras» solo aparece desde la octava). Leyenda debajo, en filas con el color, el nombre y la línea
   «monto · %»: dos columnas si en cada una cabe entera la línea más ancha, si no una sola; la línea de la cifra
-  nunca se corta ni se parte (solo el nombre puede acabar en «…»).
+  nunca se corta ni se parte (solo el nombre puede acabar en «…»). **Excepción a `cifra` (§3):** en las leyendas
+  la cifra va en `etiqueta` con `tnum` (`cifra` a 17 sp satura la leyenda); el total del centro sí va en `cifra`.
 - Series (barras/líneas de comparativa): serie actual en `primario`, serie anterior en `textoSecundario` al 60 %;
   ingreso/gasto siempre en `ingreso`/`gasto` con signo en la etiqueta. Líneas de 2,5 dp con extremos redondeados;
   barras con radio superior de 6 dp. Rejilla de 1 dp en `borde`, sin ejes pesados.
-- La línea de progreso de «Este mes» (§1) y la de presupuestos: pista `fondo` (o `borde` dentro de `superficie`),
-  6 dp, píldora; relleno `gasto` (o `aviso` cuando el presupuesto pasa del 80 %, `error` si se excede).
+- La línea de progreso de «Este mes» (§1) y la de presupuestos (`LineaProgreso`): relleno de 6 dp en píldora,
+  `gasto` (o `aviso` cuando el presupuesto pasa del 80 %, `error` si se excede), sobre una **pista de 2 dp en
+  `textoSecundario`** centrada que marca el 100 %. La pista da ≥ 4,5:1 frente a `superficieElevada` en todas las
+  paletas (WCAG 1.4.11; `fondo` o `borde` se quedaban en 1,1-1,4:1 dentro de una `Tarjeta`); el final del relleno
+  se distingue por el grosor, no solo por el color. En presupuestos, «gastado / tope» va en `cifra`.
 - Toda gráfica tiene alternativa en texto (`contentDescription` con el resumen) y estado vacío con `Vacio`.
 
 ## 8. Prohibiciones

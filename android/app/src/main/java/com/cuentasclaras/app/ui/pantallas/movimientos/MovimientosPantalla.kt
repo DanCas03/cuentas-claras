@@ -102,8 +102,8 @@ private val ALTO_CHIP_FILTRO = 36.dp
 private val EMOJI_FILA = 22.sp
 
 /**
- * Fila seleccionada: tinte `primario` al 14 % (el mismo del estado activo de la barra inferior, del chip sugerido y
- * de la paleta elegida en Ajustes) + contorno `primario` de 1 dp + visto en el cuadro del ícono (no solo color).
+ * Fila seleccionada: tinte `primario` al 14 % (el mismo del chip sugerido y de la paleta elegida en Ajustes) +
+ * contorno `primario` de 1 dp + visto en el cuadro del ícono (no solo color).
  */
 private const val TINTE_SELECCION = 0.14f
 private val TRAZO_SELECCION = 1.dp
