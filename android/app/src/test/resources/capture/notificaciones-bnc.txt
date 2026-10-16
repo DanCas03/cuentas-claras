@@ -1,0 +1,2 @@
+BNC Pago Movil Recibido Bs.1234,56 Telf.0412***9999 Dia:15/07/26-10:31 Ref:123456789 Llamar al 0500-2625000 si no realizo esta Operacion
+BNC Compra POS Bs.7890,12 Tarj:9999 Dia:15/07/26-12:45 Ref:654321 Llamar al 0500-2625000 si no realizo esta Operacion
