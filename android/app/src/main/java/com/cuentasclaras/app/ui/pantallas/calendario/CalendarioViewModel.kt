@@ -75,7 +75,11 @@ class CalendarioViewModel(private val repo: CuentasRepo, args: SavedStateHandle)
         val porFecha: Map<String, List<OcurrenciaVista>> = emptyMap(),
     )
 
-    private val hoy = todayIso()
+    /**
+     * Día de hoy (I1): este ViewModel puede vivir de un día para otro, así que la pantalla llama a [refrescarHoy] en
+     * cada ON_RESUME (vencidas, «hoy» marcado y el mes inicial no se quedan en ayer).
+     */
+    private val hoy = MutableStateFlow(todayIso())
 
     fun borradorNuevo(fecha: String) = BorradorEvento(
         original = null, id = nuevoId(), createdIso = ahoraIso(), titulo = "", kind = CategoryKind.EXPENSE,
@@ -105,19 +109,47 @@ class CalendarioViewModel(private val repo: CuentasRepo, args: SavedStateHandle)
 
     private val ui: MutableStateFlow<Ui> = run {
         val pedido = args.get<String>("dia")
-        val mes = monthOf(pedido ?: hoy)
-        val dia = pedido ?: if (hoy.startsWith(mes)) hoy else primerDiaMes(mes)
-        MutableStateFlow(Ui(mes, dia, editando = if (args.get<String>("nuevo") == "1") borradorNuevo(hoy) else null))
+        val h = hoy.value
+        val mes = monthOf(pedido ?: h)
+        val dia = pedido ?: if (h.startsWith(mes)) h else primerDiaMes(mes)
+        MutableStateFlow(Ui(mes, dia, editando = if (args.get<String>("nuevo") == "1") borradorNuevo(h) else null))
     }
 
     /** E18: las ocurrencias se derivan de las transacciones CRUDAS (`txs`), nunca de `txsEfectivas()`. */
-    val estado: StateFlow<Estado> = combine(ui, repo.instantanea) { u, i ->
-        val ocurrencias = ocurrenciasEnRango(i.eventos, i.txs, i.cuentas, primerDiaMes(u.mes), ultimoDiaMes(u.mes), hoy)
-        Estado(u, hoy, i, ocurrencias.groupBy { it.date })
-    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Estado(ui.value, hoy))
+    val estado: StateFlow<Estado> = combine(ui, repo.instantanea, hoy) { u, i, h ->
+        val ocurrencias = ocurrenciasEnRango(i.eventos, i.txs, i.cuentas, primerDiaMes(u.mes), ultimoDiaMes(u.mes), h)
+        Estado(u, h, i, ocurrencias.groupBy { it.date })
+    }.flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Estado(ui.value, hoy.value))
 
-    fun cambiarMes(m: String) = ui.update { it.copy(mes = m, diaSel = if (monthOf(hoy) == m) hoy else primerDiaMes(m)) }
-    fun irAHoy() = ui.update { it.copy(mes = monthOf(hoy), diaSel = hoy) }
+    fun cambiarMes(m: String) {
+        val h = hoy.value
+        ui.update { it.copy(mes = m, diaSel = if (monthOf(h) == m) h else primerDiaMes(m)) }
+    }
+
+    fun irAHoy() {
+        val h = hoy.value
+        ui.update { it.copy(mes = monthOf(h), diaSel = h) }
+    }
+
+    /**
+     * Toma de nuevo la fecha de hoy (ON_RESUME). Si se veía el mes actual de antes, pasa al nuevo mes actual (y el día
+     * elegido, si era hoy, al nuevo hoy); si Daniel miraba otro mes o había elegido otro día a propósito, se respeta.
+     */
+    fun refrescarHoy() {
+        val nuevo = todayIso()
+        val anterior = hoy.value
+        if (nuevo == anterior) return
+        ui.update { u ->
+            when {
+                u.mes != monthOf(anterior) -> u
+                monthOf(nuevo) != u.mes -> u.copy(mes = monthOf(nuevo), diaSel = nuevo)
+                u.diaSel == anterior -> u.copy(diaSel = nuevo)
+                else -> u
+            }
+        }
+        hoy.value = nuevo
+    }
     fun seleccionarDia(iso: String) = ui.update { it.copy(diaSel = iso) }
     fun nuevoEvento() = ui.update { it.copy(editando = borradorNuevo(it.diaSel)) }
     fun editarEvento(e: CalEvent) {

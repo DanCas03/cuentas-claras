@@ -60,6 +60,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.cuentasclaras.app.R
@@ -153,7 +155,9 @@ fun MovimientosPantalla(nav: NavHostController) {
             estado.eventos.associateBy { it.id },
         )
     }
-    val hoy = remember { todayIso() }
+    // I1: la pantalla puede seguir viva de un día para otro; al volver a la app se toma de nuevo la fecha de hoy.
+    var hoy by remember { mutableStateOf(todayIso()) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { hoy = todayIso() }
     var busqueda by rememberSaveable { mutableStateOf(filtro.q ?: "") }
 
     val opcionesCuenta = remember(estado.cuentas) { listOf("") + estado.cuentas.map { it.id } }

@@ -46,6 +46,8 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.cuentasclaras.app.R
@@ -102,6 +104,8 @@ private const val OPACIDAD_FUERA_DE_MES = 0.4f
 fun CalendarioPantalla(nav: NavHostController) {
     val vm = vmCon { c, h -> CalendarioViewModel(c.repo, h) }
     val estado by vm.estado.collectAsStateWithLifecycle()
+    // I1: al volver a la app (quizá al día siguiente, con el proceso vivo) se toma de nuevo la fecha de hoy.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { vm.refrescarHoy() }
     val ui = estado.ui
     val datos = estado.datos
     val e = CuentasTema.espacios

@@ -77,21 +77,25 @@ class InicioViewModel(
         val totalesSemana: TotalesEsperados = TotalesEsperados(emptyList(), emptyList()),
     )
 
-    private val hoy = todayIso()
-    private val mesVisto = MutableStateFlow(monthOf(hoy))
+    /**
+     * Día de hoy (I1): este ViewModel vive mientras viva el proceso, así que la pantalla llama a [refrescarHoy] en
+     * cada ON_RESUME para que «Este mes», «Esta semana», la tasa vigente y las vencidas no se queden en ayer.
+     */
+    private val hoy = MutableStateFlow(todayIso())
+    private val mesVisto = MutableStateFlow(monthOf(hoy.value))
     private val guardando = MutableStateFlow(false)
     private val ocupacion = Ocupacion({ guardando.value }) { guardando.value = it }
 
-    val estado: StateFlow<Estado> = combine(repo.instantanea, mesVisto) { i, visto -> calcular(i, visto) }
+    val estado: StateFlow<Estado> = combine(repo.instantanea, mesVisto, hoy) { i, visto, h -> calcular(i, visto, h) }
         .flowOn(Dispatchers.Default)
         .combine(guardando) { e, g -> e.copy(guardando = g) }
         .combine(capturas.pendientes) { e, p -> e.copy(capturasPendientes = p) }
         .stateIn(
             viewModelScope, SharingStarted.WhileSubscribed(5_000),
-            Estado(hoy = hoy, mes = monthOf(hoy), mesActual = monthOf(hoy), primerMes = monthOf(hoy)),
+            monthOf(hoy.value).let { m -> Estado(hoy = hoy.value, mes = m, mesActual = m, primerMes = m) },
         )
 
-    private fun calcular(i: Instantanea, visto: String): Estado {
+    private fun calcular(i: Instantanea, visto: String, hoy: String): Estado {
         val s = i.settings
         val tasa = effectiveRate(hoy, s.rateSource, i.tasas)
         val pendientes = i.deudas.filter { it.status == DebtStatus.PENDIENTE }
@@ -131,6 +135,18 @@ class InicioViewModel(
 
     fun irAMes(m: String) {
         mesVisto.value = m
+    }
+
+    /**
+     * Toma de nuevo la fecha de hoy (ON_RESUME). Si se estaba viendo el mes actual de antes, pasa al nuevo mes
+     * actual; si Daniel miraba otro mes a propósito, se respeta.
+     */
+    fun refrescarHoy() {
+        val nuevo = todayIso()
+        val anterior = hoy.value
+        if (nuevo == anterior) return
+        if (mesVisto.value == monthOf(anterior)) mesVisto.value = monthOf(nuevo)
+        hoy.value = nuevo
     }
 
     fun alternarMoneda() = escribir(ocupacion, "No se pudo cambiar la moneda") {

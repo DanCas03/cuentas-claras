@@ -45,6 +45,8 @@ import com.cuentasclaras.app.ui.vmCon
 fun InicioPantalla(nav: NavHostController) {
     val vm = vmCon { c, _ -> InicioViewModel(c.repo, c.apariencia, c.capturas) }
     val estado by vm.estado.collectAsStateWithLifecycle()
+    // I1: al volver a la app (quizá al día siguiente, con el proceso vivo) se toma de nuevo la fecha de hoy.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { vm.refrescarHoy() }
     // Mientras no hay datos no se pinta nada: sin parpadeos de cifras en cero.
     if (!estado.cargado) {
         Box(Modifier.fillMaxSize())
@@ -87,7 +89,9 @@ fun InicioPantalla(nav: NavHostController) {
             EsteMesSeccion(
                 estado,
                 onMes = vm::irAMes,
-                onCategoria = { id, mes -> nav.navigate(Rutas.movimientos(categoria = id, mes = mes)) },
+                onCategoria = { id, mes ->
+                    nav.navigate(Rutas.movimientos(categoria = id, mes = mes)) { launchSingleTop = true }
+                },
             )
         }
         item(key = "semana") { SemanaTarjeta(estado, nav) }
