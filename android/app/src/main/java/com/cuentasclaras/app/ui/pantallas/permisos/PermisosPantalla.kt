@@ -36,6 +36,7 @@ import com.cuentasclaras.app.capture.parseNotificacionBnc
 import com.cuentasclaras.app.data.db.TipoCaptura
 import com.cuentasclaras.app.domain.Currency
 import com.cuentasclaras.app.domain.formatMoney
+import com.cuentasclaras.app.ui.Avisos
 import com.cuentasclaras.app.ui.componentes.Banner
 import com.cuentasclaras.app.ui.componentes.BotonPrincipal
 import com.cuentasclaras.app.ui.componentes.BotonSecundario
@@ -76,6 +77,7 @@ fun PermisosPantalla(nav: NavHostController) {
     var acceso by remember { mutableStateOf(false) }
     var bateria by remember { mutableStateOf(false) }
     var avisos by remember { mutableStateOf(false) }
+    var faltaPermisoAvisos by remember { mutableStateOf(false) }
     var avisoAutoinicio by remember { mutableStateOf(false) }
     var avisoPermisoDenegado by remember { mutableStateOf(false) }
     var textoPrueba by remember { mutableStateOf("") }
@@ -85,6 +87,12 @@ fun PermisosPantalla(nav: NavHostController) {
         acceso = listener.accesoConcedido()
         bateria = PermisosXiaomi.bateriaSinRestricciones(ctx)
         avisos = PermisosXiaomi.notificacionesPermitidas(ctx)
+        faltaPermisoAvisos = PermisosXiaomi.faltaPermisoDeAvisos(ctx)
+    }
+
+    /** Las aperturas nunca lanzan: si ni el ajuste ni los detalles de la app se abren, se avisa. */
+    fun abrirOAvisar(abierto: Boolean) {
+        if (!abierto) Avisos.avisar("No se pudo abrir el ajuste. Búscalo en Ajustes → Apps → Cuentas Claras.")
     }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { releer() }
 
@@ -114,7 +122,7 @@ fun PermisosPantalla(nav: NavHostController) {
             ) {
                 BotonSecundario(
                     "Abrir ajuste",
-                    onClick = { PermisosXiaomi.abrirAccesoNotificaciones(ctx) },
+                    onClick = { abrirOAvisar(PermisosXiaomi.abrirAccesoNotificaciones(ctx)) },
                     modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Abrir ajuste de acceso a notificaciones" },
                 )
             }
@@ -127,7 +135,7 @@ fun PermisosPantalla(nav: NavHostController) {
             ) {
                 BotonSecundario(
                     "Abrir ajuste",
-                    onClick = { PermisosXiaomi.abrirBateria(ctx) },
+                    onClick = { abrirOAvisar(PermisosXiaomi.abrirBateria(ctx)) },
                     modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Abrir ajuste de batería" },
                 )
             }
@@ -163,17 +171,18 @@ fun PermisosPantalla(nav: NavHostController) {
             }
         }
         item(key = "avisos") {
-            val pideAndroid13 = Build.VERSION.SDK_INT >= 33
             Permiso(
                 titulo = "Permiso para avisarte",
                 estado = estadoDe(avisos),
-                ayuda = if (pideAndroid13) {
-                    "Para mostrar «Toca para registrar» cuando llegue un aviso del BNC."
-                } else {
-                    "En esta versión de Android no hace falta pedirlo."
+                ayuda = when {
+                    // Permiso concedido (o no hace falta) pero la app o el canal están apagados en el sistema.
+                    !avisos && !faltaPermisoAvisos ->
+                        "Las notificaciones de la app o el canal «Capturas BNC» están apagados. Actívalos en el ajuste."
+                    Build.VERSION.SDK_INT >= 33 -> "Para mostrar «Toca para registrar» cuando llegue un aviso del BNC."
+                    else -> "En esta versión de Android no hace falta pedirlo."
                 },
             ) {
-                if (pideAndroid13 && !avisos) {
+                if (faltaPermisoAvisos) {
                     BotonSecundario(
                         "Permitir avisos",
                         onClick = { pedirAvisos.launch(Manifest.permission.POST_NOTIFICATIONS) },
@@ -185,6 +194,12 @@ fun PermisosPantalla(nav: NavHostController) {
                             TipoBanner.AVISO,
                         )
                     }
+                } else if (!avisos) {
+                    BotonSecundario(
+                        "Abrir ajuste",
+                        onClick = { abrirOAvisar(PermisosXiaomi.abrirAjusteNotificaciones(ctx)) },
+                        modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Abrir ajuste de notificaciones de la app" },
+                    )
                 }
             }
         }
