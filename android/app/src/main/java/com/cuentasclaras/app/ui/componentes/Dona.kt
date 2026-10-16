@@ -47,6 +47,9 @@ private val GROSOR_DONA = 20.dp
 /** Separación entre porciones, en grados (DESIGN.md §7): deja ver el núcleo `superficieElevada` de la tarjeta. */
 private const val SEPARACION_GRADOS = 2f
 
+/** Barrido mínimo de toda porción > 0, en grados: una categoría diminuta no desaparece del anillo. */
+private const val BARRIDO_MINIMO = 1f
+
 /** Porciones con nombre como máximo; el resto se agrupa en «Otras» (DESIGN.md §7). */
 private const val MAX_PORCIONES = 6
 
@@ -104,10 +107,10 @@ fun Dona(
                 val lado = Size(size.width - grosor, size.height - grosor)
                 val hueco = if (visibles.size > 1) SEPARACION_GRADOS else 0f
                 var inicio = -90f
-                visibles.forEach { s ->
-                    val barrido = s.valor.toFloat() / total * 360f
-                    // Una porción diminuta no desaparece por la separación: conserva la mitad de su arco.
-                    val dibujado = if (barrido > hueco * 2f) barrido - hueco else barrido / 2f
+                barridos(visibles, total).forEachIndexed { i, barrido ->
+                    val s = visibles[i]
+                    // La separación sale de cada porción, pero ninguna se dibuja por debajo del barrido mínimo.
+                    val dibujado = maxOf(barrido - hueco, minOf(barrido, BARRIDO_MINIMO))
                     drawArc(
                         color = s.color,
                         startAngle = inicio + (barrido - dibujado) / 2f,
@@ -167,6 +170,20 @@ private fun ItemLeyenda(s: SegmentoDona, total: Long, formato: (Long) -> String,
             )
         }
     }
+}
+
+/**
+ * Grados de cada porción: proporcionales, con un mínimo de [BARRIDO_MINIMO] para toda porción > 0. Lo que ese
+ * mínimo añade se resta de la porción mayor, para que el total no pase de 360°.
+ */
+private fun barridos(visibles: List<SegmentoDona>, total: Long): List<Float> {
+    val grados = visibles.map { maxOf(it.valor.toFloat() / total * 360f, BARRIDO_MINIMO) }.toMutableList()
+    val exceso = grados.sum() - 360f
+    if (exceso > 0f) {
+        val mayor = grados.indices.maxBy { grados[it] }
+        grados[mayor] -= exceso
+    }
+    return grados
 }
 
 /** Porcentaje entero de `valor` sobre `total`, redondeado como `Math.round` de JS. */

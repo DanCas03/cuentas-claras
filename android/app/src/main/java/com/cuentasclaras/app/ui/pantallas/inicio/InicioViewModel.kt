@@ -20,6 +20,7 @@ import com.cuentasclaras.app.domain.TotalesDeudas
 import com.cuentasclaras.app.domain.budgetStatus
 import com.cuentasclaras.app.domain.debtTotals
 import com.cuentasclaras.app.domain.effectiveRate
+import com.cuentasclaras.app.domain.esFechaIso
 import com.cuentasclaras.app.domain.lastMonths
 import com.cuentasclaras.app.domain.monthOf
 import com.cuentasclaras.app.domain.monthSummary
@@ -81,14 +82,17 @@ class InicioViewModel(
         val pendientes = i.deudas.filter { it.status == DebtStatus.PENDIENTE }
         val p = patrimonio(i.cuentas, i.txs, tasa?.vesPerUsd, pendientes.filter { it.direction == DebtDirection.POR_PAGAR })
         val mesActual = monthOf(hoy)
-        val primerMes = i.txs.minOfOrNull { it.date }?.let { monthOf(it) } ?: mesActual
+        // Un respaldo puede traer una fecha corrupta (validateBackup no valida fechas): esas txs quedan fuera de
+        // las agregaciones para que Inicio, el destino inicial, no lance en cada arranque. Saldos: crudas.
+        val conFechaValida = i.txs.filter { esFechaIso(it.date) }
+        val primerMes = conFechaValida.minOfOrNull { it.date }?.let { monthOf(it) } ?: mesActual
         val mes = when {
             visto > mesActual -> mesActual
             visto < primerMes -> primerMes
             else -> visto
         }
         // txsEfectivas SOLO para agregaciones; el patrimonio de arriba usa las crudas (restricción 7).
-        val efectivas = txsEfectivas(i.txs, i.cuentas, i.grupos, i.categorias)
+        val efectivas = txsEfectivas(conFechaValida, i.cuentas, i.grupos, i.categorias)
         val resumen = monthSummary(efectivas, i.cuentas, mes, s.viewCurrency, i.tasas, s.rateSource)
         val comparativa = lastMonths(mes, 4)
             .map { monthSummary(efectivas, i.cuentas, it, s.viewCurrency, i.tasas, s.rateSource) }

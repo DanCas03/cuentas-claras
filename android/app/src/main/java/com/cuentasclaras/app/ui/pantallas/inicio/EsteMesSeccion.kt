@@ -148,14 +148,15 @@ private fun TarjetaEsteMes(
                 Text(
                     formatMoney(balance, estado.viewCurrency),
                     style = t.cifra,
-                    color = if (balance >= 0L) c.ingreso else c.gasto,
+                    // Cantidad de estado con formatMoney: en `texto` (DESIGN.md §4).
+                    color = c.texto,
                     maxLines = 1,
                 )
             }
             if (resumen.omitidasSinTasa > 0) {
                 Banner("${resumen.omitidasSinTasa} movimiento(s) sin tasa quedaron fuera del resumen.", TipoBanner.AVISO)
             }
-            if (resumen.byCategory.isEmpty()) {
+            if (resumen.expenseMinor <= 0L) {
                 Vacio("🧾", if (estado.mes == estado.mesActual) "Sin gastos este mes" else "Sin gastos en ${nombreMes(estado.mes)}")
             } else {
                 Rotulo("Gasto por categoría")
@@ -183,14 +184,15 @@ private fun TarjetaEsteMes(
                     resumen.byCategory.forEach { b ->
                         FilaCategoria(
                             categoria(b.categoryId), b.expenseMinor, resumen.expenseMinor, estado.viewCurrency, Signo.NEGATIVO,
-                            onClick = b.categoryId?.let { id -> { onCategoria(id, estado.mes) } },
+                            // Solo enlaza si la categoría existe (GraficasMes.tsx:58-60).
+                            onClick = categoria(b.categoryId)?.let { cat -> { onCategoria(cat.id, estado.mes) } },
                         )
                     }
                     if (resumen.incomeByCategory.isNotEmpty()) Subtitulo("Ingresos")
                     resumen.incomeByCategory.forEach { b ->
                         FilaCategoria(
                             categoria(b.categoryId), b.incomeMinor, resumen.incomeMinor, estado.viewCurrency, Signo.POSITIVO,
-                            onClick = b.categoryId?.let { id -> { onCategoria(id, estado.mes) } },
+                            onClick = categoria(b.categoryId)?.let { cat -> { onCategoria(cat.id, estado.mes) } },
                         )
                     }
                 }

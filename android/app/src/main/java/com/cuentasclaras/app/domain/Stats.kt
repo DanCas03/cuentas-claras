@@ -51,9 +51,10 @@ fun monthSummary(
             incomeMinor += minor
             porCategoriaIngreso[t.categoryId] = (porCategoriaIngreso[t.categoryId] ?: 0L) + minor
         } else {
+            // Una fecha corrupta (un respaldo sin validar) no tumba el resumen: esa tx se salta.
+            val dia = (if (t.date.length >= 10) t.date.substring(8, 10).toIntOrNull() else null) ?: continue
             expenseMinor += minor
             porCategoria[t.categoryId] = (porCategoria[t.categoryId] ?: 0L) + minor
-            val dia = t.date.substring(8, 10).toInt()
             porDia[dia] = (porDia[dia] ?: 0L) + minor
         }
     }
