@@ -6,12 +6,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cuentasclaras.app.backup.BackupFile
 import com.cuentasclaras.app.backup.Conteos
+import com.cuentasclaras.app.backup.RespaldoSeguridad
 import com.cuentasclaras.app.backup.ValidacionRespaldo
 import com.cuentasclaras.app.backup.backupFilename
 import com.cuentasclaras.app.backup.contarTablas
 import com.cuentasclaras.app.backup.exportBackup
 import com.cuentasclaras.app.backup.restaurarConPrevio
 import com.cuentasclaras.app.backup.leerRespaldo
+import com.cuentasclaras.app.backup.listarRespaldosPrevios
 import com.cuentasclaras.app.backup.respaldoAJson
 import com.cuentasclaras.app.data.db.CuentasDb
 import com.cuentasclaras.app.domain.todayIso
@@ -35,16 +37,37 @@ class RespaldoViewModel(private val db: CuentasDb, private val dirSeguridad: Fil
         val conteos: Conteos? = null,
         val pendiente: Pendiente? = null,
         val guardando: Boolean = false,
+        /** Respaldos de seguridad de `filesDir/respaldos/` (I3), del más reciente al más antiguo. */
+        val seguridad: List<RespaldoSeguridad> = emptyList(),
+        /** Respaldo de seguridad que se pide confirmar antes de restaurarlo. */
+        val seguridadPorRestaurar: RespaldoSeguridad? = null,
     )
 
     private val _estado = MutableStateFlow(Estado())
     val estado: StateFlow<Estado> = _estado.asStateFlow()
     private val ocupacion = Ocupacion({ _estado.value.guardando }) { g -> _estado.update { it.copy(guardando = g) } }
 
-    init { refrescarConteos() }
+    init {
+        refrescarConteos()
+        refrescarSeguridad()
+    }
 
     private fun refrescarConteos() {
         viewModelScope.launch { _estado.update { it.copy(conteos = contarTablas(db)) } }
+    }
+
+    /** Relee la carpeta de respaldos de seguridad: cada restauración añade uno (D16). */
+    private fun refrescarSeguridad() {
+        viewModelScope.launch {
+            try {
+                val lista = listarRespaldosPrevios(dirSeguridad)
+                _estado.update { it.copy(seguridad = lista) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Avisos.avisar("No se pudieron leer los respaldos de seguridad: ${e.message ?: ERROR_DESCONOCIDO}")
+            }
+        }
     }
 
     fun nombreSugerido(): String = backupFilename(todayIso())
@@ -72,7 +95,7 @@ class RespaldoViewModel(private val db: CuentasDb, private val dirSeguridad: Fil
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Avisos.avisar("No se pudo leer el archivo: ${e.message}")
+                Avisos.avisar("No se pudo leer el archivo: ${e.message ?: ERROR_DESCONOCIDO}")
                 return@launch
             }
             when (val v = withContext(Dispatchers.Default) { leerRespaldo(texto) }) {
@@ -99,8 +122,47 @@ class RespaldoViewModel(private val db: CuentasDb, private val dirSeguridad: Fil
                 _estado.update { it.copy(pendiente = null) }
                 Avisos.avisar("Datos restaurados ✓")
                 refrescarConteos()
+                refrescarSeguridad()
             },
             aviso = { "No se restauró nada: ${it.message ?: ERROR_DESCONOCIDO}" },
         ) { restaurarConPrevio(db, dirSeguridad, pendiente.backup) }
+    }
+
+    fun pedirRestaurarSeguridad(r: RespaldoSeguridad) = _estado.update { it.copy(seguridadPorRestaurar = r) }
+
+    fun cancelarSeguridad() {
+        if (!ocupacion.activa) _estado.update { it.copy(seguridadPorRestaurar = null) }
+    }
+
+    /**
+     * Restaura un respaldo de seguridad leyéndolo directamente de `filesDir` (sin selector SAF). Pasa por
+     * `restaurarConPrevio`, así que antes guarda otro previo de lo actual. Un respaldo inválido avisa con el mismo
+     * texto que el restore desde un archivo (`leerRespaldo`) y no cambia nada.
+     */
+    fun restaurarSeguridad() {
+        val r = _estado.value.seguridadPorRestaurar ?: return
+        var restaurado = false
+        escribir(
+            ocupacion,
+            "No se restauró nada",
+            alTerminar = {
+                _estado.update { it.copy(seguridadPorRestaurar = null) }
+                if (restaurado) {
+                    Avisos.avisar("Datos restaurados ✓")
+                    refrescarConteos()
+                    refrescarSeguridad()
+                }
+            },
+            aviso = { "No se restauró nada: ${it.message ?: ERROR_DESCONOCIDO}" },
+        ) {
+            val texto = withContext(Dispatchers.IO) { r.archivo.readText() }
+            when (val v = withContext(Dispatchers.Default) { leerRespaldo(texto) }) {
+                is ValidacionRespaldo.Error -> Avisos.avisar(v.mensaje)
+                is ValidacionRespaldo.Ok -> {
+                    restaurarConPrevio(db, dirSeguridad, v.backup)
+                    restaurado = true
+                }
+            }
+        }
     }
 }
