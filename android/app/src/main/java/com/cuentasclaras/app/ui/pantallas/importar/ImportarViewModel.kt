@@ -36,9 +36,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** El TXT del BNC siempre va a la cuenta bancaria en Bs del seed. */
 private const val MAX_BYTES = 1_000_000
 
+/** El TXT del BNC siempre va a la cuenta bancaria en Bs del seed. */
 const val CUENTA_BNC = "acc-bnc"
 
 data class DraftUI(
@@ -125,8 +125,15 @@ class ImportarViewModel(private val repo: CuentasRepo) : ViewModel() {
 
     /** Lee como mucho 1 MB (un export del BNC pesa unos KB); null si el archivo lo supera. */
     private fun leerConTope(entrada: java.io.InputStream): String? {
-        val bytes = entrada.readNBytes(MAX_BYTES + 1)
-        return if (bytes.size > MAX_BYTES) null else String(bytes, Charsets.UTF_8)
+        val salida = java.io.ByteArrayOutputStream()
+        val buf = ByteArray(8192)
+        while (true) {
+            val n = entrada.read(buf)
+            if (n < 0) break
+            salida.write(buf, 0, n)
+            if (salida.size() > MAX_BYTES) return null
+        }
+        return String(salida.toByteArray(), Charsets.UTF_8)
     }
 
     fun analizar() {
@@ -150,17 +157,18 @@ class ImportarViewModel(private val repo: CuentasRepo) : ViewModel() {
                 val cuenta = db.accounts().porId(CUENTA_BNC)
                 val mapeados = mapBncRows(r.rows, CUENTA_BNC, existentes, reglas, categorias, capturadas)
                 val vistas = mutableSetOf<String>()
+                val borradores = mapeados.map { d ->
+                    // Fila repetida dentro del mismo texto: solo la primera entra marcada.
+                    val repetida = !d.duplicate && !vistas.add(d.tx.importKey ?: d.tx.id)
+                    DraftUI(d, d.tx, incluir = !d.duplicate && !repetida, crearRegla = false, patron = d.tx.note ?: "", repetida = repetida)
+                }
                 ui.update {
                     it.copy(
                         sinResultados = false, ajusteHecho = false, resultado = r,
                         rotos = validateChain(r.rows),
                         gap = detectGap(r.rows, cuenta?.bncLastImportKey, cuenta?.bncLastSaldoMinor),
                         saldoTxt = newestRow(r.rows)?.saldoMinor,
-                        drafts = mapeados.map { d ->
-                            // Fila repetida dentro del mismo texto: solo la primera entra marcada.
-                            val repetida = !d.duplicate && !vistas.add(d.tx.importKey ?: d.tx.id)
-                            DraftUI(d, d.tx, incluir = !d.duplicate && !repetida, crearRegla = false, patron = d.tx.note ?: "", repetida = repetida)
-                        },
+                        drafts = borradores,
                         fase = FaseImport.PREVIA,
                     )
                 }
