@@ -113,19 +113,20 @@ fun BarraInferior(nav: NavHostController) {
  * `restaurar = false` (Movimientos, E25) la pestaña abre limpia: no restaura la copia con filtros de un
  * drill-down y tampoco usa `launchSingleTop`, que reutilizaría esa entrada con sus argumentos anteriores.
  *
- * Ciclo de vida: `popBackStack` solo limpia el `ViewModelStore` de una entrada si NO se guarda su estado.
- * Como Movimientos nunca se restaura, sacarla con `saveState = true` dejaría su ViewModel (con todas las
- * transacciones) retenido hasta destruir la Activity. Por eso, si en la pila hay una entrada de Movimientos,
- * el `popUpTo` no guarda estado; las demás pestañas siguen guardándose cuando no se sale de Movimientos.
+ * Ciclo de vida: `popBackStack` solo limpia el `ViewModelStore` de una entrada si NO se guarda su estado, y
+ * Movimientos nunca se restaura. Por eso, antes de navegar se sacan explícitamente todas las entradas de
+ * Movimientos sin guardar (`popBackStack(..., saveState = false)`, API pública; devuelve false si no hay).
+ * El `popUpTo` conserva siempre `saveState = true`, así las demás pestañas se guardan y restauran como en el
+ * patrón estándar (incluida una pestaña que estuviera bajo un drill-down de Movimientos).
  */
 private fun irAPestana(nav: NavHostController, destino: String, restaurar: Boolean) {
     val actual = nav.currentBackStackEntry
     val enMovimientos = actual?.destination?.route == Rutas.MOVIMIENTOS
     // Tocar «Movs» estando en Movimientos sin filtros no hace nada (como el mismo hash en la web).
     if (!restaurar && enMovimientos && Rutas.ARGS_MOVIMIENTOS.none { actual?.arguments?.getString(it) != null }) return
-    val hayMovimientosEnPila = nav.currentBackStack.value.any { it.destination.route == Rutas.MOVIMIENTOS }
+    while (nav.popBackStack(Rutas.MOVIMIENTOS, inclusive = true, saveState = false)) { /* una por entrada */ }
     nav.navigate(destino) {
-        popUpTo(nav.graph.findStartDestination().id) { saveState = !hayMovimientosEnPila }
+        popUpTo(nav.graph.findStartDestination().id) { saveState = true }
         launchSingleTop = restaurar
         restoreState = restaurar
     }
