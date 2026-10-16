@@ -4,10 +4,13 @@ import androidx.room.withTransaction
 import com.cuentasclaras.app.data.db.CuentasDb
 import com.cuentasclaras.app.data.db.toDomain
 import com.cuentasclaras.app.data.db.toEntity
+import com.cuentasclaras.app.data.ops.asignarEvento
+import com.cuentasclaras.app.data.ops.desasignarEvento
 import com.cuentasclaras.app.domain.Account
 import com.cuentasclaras.app.domain.CalEvent
 import com.cuentasclaras.app.domain.Category
 import com.cuentasclaras.app.domain.Debt
+import com.cuentasclaras.app.domain.Ocurrencia
 import com.cuentasclaras.app.domain.Rate
 import com.cuentasclaras.app.domain.Rule
 import com.cuentasclaras.app.domain.Settings
@@ -74,6 +77,18 @@ class CuentasRepo(val db: CuentasDb) {
             ?: throw IllegalStateException("El movimiento ya no existe")
         db.transactions().actualizar(cambios(actual).toEntity())
     }
+
+    /**
+     * Como [actualizarTxParcial], pero además cambia la asignación de evento con las ops de T6 en la MISMA transacción
+     * (restricción 8): `ocurrencia` no nula → `asignarEvento` (valida la dirección y copia la categoría del evento);
+     * null → `desasignarEvento` (conserva la categoría). `cambios` se aplica DESPUÉS sobre la fila releída, así la
+     * categoría elegida en el editor prevalece sobre la copiada del evento. Si algo falla no se escribe nada.
+     */
+    suspend fun actualizarTxConEvento(id: String, ocurrencia: Ocurrencia?, cambios: (Transaction) -> Transaction) =
+        db.withTransaction {
+            if (ocurrencia != null) asignarEvento(db, id, ocurrencia) else desasignarEvento(db, id)
+            actualizarTxParcial(id, cambios)
+        }
     suspend fun borrarTx(id: String) = db.transactions().borrar(id)
     suspend fun guardarCuenta(a: Account) = db.accounts().guardar(a.toEntity())
     suspend fun guardarCategoria(c: Category) = db.categories().guardar(c.toEntity())

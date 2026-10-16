@@ -38,8 +38,13 @@ import androidx.navigation.NavHostController
 import com.cuentasclaras.app.R
 import com.cuentasclaras.app.domain.Category
 import com.cuentasclaras.app.domain.CategoryKind
+import com.cuentasclaras.app.domain.CtxSugerencia
 import com.cuentasclaras.app.domain.Currency
+import com.cuentasclaras.app.domain.Ocurrencia
+import com.cuentasclaras.app.domain.TxParaSugerir
 import com.cuentasclaras.app.domain.TxType
+import com.cuentasclaras.app.domain.aplicarAsignacion
+import com.cuentasclaras.app.domain.comoKind
 import com.cuentasclaras.app.domain.formatMoney
 import com.cuentasclaras.app.importar.bnc.GapStatus
 import com.cuentasclaras.app.ui.componentes.Banner
@@ -48,6 +53,7 @@ import com.cuentasclaras.app.ui.componentes.BotonSecundario
 import com.cuentasclaras.app.ui.componentes.CampoTexto
 import com.cuentasclaras.app.ui.componentes.Chip
 import com.cuentasclaras.app.ui.componentes.Monto
+import com.cuentasclaras.app.ui.componentes.SelectEvento
 import com.cuentasclaras.app.ui.componentes.Selector
 import com.cuentasclaras.app.ui.componentes.Signo
 import com.cuentasclaras.app.ui.componentes.Tarjeta
@@ -101,6 +107,7 @@ fun ImportarPantalla(nav: NavHostController) {
                         indice = i,
                         d = d,
                         categorias = estado.categorias,
+                        ctxEventos = estado.ctxEventos,
                         onCambio = { cambio -> vm.actualizar(i, cambio) },
                     )
                 }
@@ -207,6 +214,7 @@ private fun FilaDraft(
     indice: Int,
     d: DraftUI,
     categorias: List<Category>,
+    ctxEventos: CtxSugerencia,
     onCambio: ((DraftUI) -> DraftUI) -> Unit,
 ) {
     val e = CuentasTema.espacios
@@ -252,6 +260,7 @@ private fun FilaDraft(
                     if (d.draft.pairRef != null) Chip("cargo+comisión")
                     if (duplicada) Chip(d.draft.motivoDuplicado ?: "ya importado")
                     if (d.repetida) Chip("Repetida en este texto")
+                    if (d.sugerido && d.tx.eventId != null) Chip("sugerido", sugerido = true)
                 }
                 if (!duplicada) {
                     val opciones = listOf("") + categorias.filter { (it.kind == CategoryKind.INCOME) == ingreso }.map { it.id }
@@ -263,6 +272,21 @@ private fun FilaDraft(
                         onSeleccion = { id -> onCambio { it.copy(tx = it.tx.copy(categoryId = id.ifEmpty { null })) } },
                         contentDescription = "Categoría fila $n",
                     )
+                    val kind = d.tx.type.comoKind()
+                    val eventId = d.tx.eventId
+                    val eventDate = d.tx.eventDate
+                    if (kind != null) {
+                        SelectEvento(
+                            tx = TxParaSugerir(kind, d.tx.date, d.tx.accountId, d.tx.amountMinor),
+                            actual = if (eventId != null && eventDate != null) Ocurrencia(eventId, eventDate) else null,
+                            ctx = ctxEventos,
+                            etiqueta = "Evento",
+                            descripcion = "Evento fila $n",
+                            onCambio = { o, evento ->
+                                onCambio { it.copy(tx = aplicarAsignacion(it.tx, o, evento), sugerido = false) }
+                            },
+                        )
+                    }
                     Casilla(
                         texto = "regla",
                         marcado = d.crearRegla,

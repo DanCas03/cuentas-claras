@@ -11,10 +11,13 @@ import com.cuentasclaras.app.data.ops.ParcheCuentaBnc
 import com.cuentasclaras.app.data.ops.commitImport
 import com.cuentasclaras.app.domain.Account
 import com.cuentasclaras.app.domain.Category
+import com.cuentasclaras.app.domain.CtxSugerencia
 import com.cuentasclaras.app.domain.Transaction
 import com.cuentasclaras.app.domain.accountBalanceMinor
+import com.cuentasclaras.app.domain.aplicarAsignacion
 import com.cuentasclaras.app.domain.buildAdjustment
 import com.cuentasclaras.app.domain.buildRule
+import com.cuentasclaras.app.domain.sugerirParaLote
 import com.cuentasclaras.app.domain.todayIso
 import com.cuentasclaras.app.importar.bnc.BncDraft
 import com.cuentasclaras.app.importar.bnc.BncParseResult
@@ -48,7 +51,7 @@ data class DraftUI(
     val incluir: Boolean,
     val crearRegla: Boolean,
     val patron: String,
-    /** true si sugerirParaLote propuso la asignación y el usuario no la cambió (Tarea 30). */
+    /** true si sugerirParaLote propuso la asignación y el usuario no la cambió (Tarea 31). */
     val sugerido: Boolean = false,
     /** Misma importKey que una fila anterior del mismo texto: nace desmarcada pero se puede marcar a mano. */
     val repetida: Boolean = false,
@@ -80,6 +83,8 @@ class ImportarViewModel(private val repo: CuentasRepo) : ViewModel() {
         val descuadre: Long? = null,
         val rawMismatch: Boolean = false,
         val hayTxsPosteriores: Boolean = false,
+        /** Contexto del selector «Evento» de cada fila: eventos y movimientos CRUDOS asignados (E18). */
+        val ctxEventos: CtxSugerencia = CtxSugerencia(emptyList(), emptyList(), emptyList(), emptyList(), ""),
     ) {
         val nuevas: List<DraftUI> get() = ui.drafts.filter { it.incluir && !it.draft.duplicate }
         val duplicadas: Int get() = ui.drafts.count { it.draft.duplicate }
@@ -88,8 +93,13 @@ class ImportarViewModel(private val repo: CuentasRepo) : ViewModel() {
     private val ui = MutableStateFlow(Ui())
     private val ocupacion = Ocupacion({ ui.value.guardando }) { g -> ui.update { it.copy(guardando = g) } }
 
+    /** Fecha de referencia de las ocurrencias, fijada al abrir la pantalla (`useState(todayIso)` de la web). */
+    private val hoy = todayIso()
+
     // Saldos con las transacciones CRUDAS (restricción 7): nunca txsEfectivas().
-    val estado: StateFlow<Estado> = combine(ui, repo.txs, repo.categorias, repo.cuentas) { u, txs, categorias, cuentas ->
+    val estado: StateFlow<Estado> = combine(
+        ui, repo.txs, repo.categorias, repo.cuentas, repo.eventos,
+    ) { u, txs, categorias, cuentas, eventos ->
         val saldoApp = accountBalanceMinor(CUENTA_BNC, txs)
         val rawMismatch = u.fase == FaseImport.HECHO && u.saldoTxt != null && saldoApp != u.saldoTxt
         // Si ya hay movimientos posteriores al último renglón del TXT, el delta ya no
@@ -100,6 +110,7 @@ class ImportarViewModel(private val repo: CuentasRepo) : ViewModel() {
             ui = u, categorias = categorias, cuentas = cuentas, saldoApp = saldoApp,
             descuadre = if (rawMismatch && !hayPosteriores) u.saldoTxt!! - saldoApp else null,
             rawMismatch = rawMismatch, hayTxsPosteriores = hayPosteriores,
+            ctxEventos = CtxSugerencia(eventos, txs.filter { it.eventId != null }, cuentas, categorias, hoy),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Estado())
 
@@ -157,13 +168,29 @@ class ImportarViewModel(private val repo: CuentasRepo) : ViewModel() {
             val cuenta = db.accounts().porId(CUENTA_BNC)
             val mapeados = mapBncRows(r.rows, CUENTA_BNC, existentes, reglas, categorias, capturadas)
             val vistas = mutableSetOf<String>()
-            val borradores = mapeados.map { d ->
+            val sinSugerencia = mapeados.map { d ->
                 // Fila repetida dentro del mismo texto: solo la primera entra marcada. TODA fila se anota en
                 // `vistas`, también la duplicada por captura: si no, la segunda copia de un pago ya capturado
                 // (export pegado dos veces) no se vería repetida y se importaría.
                 val nueva = vistas.add(d.tx.importKey ?: d.tx.id)
                 val repetida = !d.duplicate && !nueva
                 DraftUI(d, d.tx, incluir = !d.duplicate && !repetida, crearRegla = false, patron = d.tx.note ?: "", repetida = repetida)
+            }
+            // El evento sugerido GANA a la heurística por defecto y a la regla aprendida (decisión 5 del spec v3):
+            // aplicarAsignacion fija eventId/eventDate y la categoría del evento; el selector de categoría sigue
+            // visible y corregible antes de confirmar. Las filas duplicadas y repetidas no reciben sugerencia.
+            // E18: el contexto lleva las transacciones CRUDAS asignadas, nunca txsEfectivas().
+            val eventos = db.calEvents().todas().map { it.toDomain() }
+            val cuentas = db.accounts().todas().map { it.toDomain() }
+            val asignadas = db.transactions().todas().map { it.toDomain() }.filter { it.eventId != null }
+            val sugerencias = sugerirParaLote(
+                sinSugerencia.filter { !it.draft.duplicate && !it.repetida }.map { it.tx },
+                CtxSugerencia(eventos, asignadas, cuentas, categorias, hoy),
+            )
+            val borradores = sinSugerencia.map { d ->
+                val o = sugerencias[d.tx.id]
+                val evento = o?.let { oc -> eventos.firstOrNull { it.id == oc.eventId } }
+                if (o != null && evento != null) d.copy(tx = aplicarAsignacion(d.tx, o, evento), sugerido = true) else d
             }
             ui.update {
                 it.copy(

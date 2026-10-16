@@ -13,6 +13,7 @@ import com.cuentasclaras.app.domain.Account
 import com.cuentasclaras.app.domain.CalEvent
 import com.cuentasclaras.app.domain.Category
 import com.cuentasclaras.app.domain.FiltroMovs
+import com.cuentasclaras.app.domain.Ocurrencia
 import com.cuentasclaras.app.domain.ResiduoMoneda
 import com.cuentasclaras.app.domain.Transaction
 import com.cuentasclaras.app.domain.TxGroup
@@ -108,6 +109,8 @@ class MovimientosViewModel(private val repo: CuentasRepo, args: SavedStateHandle
         val cuentas: List<Account> = emptyList(),
         val categorias: List<Category> = emptyList(),
         val eventos: List<CalEvent> = emptyList(),
+        /** Movimientos CRUDOS con evento asignado (E18): contexto del selector «Evento» del editor. */
+        val txsAsignadas: List<Transaction> = emptyList(),
         /** Residuos del grupo que se está editando (con TODOS sus miembros, no solo los visibles por el filtro). */
         val residuosEditandoGrupo: List<ResiduoMoneda> = emptyList(),
         /** `true` hasta que llega la primera lectura de la base (evita parpadear el estado vacío). */
@@ -134,6 +137,7 @@ class MovimientosViewModel(private val repo: CuentasRepo, args: SavedStateHandle
             cuentas = i.cuentas,
             categorias = i.categorias,
             eventos = i.eventos,
+            txsAsignadas = i.txs.filter { it.eventId != null },
             residuosEditandoGrupo = u.editandoGrupo?.let { g ->
                 residuosDeGrupo(i.txs.filter { it.groupId == g.id }, i.cuentas)
             } ?: emptyList(),
@@ -158,8 +162,19 @@ class MovimientosViewModel(private val repo: CuentasRepo, args: SavedStateHandle
      * Como la web (`db.transactions.update(id, cambios)`), se escriben SOLO los campos editados sobre la fila ACTUAL,
      * releída dentro de una transacción: así un `groupId` asignado (o quitado) mientras el editor estaba abierto no se
      * revierte con la copia tomada al abrirlo.
+     *
+     * Gasto e ingreso: `ocurrencia` es la asignación de evento elegida en el editor (null = «Sin evento»). Solo si
+     * difiere de la que tenía el movimiento al abrirlo se asigna o desasigna, con las ops de T6 y en la misma
+     * transacción que el resto de cambios (restricción 8); desasignar conserva la categoría.
      */
-    fun guardarEdicion(original: Transaction, montoTxt: String, categoryId: String?, fecha: String, nota: String) {
+    fun guardarEdicion(
+        original: Transaction,
+        montoTxt: String,
+        categoryId: String?,
+        fecha: String,
+        nota: String,
+        ocurrencia: Ocurrencia?,
+    ) {
         if (ocupacion.activa) return
         if (!esFechaIso(fecha)) { Avisos.avisar("Fecha inválida"); return }
         val notaLimpia = nota.trim().takeIf { it.isNotEmpty() }
@@ -171,6 +186,10 @@ class MovimientosViewModel(private val repo: CuentasRepo, args: SavedStateHandle
         }
         val montoNuevo = monto
         val categoriaNueva = categoryId?.takeIf { it.isNotEmpty() }
+        val eventId = original.eventId
+        val eventDate = original.eventDate
+        val ocurrenciaOriginal = if (eventId != null && eventDate != null) Ocurrencia(eventId, eventDate) else null
+        val cambiaEvento = montoNuevo != null && ocurrencia != ocurrenciaOriginal
         escribir(
             ocupacion,
             "No se pudo actualizar",
@@ -179,10 +198,12 @@ class MovimientosViewModel(private val repo: CuentasRepo, args: SavedStateHandle
                 ui.update { it.copy(editando = null) }
             },
         ) {
-            repo.actualizarTxParcial(original.id) { actual ->
+            val cambios = { actual: Transaction ->
                 val cambiado = actual.copy(note = notaLimpia, date = fecha)
                 if (montoNuevo != null) cambiado.copy(amountMinor = montoNuevo, categoryId = categoriaNueva) else cambiado
             }
+            if (cambiaEvento) repo.actualizarTxConEvento(original.id, ocurrencia, cambios)
+            else repo.actualizarTxParcial(original.id, cambios)
         }
     }
 

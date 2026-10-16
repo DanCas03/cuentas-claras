@@ -354,9 +354,14 @@ fun MovimientosPantalla(nav: NavHostController) {
             EditorMovimiento(
                 tx = tx,
                 categorias = estado.categorias,
+                cuentas = estado.cuentas,
+                eventos = estado.eventos,
+                txsAsignadas = estado.txsAsignadas,
                 guardando = estado.ui.guardando,
                 onCerrar = vm::cerrarEditor,
-                onGuardar = { monto, categoria, fecha, nota -> vm.guardarEdicion(tx, monto, categoria, fecha, nota) },
+                onGuardar = { monto, categoria, fecha, nota, ocurrencia ->
+                    vm.guardarEdicion(tx, monto, categoria, fecha, nota, ocurrencia)
+                },
                 onEliminar = { vm.eliminar(tx) },
             )
         }
