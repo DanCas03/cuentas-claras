@@ -27,13 +27,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.cuentasclaras.app.R
 import com.cuentasclaras.app.domain.fechaLarga
+import com.cuentasclaras.app.ui.nav.Rutas
 import com.cuentasclaras.app.ui.theme.CuentasTema
 import com.cuentasclaras.app.ui.vmCon
 
 /** Lado mínimo del botón de modo: objetivo táctil de 48 dp (DESIGN.md §6). */
 private val BOTON_MODO = 48.dp
 
-/** Inicio: patrimonio, semana (provisional) y deudas. «Este mes» llega en la Tarea 14. */
+/** Inicio: patrimonio, semana (provisional), deudas y «Este mes» con su comparativa y presupuestos. */
 @Composable
 fun InicioPantalla(nav: NavHostController) {
     val vm = vmCon { c, _ -> InicioViewModel(c.repo, c.apariencia) }
@@ -53,7 +54,13 @@ fun InicioPantalla(nav: NavHostController) {
         item(key = "patrimonio") { PatrimonioTarjeta(estado, onAlternarMoneda = vm::alternarMoneda) }
         item(key = "semana") { SemanaTarjeta() }
         item(key = "deudas") { DeudasTarjeta(estado, nav) }
-        // Tarea 14: item(key = "este-mes") { EsteMesSeccion(estado, vm::irAMes) } (Este mes, Comparativa, Presupuestos).
+        item(key = "este-mes") {
+            EsteMesSeccion(
+                estado,
+                onMes = vm::irAMes,
+                onCategoria = { id, mes -> nav.navigate(Rutas.movimientos(categoria = id, mes = mes)) },
+            )
+        }
     }
 }
 
