@@ -101,7 +101,7 @@ fun ImportarPantalla(nav: NavHostController) {
             }
             FaseImport.PREVIA -> {
                 item(key = "resumen") { ResumenYAvisos(estado) }
-                itemsIndexed(u.drafts, key = { i, d -> d.tx.importKey ?: "${d.tx.id}-$i" }) { i, d ->
+                itemsIndexed(u.drafts, key = { i, d -> "$i:${d.tx.importKey ?: d.tx.id}" }) { i, d ->
                     FilaDraft(
                         indice = i,
                         d = d,
@@ -111,7 +111,7 @@ fun ImportarPantalla(nav: NavHostController) {
                 }
                 item(key = "pie") {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(e.s)) {
-                        BotonSecundario("Cancelar", onClick = vm::reiniciar, modifier = Modifier.weight(1f))
+                        BotonSecundario("Cancelar", onClick = vm::reiniciar, enabled = !u.guardando, modifier = Modifier.weight(1f))
                         BotonPrincipal(
                             "Confirmar (${estado.nuevas.size})",
                             onClick = vm::confirmar,
@@ -174,7 +174,7 @@ private fun ResumenYAvisos(estado: ImportarViewModel.Estado) {
     val cuenta = resultado?.meta?.let { " de la cuenta ${it.accountNumber.takeLast(4).padStart(8, '•')}" } ?: ""
     Column(verticalArrangement = Arrangement.spacedBy(e.s)) {
         Text(
-            "${u.drafts.size} movimientos en el archivo$cuenta",
+            "${u.drafts.size} movimientos en el archivo$cuenta.",
             style = CuentasTema.tipografia.subtitulo,
             color = CuentasTema.colores.texto,
         )
@@ -255,6 +255,7 @@ private fun FilaDraft(
                     )
                     if (d.draft.pairRef != null) Chip("cargo+comisión")
                     if (duplicada) Chip(d.draft.motivoDuplicado ?: "ya importado")
+                    if (d.repetida) Chip("Repetida en este texto")
                 }
                 if (!duplicada) {
                     val opciones = listOf("") + categorias.filter { (it.kind == CategoryKind.INCOME) == ingreso }.map { it.id }
@@ -343,6 +344,6 @@ private fun Hecho(estado: ImportarViewModel.Estado, onCrearAjuste: () -> Unit, o
                 accion = { BotonSecundario("Crear ajuste", onClick = onCrearAjuste, enabled = !u.guardando) },
             )
         }
-        BotonPrincipal("Importar otro archivo", onClick = onOtro, modifier = Modifier.fillMaxWidth())
+        BotonPrincipal("Importar otro archivo", onClick = onOtro, enabled = !u.guardando, modifier = Modifier.fillMaxWidth())
     }
 }

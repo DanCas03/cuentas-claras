@@ -37,6 +37,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /** El TXT del BNC siempre va a la cuenta bancaria en Bs del seed. */
+private const val MAX_BYTES = 1_000_000
+
 const val CUENTA_BNC = "acc-bnc"
 
 data class DraftUI(
@@ -47,6 +49,8 @@ data class DraftUI(
     val patron: String,
     /** true si sugerirParaLote propuso la asignación y el usuario no la cambió (Tarea 30). */
     val sugerido: Boolean = false,
+    /** Misma importKey que una fila anterior del mismo texto: nace desmarcada pero se puede marcar a mano. */
+    val repetida: Boolean = false,
 )
 
 enum class FaseImport { ENTRADA, PREVIA, HECHO }
@@ -104,7 +108,11 @@ class ImportarViewModel(private val repo: CuentasRepo) : ViewModel() {
             try {
                 val texto = withContext(Dispatchers.IO) {
                     val entrada = resolver.openInputStream(uri) ?: error("no se pudo abrir")
-                    entrada.bufferedReader().use { it.readText() }
+                    entrada.use { leerConTope(it) }
+                }
+                if (texto == null) {
+                    Avisos.avisar("El archivo es demasiado grande para ser un export del BNC (máximo 1 MB)")
+                    return@launch
                 }
                 ui.update { it.copy(texto = texto) }
             } catch (e: CancellationException) {
@@ -113,6 +121,12 @@ class ImportarViewModel(private val repo: CuentasRepo) : ViewModel() {
                 Avisos.avisar("No se pudo leer el archivo: ${e.message}")
             }
         }
+    }
+
+    /** Lee como mucho 1 MB (un export del BNC pesa unos KB); null si el archivo lo supera. */
+    private fun leerConTope(entrada: java.io.InputStream): String? {
+        val bytes = entrada.readNBytes(MAX_BYTES + 1)
+        return if (bytes.size > MAX_BYTES) null else String(bytes, Charsets.UTF_8)
     }
 
     fun analizar() {
@@ -135,13 +149,18 @@ class ImportarViewModel(private val repo: CuentasRepo) : ViewModel() {
                 val categorias = db.categories().todas().map { it.toDomain() }
                 val cuenta = db.accounts().porId(CUENTA_BNC)
                 val mapeados = mapBncRows(r.rows, CUENTA_BNC, existentes, reglas, categorias, capturadas)
+                val vistas = mutableSetOf<String>()
                 ui.update {
                     it.copy(
                         sinResultados = false, ajusteHecho = false, resultado = r,
                         rotos = validateChain(r.rows),
                         gap = detectGap(r.rows, cuenta?.bncLastImportKey, cuenta?.bncLastSaldoMinor),
                         saldoTxt = newestRow(r.rows)?.saldoMinor,
-                        drafts = mapeados.map { d -> DraftUI(d, d.tx, incluir = !d.duplicate, crearRegla = false, patron = d.tx.note ?: "") },
+                        drafts = mapeados.map { d ->
+                            // Fila repetida dentro del mismo texto: solo la primera entra marcada.
+                            val repetida = !d.duplicate && !vistas.add(d.tx.importKey ?: d.tx.id)
+                            DraftUI(d, d.tx, incluir = !d.duplicate && !repetida, crearRegla = false, patron = d.tx.note ?: "", repetida = repetida)
+                        },
                         fase = FaseImport.PREVIA,
                     )
                 }
