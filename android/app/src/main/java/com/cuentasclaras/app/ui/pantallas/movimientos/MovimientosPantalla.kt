@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -41,8 +43,12 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
@@ -328,9 +334,17 @@ private fun IconoFila(fondo: Color, emoji: String?, vector: Int) {
     }
 }
 
-/** Descripción y meta apiladas; ocupan el ancho que dejan el ícono y el monto. */
+/** Clave del ícono en línea `ic_calendario` dentro de la meta. */
+private const val ICONO_EVENTO = "evento"
+
+/**
+ * Descripción y meta apiladas; ocupan el ancho que dejan el ícono y el monto. Con `evento`, la meta termina en
+ * « · [ic_calendario] título» (📅 en la web; ícono de interfaz, DESIGN.md §8).
+ */
 @Composable
-private fun RowScope.TextoFila(principal: String, meta: String) {
+private fun RowScope.TextoFila(principal: String, meta: String, evento: String? = null) {
+    val etiqueta = CuentasTema.tipografia.etiqueta
+    val tinta = CuentasTema.colores.textoSecundario
     Column(Modifier.weight(1f)) {
         Text(
             principal,
@@ -340,11 +354,24 @@ private fun RowScope.TextoFila(principal: String, meta: String) {
             overflow = TextOverflow.Ellipsis,
         )
         Text(
-            meta,
-            style = CuentasTema.tipografia.etiqueta,
-            color = CuentasTema.colores.textoSecundario,
+            buildAnnotatedString {
+                append(meta)
+                if (evento != null) {
+                    append(" · ")
+                    appendInlineContent(ICONO_EVENTO, "evento")
+                    append(" ")
+                    append(evento)
+                }
+            },
+            style = etiqueta,
+            color = tinta,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
+            inlineContent = mapOf(
+                ICONO_EVENTO to InlineTextContent(Placeholder(1.em, 1.em, PlaceholderVerticalAlign.TextCenter)) {
+                    Icon(painterResource(R.drawable.ic_calendario), contentDescription = null, tint = tinta, modifier = Modifier.fillMaxSize())
+                },
+            ),
         )
     }
 }
@@ -380,9 +407,10 @@ private fun FilaMovimiento(t: Transaction, cat: Catalogos, indentada: Boolean, o
     val meta = buildString {
         append(t.date).append(" · ").append(cat.nombreCuenta(t.accountId))
         if (t.importKey != null) append(" · importado")
-        if (evento != null) append(" · 📅 ").append(evento.titulo)
     }
-    val accesible = "$descripcion, $meta, " + when (t.type) {
+    // La fila es un solo nodo accesible: el ícono del evento se lee como «evento {título}».
+    val metaAccesible = if (evento != null) "$meta · evento ${evento.titulo}" else meta
+    val accesible = "$descripcion, $metaAccesible, " + when (t.type) {
         TxType.INCOME -> "ingreso de ${formatMoney(t.amountMinor, moneda)}"
         TxType.EXPENSE -> "gasto de ${formatMoney(t.amountMinor, moneda)}"
         TxType.TRANSFER -> "transferencia de ${formatMoney(t.amountMinor, moneda)}"
@@ -407,7 +435,7 @@ private fun FilaMovimiento(t: Transaction, cat: Catalogos, indentada: Boolean, o
         onClick = onClick,
     ) {
         IconoFila(fondoIcono, emoji, vector)
-        TextoFila(descripcion, meta)
+        TextoFila(descripcion, meta, evento?.titulo)
         when (t.type) {
             TxType.INCOME -> MontoConDireccion(t.amountMinor, moneda, Signo.POSITIVO)
             TxType.EXPENSE -> MontoConDireccion(t.amountMinor, moneda, Signo.NEGATIVO)

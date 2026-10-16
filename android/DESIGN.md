@@ -239,7 +239,8 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
   No se añade `material-icons-extended`. `ic_candado` (16 dp, `textoSecundario`) marca las cuentas de ahorro en Inicio.
   En el cuadro de las filas sin emoji de categoría (24 dp): `ic_transferir` (transferencia, 🔁 en la web),
   `ic_ajuste_saldo` (ajuste, 🎯), `ic_sin_categoria` (sin categoría, 📦; también en «Este mes») e `ic_grupo`
-  (grupo transaccional sin categoría, 🔁).
+  (grupo transaccional sin categoría, 🔁). En la meta de una fila con evento, `ic_calendario` en línea (1 em,
+  `textoSecundario`) delante del título (📅 en la web); el texto accesible dice «evento {título}».
 - **Ícono de la app**: adaptable (`mipmap-anydpi-v26/ic_launcher.xml`): «C» abierta con un visto en lima `#C5F05A`
   sobre `#0A0F1C` (Noche lima), con capa monocroma.
 

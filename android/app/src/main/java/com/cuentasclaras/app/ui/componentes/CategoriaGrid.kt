@@ -34,12 +34,17 @@ private const val COLUMNAS_CATEGORIAS = 4
 /** Lado del cuadro del emoji de cada categoría. */
 private val CUADRO_CATEGORIA = 48.dp
 
+/** `#RGB` (forma corta de CSS, posible en respaldos de la PWA). */
+private val HEX_CORTO = Regex("^#[0-9a-fA-F]{3}$")
+
 /**
- * Color de una categoría: es dato del usuario (hex de la web), por eso no sale del tema. Si el hex no es
- * válido, usa el respaldo dado.
+ * Color de una categoría: es dato del usuario (hex de la web), por eso no sale del tema. `#RGB` se expande a
+ * `#RRGGBB` (como en CSS) porque `parseColor` no lo admite. Si el hex no es válido, usa el respaldo dado.
  */
-fun colorDeCategoria(hex: String, respaldo: Color): Color =
-    runCatching { Color(android.graphics.Color.parseColor(hex)) }.getOrDefault(respaldo)
+fun colorDeCategoria(hex: String, respaldo: Color): Color {
+    val largo = if (HEX_CORTO.matches(hex)) "#" + hex.drop(1).map { "$it$it" }.joinToString("") else hex
+    return runCatching { Color(android.graphics.Color.parseColor(largo)) }.getOrDefault(respaldo)
+}
 
 /**
  * Grid de categorías de 4 columnas: emoji grande sobre un tinte del color de la categoría y el nombre en 2
