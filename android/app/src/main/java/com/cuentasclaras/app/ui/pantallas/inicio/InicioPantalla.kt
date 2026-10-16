@@ -62,6 +62,8 @@ fun InicioPantalla(nav: NavHostController) {
     val listener = (LocalContext.current.applicationContext as CuentasApp).container.estadoListener
     var acceso by remember { mutableStateOf(true) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { acceso = listener.accesoConcedido() }
+    // D1: acceso concedido pero listener sin enlazar y re-enlace frenado (MIUI sin Autoinicio). Se apaga al conectar.
+    val enPausa by listener.enPausa.collectAsStateWithLifecycle()
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = e.m, vertical = e.m),
@@ -73,6 +75,14 @@ fun InicioPantalla(nav: NavHostController) {
                 Banner(
                     texto = "La app perdió el acceso a notificaciones",
                     tipo = TipoBanner.ERROR,
+                    accion = { Chip("Arreglar", onClick = { nav.navigate(Rutas.PERMISOS) }) },
+                )
+            }
+        } else if (enPausa) {
+            item(key = "captura-en-pausa") {
+                Banner(
+                    texto = "La captura está en pausa: activa Autoinicio",
+                    tipo = TipoBanner.AVISO,
                     accion = { Chip("Arreglar", onClick = { nav.navigate(Rutas.PERMISOS) }) },
                 )
             }
