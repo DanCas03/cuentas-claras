@@ -139,7 +139,11 @@ interface CapturaDao {
     @Query("SELECT * FROM capturas WHERE id = :id") suspend fun porId(id: String): CapturaEntity?
     @Query("SELECT COUNT(*) FROM capturas WHERE hash = :hash AND recibidaIso >= :desdeIso")
     suspend fun contarRecientes(hash: String, desdeIso: String): Int
-    @Query("SELECT referencia, montoMinor FROM capturas WHERE estado = 'REGISTRADA' AND referencia IS NOT NULL AND montoMinor IS NOT NULL")
+    /** E19: solo cuentan las registradas cuyo movimiento sigue existiendo (un respaldo restaurado puede dejar txId huérfanos). */
+    @Query(
+        "SELECT referencia, montoMinor FROM capturas WHERE estado = 'REGISTRADA' AND referencia IS NOT NULL " +
+            "AND montoMinor IS NOT NULL AND txId IS NOT NULL AND EXISTS (SELECT 1 FROM transactions WHERE transactions.id = capturas.txId)",
+    )
     suspend fun registradas(): List<ReferenciaCapturada>
     @Insert suspend fun insertar(fila: CapturaEntity)
     @Query("UPDATE capturas SET estado = 'REGISTRADA', txId = :txId WHERE id = :id") suspend fun marcarRegistrada(id: String, txId: String)
