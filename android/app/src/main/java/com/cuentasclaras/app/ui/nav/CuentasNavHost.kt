@@ -11,6 +11,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.cuentasclaras.app.ui.componentes.Proximamente
 import com.cuentasclaras.app.ui.pantallas.ajustes.AjustesPantalla
+import com.cuentasclaras.app.ui.pantallas.calendario.CalendarioPantalla
 import com.cuentasclaras.app.ui.pantallas.deudas.DeudasPantalla
 import com.cuentasclaras.app.ui.pantallas.importar.ImportarPantalla
 import com.cuentasclaras.app.ui.pantallas.inicio.InicioPantalla
@@ -43,7 +44,7 @@ fun CuentasNavHost(nav: NavHostController, modifier: Modifier = Modifier) {
         composable(Rutas.AJUSTES) { AjustesPantalla(nav) }
         composable(Rutas.IMPORTAR) { ImportarPantalla(nav) }
         composable(Rutas.DEUDAS) { DeudasPantalla(nav) }
-        composable(Rutas.CALENDARIO, arguments = argumentos(Rutas.ARGS_CALENDARIO)) { Proximamente("El calendario llega en la fase 6") }
+        composable(Rutas.CALENDARIO, arguments = argumentos(Rutas.ARGS_CALENDARIO)) { CalendarioPantalla(nav) }
         composable(Rutas.PERMISOS) { Proximamente("Permisos de captura llega en la fase 3") }
     }
 }
