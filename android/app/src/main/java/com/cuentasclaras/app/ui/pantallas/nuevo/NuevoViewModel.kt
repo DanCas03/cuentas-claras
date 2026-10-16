@@ -84,6 +84,8 @@ class NuevoViewModel(
          * caer a la primera activa) y guardar exige elegirla.
          */
         val cuentaBncNoActiva: Boolean = false,
+        /** La captura cargada no se reconoció (D6): su banner es un aviso, no un «Correcto». */
+        val capturaSinReconocer: Boolean = false,
     )
 
     /** Chip de una ocurrencia del calendario a la que se puede asignar el movimiento (T30). */
@@ -293,7 +295,13 @@ class NuevoViewModel(
     fun abrirCaptura(id: String?) {
         if (id.isNullOrEmpty() || id == formulario.value.capturaId) return
         formulario.update {
-            it.copy(capturaId = id, pareceImportada = false, fechaCaptura = null, cuentaBncNoActiva = false)
+            it.copy(
+                capturaId = id,
+                pareceImportada = false,
+                fechaCaptura = null,
+                cuentaBncNoActiva = false,
+                capturaSinReconocer = false,
+            )
         }
         // La elección de evento era de la captura anterior.
         seleccion.value = SeleccionEvento()
@@ -346,6 +354,7 @@ class NuevoViewModel(
                             entrada = "",
                             nota = c.textoCrudo.take(200),
                             fechaCaptura = fechaLocalDeInstante(c.recibidaIso),
+                            capturaSinReconocer = true,
                         )
                     }
                 }

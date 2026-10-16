@@ -107,7 +107,8 @@ fun NuevoPantalla(nav: NavHostController) {
         if (f.capturaId != null && (f.modo == Modo.GASTO || f.modo == Modo.INGRESO)) {
             Banner(
                 texto = "Desde una notificación del BNC",
-                tipo = TipoBanner.OK,
+                // D6: el check de «Correcto» solo si la captura se reconoció; si no, aviso (no hay variante INFO).
+                tipo = if (f.capturaSinReconocer) TipoBanner.AVISO else TipoBanner.OK,
                 accion = { Chip("Descartar", onClick = vm::descartarCaptura, enabled = !f.guardando) },
             )
             // Duplicado inverso: el TXT ya trajo este movimiento. Solo avisa; Daniel decide si registrar.
