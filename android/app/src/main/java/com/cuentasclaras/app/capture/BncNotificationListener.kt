@@ -22,6 +22,8 @@ internal fun textoDeNotificacion(extras: Bundle): String {
     return if (titulo.isEmpty() || cuerpo.contains(titulo)) cuerpo else "$titulo $cuerpo"
 }
 
+private const val NO_SON_MOVIMIENTOS = Notification.FLAG_GROUP_SUMMARY or Notification.FLAG_ONGOING_EVENT
+
 class BncNotificationListener : NotificationListenerService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var ultimoLatidoMs = 0L
@@ -59,7 +61,10 @@ class BncNotificationListener : NotificationListenerService() {
                 ultimoLatidoMs = ahora
                 conLog("No se pudo guardar el latido") { container.estadoListener.latido() }
             }
-            if (sbn.packageName !in paquetesCapturables(this)) return
+            if (sbn.packageName !in paquetesCapturables()) return
+            // Resúmenes de grupo y notificaciones en curso (progreso, sesión) no son movimientos: sin esto
+            // crearían capturas «sin reconocer».
+            if ((sbn.notification.flags and NO_SON_MOVIMIENTOS) != 0) return
             val texto = textoDeNotificacion(sbn.notification.extras)
             if (texto.isBlank()) return
             scope.launch {

@@ -3,6 +3,7 @@ package com.cuentasclaras.app.domain
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
@@ -19,6 +20,11 @@ fun todayIso(): String = LocalDate.now().toString()
 fun instanteIso(i: Instant): String = FORMATO_INSTANTE.format(i)
 
 fun ahoraIso(): String = instanteIso(Instant.now())
+
+/** Día local (zona del sistema) en que ocurrió un instante UTC ISO como `recibidaIso`: 'yyyy-mm-dd'.
+ *  Un aviso de las 23:50 locales cae en su día aunque en UTC ya sea el siguiente. */
+fun fechaLocalDeInstante(instanteIso: String): String =
+    Instant.parse(instanteIso).atZone(ZoneId.systemDefault()).toLocalDate().toString()
 
 private val DD_MM_YYYY = Regex("""^(\d{2})/(\d{2})/(\d{4})$""")
 

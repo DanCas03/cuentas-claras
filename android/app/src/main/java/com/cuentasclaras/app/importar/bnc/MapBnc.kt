@@ -20,6 +20,22 @@ const val MOTIVO_POR_CAPTURA = "ya registrada por captura"
 /** "0100000007" y "100000007" son la misma referencia; "0" o vacía no identifican nada. */
 fun normalizarReferencia(ref: String): String = ref.trim().trimStart('0')
 
+/**
+ * Referencia normalizada de un movimiento importado del TXT, sacada de su `importKey` (`bncImportKey`:
+ * `bnc:fecha:ref:hora:monto`); null si la clave no tiene esa forma. La fecha (`yyyy-mm-dd`) y el monto no llevan
+ * «:», así que se cortan por el primero y el último; la hora sí los lleva, así que se quita la del propio
+ * movimiento. Si el movimiento ya no tiene hora, la referencia es el primer campo (las del BNC son dígitos).
+ */
+fun referenciaImportada(tx: Transaction): String? {
+    val clave = tx.importKey?.removePrefix("bnc:")?.takeIf { it != tx.importKey } ?: return null
+    val trasFecha = clave.substringAfter(':', "")
+    val refYHora = trasFecha.substringBeforeLast(':', "")
+    if (refYHora.isEmpty()) return null
+    val hora = tx.time
+    val ref = if (hora != null && refYHora.endsWith(":$hora")) refYHora.removeSuffix(":$hora") else refYHora.substringBefore(':')
+    return normalizarReferencia(ref)
+}
+
 data class BncDraft(
     val tx: Transaction,
     val saldoMinor: Long,

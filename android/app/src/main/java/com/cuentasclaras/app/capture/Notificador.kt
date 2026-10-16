@@ -1,15 +1,12 @@
 package com.cuentasclaras.app.capture
 
-import android.Manifest
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.os.Build
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import androidx.core.content.ContextCompat
 import com.cuentasclaras.app.MainActivity
 import com.cuentasclaras.app.R
 import com.cuentasclaras.app.data.db.CapturaEntity
@@ -39,12 +36,14 @@ object Notificador {
         }
     }
 
-    /** Sin permiso de notificaciones no se publica nada, pero la captura YA está en Room y
-     *  aparece en la tarjeta «Capturas pendientes» de Inicio. */
+    /** Id de la notificación propia de una captura: el mismo al publicar y al cancelar. */
+    private fun idNotificacion(capturaId: String): Int = capturaId.hashCode()
+
+    /** Sin permiso para avisar no se publica nada, pero la captura YA está en Room y aparece en la tarjeta
+     *  «Capturas pendientes» de Inicio. `notificacionesPermitidas` comprueba el permiso de Android 13+. */
+    @SuppressLint("MissingPermission")
     fun publicar(ctx: Context, c: CapturaEntity) {
-        if (Build.VERSION.SDK_INT >= 33 &&
-            ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) return
+        if (!PermisosXiaomi.notificacionesPermitidas(ctx)) return
         val intent = Intent(ctx, MainActivity::class.java).apply {
             putExtra(EXTRA_CAPTURA_ID, c.id)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
@@ -61,6 +60,11 @@ object Notificador {
             .setAutoCancel(true)
             .setContentIntent(pendiente)
             .build()
-        NotificationManagerCompat.from(ctx).notify(c.id.hashCode(), notificacion)
+        NotificationManagerCompat.from(ctx).notify(idNotificacion(c.id), notificacion)
+    }
+
+    /** Quita la notificación propia de una captura ya registrada o descartada (desde Nuevo o desde Inicio). */
+    fun cancelar(ctx: Context, capturaId: String) {
+        NotificationManagerCompat.from(ctx).cancel(idNotificacion(capturaId))
     }
 }

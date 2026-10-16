@@ -32,6 +32,10 @@ interface TransactionDao {
     @Query("SELECT COUNT(*) FROM transactions") suspend fun contar(): Int
     @Query("SELECT COUNT(*) FROM transactions WHERE importKey IN (:keys)") suspend fun contarPorImportKeys(keys: List<String>): Int
     @Query("SELECT importKey FROM transactions WHERE importKey IS NOT NULL") suspend fun importKeys(): List<String>
+    /** Movimientos importados del TXT del BNC con un tipo (`TxType.name`) y un monto dados: candidatos a ser el
+     *  mismo movimiento que una captura (aviso de posible duplicado en Nuevo). */
+    @Query("SELECT * FROM transactions WHERE source = 'BNC' AND type = :tipo AND amountMinor = :montoMinor AND importKey IS NOT NULL")
+    suspend fun importadasBnc(tipo: String, montoMinor: Long): List<TransactionEntity>
     @Insert suspend fun insertar(fila: TransactionEntity)
     @Insert suspend fun insertarTodas(filas: List<TransactionEntity>)
     @Update suspend fun actualizar(fila: TransactionEntity)
@@ -146,8 +150,11 @@ interface CapturaDao {
     )
     suspend fun registradas(): List<ReferenciaCapturada>
     @Insert suspend fun insertar(fila: CapturaEntity)
-    @Query("UPDATE capturas SET estado = 'REGISTRADA', txId = :txId WHERE id = :id") suspend fun marcarRegistrada(id: String, txId: String)
-    @Query("UPDATE capturas SET estado = 'DESCARTADA' WHERE id = :id") suspend fun marcarDescartada(id: String)
+    /** Solo una captura PENDIENTE cambia de estado: devuelve las filas marcadas (0 = ya registrada o descartada). */
+    @Query("UPDATE capturas SET estado = 'REGISTRADA', txId = :txId WHERE id = :id AND estado = 'PENDIENTE'")
+    suspend fun marcarRegistrada(id: String, txId: String): Int
+    @Query("UPDATE capturas SET estado = 'DESCARTADA' WHERE id = :id AND estado = 'PENDIENTE'")
+    suspend fun marcarDescartada(id: String): Int
 }
 
 /** Proyección para la deduplicación captura ↔ import (D8). */

@@ -12,8 +12,11 @@ import com.cuentasclaras.app.domain.Currency
 import com.cuentasclaras.app.domain.RateSource
 import com.cuentasclaras.app.domain.Settings
 
+/** Id de la cuenta bancaria en Bs del seed: destino del TXT del BNC y de las capturas. */
+const val CUENTA_BNC = "acc-bnc"
+
 val CUENTAS_SEED = listOf(
-    Account("acc-bnc", "BNC", Currency.VES, AccountKind.BANK, isSavings = false, archived = false),
+    Account(CUENTA_BNC, "BNC", Currency.VES, AccountKind.BANK, isSavings = false, archived = false),
     Account("acc-zinli", "Zinli", Currency.USD, AccountKind.WALLET, isSavings = false, archived = false),
     Account("acc-binance", "Binance", Currency.USD, AccountKind.SNAPSHOT, isSavings = true, archived = false),
     Account("acc-efectivo", "Efectivo", Currency.USD, AccountKind.CASH, isSavings = false, archived = false),
@@ -45,7 +48,7 @@ val CATEGORIAS_SEED_V2 = listOf(
     Category("cat-vuelto-gasto", "Vuelto", "↪️", "#f87171", CategoryKind.EXPENSE),
 )
 
-val SETTINGS_SEED = Settings(id = "main", viewCurrency = Currency.USD, rateSource = RateSource.BCV, lastAccountId = "acc-bnc")
+val SETTINGS_SEED = Settings(id = "main", viewCurrency = Currency.USD, rateSource = RateSource.BCV, lastAccountId = CUENTA_BNC)
 
 /** Crea cuentas, categorías y settings iniciales solo si la tabla está vacía. Las categorías v2
  *  además se reponen por id si faltan (add-if-missing, nunca pisa ediciones). */

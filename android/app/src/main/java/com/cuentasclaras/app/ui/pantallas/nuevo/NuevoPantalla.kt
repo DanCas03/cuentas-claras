@@ -101,6 +101,10 @@ fun NuevoPantalla(nav: NavHostController) {
                 tipo = TipoBanner.OK,
                 accion = { Chip("Descartar", onClick = vm::descartarCaptura, enabled = !f.guardando) },
             )
+            // Duplicado inverso: el TXT ya trajo este movimiento. Solo avisa; Daniel decide si registrar.
+            if (f.pareceImportada) {
+                Banner(texto = "Este movimiento parece ya importado del TXT del BNC.", tipo = TipoBanner.AVISO)
+            }
         }
         Segmentado(
             opciones = listOf("Gasto", "Ingreso", "Transferir", "Ajustar"),

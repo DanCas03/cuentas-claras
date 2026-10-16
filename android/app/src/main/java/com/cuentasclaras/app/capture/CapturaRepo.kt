@@ -4,8 +4,15 @@ import androidx.room.withTransaction
 import com.cuentasclaras.app.data.db.CapturaEntity
 import com.cuentasclaras.app.data.db.CuentasDb
 import com.cuentasclaras.app.data.db.EstadoCaptura
+import com.cuentasclaras.app.data.db.TipoCaptura
+import com.cuentasclaras.app.data.db.toDomain
+import com.cuentasclaras.app.data.db.toEntity
+import com.cuentasclaras.app.domain.Transaction
+import com.cuentasclaras.app.domain.TxType
 import com.cuentasclaras.app.domain.instanteIso
 import com.cuentasclaras.app.domain.nuevoId
+import com.cuentasclaras.app.importar.bnc.normalizarReferencia
+import com.cuentasclaras.app.importar.bnc.referenciaImportada
 import kotlinx.coroutines.flow.Flow
 import java.security.MessageDigest
 import java.time.Duration
@@ -14,7 +21,14 @@ import java.time.Instant
 private fun sha256(texto: String): String =
     MessageDigest.getInstance("SHA-256").digest(texto.toByteArray()).joinToString("") { "%02x".format(it) }
 
-class CapturaRepo(private val db: CuentasDb) {
+/** Mensaje al registrar o descartar una captura que otra pantalla ya resolvió. */
+const val MENSAJE_CAPTURA_RESUELTA = "Esta notificación ya se registró o se descartó"
+
+/**
+ * @param alResolver se llama tras registrar o descartar con éxito una captura; la app lo usa para quitar su
+ *   notificación propia (`Notificador.cancelar`).
+ */
+class CapturaRepo(private val db: CuentasDb, private val alResolver: (capturaId: String) -> Unit = {}) {
     val pendientes: Flow<List<CapturaEntity>> = db.capturas().observarPendientes()
 
     /** Persiste la notificación ANTES de avisar (spec §3.8). Devuelve null si el texto está vacío o
@@ -51,5 +65,38 @@ class CapturaRepo(private val db: CuentasDb) {
 
     suspend fun porId(id: String): CapturaEntity? = db.capturas().porId(id)
 
-    suspend fun descartar(id: String) = db.capturas().marcarDescartada(id)
+    /**
+     * Registra la captura con su movimiento, todo-o-nada (restricción 8): inserta `tx` y marca la captura como
+     * REGISTRADA en una transacción. Si la captura ya no estaba PENDIENTE (se registró o descartó desde otra
+     * pantalla), lanza y el movimiento NO queda guardado.
+     */
+    suspend fun registrarConTx(capturaId: String, tx: Transaction) {
+        db.withTransaction {
+            db.transactions().insertar(tx.toEntity())
+            check(db.capturas().marcarRegistrada(capturaId, tx.id) == 1) { MENSAJE_CAPTURA_RESUELTA }
+        }
+        alResolver(capturaId)
+    }
+
+    /** Descarta una captura PENDIENTE; si ya se registró o descartó, lanza sin cambiar nada. */
+    suspend fun descartar(id: String) {
+        check(db.capturas().marcarDescartada(id) == 1) { MENSAJE_CAPTURA_RESUELTA }
+        alResolver(id)
+    }
+
+    /**
+     * true si ya hay un movimiento importado del TXT del BNC que parece ser esta captura: misma referencia
+     * normalizada (no vacía), mismo |monto| y mismo sentido. Es el duplicado inverso de D8/E24 (la captura quedó
+     * pendiente y el TXT ya trajo el movimiento); solo sirve para avisar, no bloquea el registro.
+     */
+    suspend fun pareceImportada(c: CapturaEntity): Boolean {
+        val ref = normalizarReferencia(c.referencia ?: return false)
+        val monto = c.montoMinor ?: return false
+        val tipo = when (c.tipo ?: return false) {
+            TipoCaptura.INGRESO -> TxType.INCOME
+            TipoCaptura.GASTO -> TxType.EXPENSE
+        }
+        if (ref.isEmpty()) return false
+        return db.transactions().importadasBnc(tipo.name, monto).any { referenciaImportada(it.toDomain()) == ref }
+    }
 }

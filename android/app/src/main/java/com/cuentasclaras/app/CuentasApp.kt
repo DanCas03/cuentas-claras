@@ -23,8 +23,8 @@ class AppContainer(context: Context) {
     val http: OkHttpClient = crearHttp()
     /** Modo y paletas elegidos (E20), en DataStore Preferences. */
     val apariencia: AparienciaRepo = AparienciaRepo(context.almacenApariencia)
-    /** Capturas de notificaciones del BNC (T18/T19). */
-    val capturas: CapturaRepo = CapturaRepo(db)
+    /** Capturas de notificaciones del BNC (T18/T19). Al registrar o descartar una, se quita su notificación. */
+    val capturas: CapturaRepo = CapturaRepo(db) { capturaId -> Notificador.cancelar(context, capturaId) }
     val estadoListener: EstadoListener = EstadoListener(context)
 }
 

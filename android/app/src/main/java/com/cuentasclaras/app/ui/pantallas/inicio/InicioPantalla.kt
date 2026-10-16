@@ -75,7 +75,8 @@ fun InicioPantalla(nav: NavHostController) {
                 CapturasTarjeta(
                     capturas = estado.capturasPendientes,
                     habilitado = !estado.guardando,
-                    onRegistrar = { nav.navigate(Rutas.nuevo(capturaId = it)) },
+                    // Igual que el toque en la notificación (MainActivity): nunca dos Nuevo apilados.
+                    onRegistrar = { nav.navigate(Rutas.nuevo(capturaId = it)) { launchSingleTop = true } },
                     onDescartar = vm::descartarCaptura,
                 )
             }

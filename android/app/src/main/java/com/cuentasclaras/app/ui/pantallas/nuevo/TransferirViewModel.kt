@@ -2,6 +2,7 @@ package com.cuentasclaras.app.ui.pantallas.nuevo
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cuentasclaras.app.data.CUENTA_BNC
 import com.cuentasclaras.app.data.CuentasRepo
 import com.cuentasclaras.app.domain.Account
 import com.cuentasclaras.app.domain.Rate
@@ -26,7 +27,7 @@ import kotlinx.coroutines.flow.update
 class TransferirViewModel(private val repo: CuentasRepo) : ViewModel() {
     data class Formulario(
         val origenId: String = "acc-efectivo",
-        val destinoId: String = "acc-bnc",
+        val destinoId: String = CUENTA_BNC,
         val montoTxt: String = "",
         val tasaTxt: String = "",
         val nota: String = "",

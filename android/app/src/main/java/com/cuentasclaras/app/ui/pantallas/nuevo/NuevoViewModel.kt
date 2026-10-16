@@ -3,8 +3,8 @@ package com.cuentasclaras.app.ui.pantallas.nuevo
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.room.withTransaction
 import com.cuentasclaras.app.capture.CapturaRepo
+import com.cuentasclaras.app.data.CUENTA_BNC
 import com.cuentasclaras.app.data.CuentasRepo
 import com.cuentasclaras.app.data.db.EstadoCaptura
 import com.cuentasclaras.app.data.db.TipoCaptura
@@ -13,6 +13,7 @@ import com.cuentasclaras.app.domain.Category
 import com.cuentasclaras.app.domain.CategoryKind
 import com.cuentasclaras.app.domain.TxType
 import com.cuentasclaras.app.domain.buildManualTx
+import com.cuentasclaras.app.domain.fechaLocalDeInstante
 import com.cuentasclaras.app.domain.montoEditable
 import com.cuentasclaras.app.domain.parseVenezuelanAmount
 import com.cuentasclaras.app.domain.todayIso
@@ -57,6 +58,8 @@ class NuevoViewModel(
         val guardando: Boolean = false,
         /** Captura del BNC que este formulario registra (null = movimiento manual). */
         val capturaId: String? = null,
+        /** La captura parece ya importada del TXT del BNC (misma referencia, monto y sentido): solo se avisa. */
+        val pareceImportada: Boolean = false,
     )
 
     data class Estado(
@@ -113,7 +116,7 @@ class NuevoViewModel(
      */
     fun abrirCaptura(id: String?) {
         if (id.isNullOrEmpty() || id == formulario.value.capturaId) return
-        formulario.update { it.copy(capturaId = id) }
+        formulario.update { it.copy(capturaId = id, pareceImportada = false) }
         cargarCaptura(id)
     }
 
@@ -131,13 +134,18 @@ class NuevoViewModel(
                         )
                         _salir.send(Unit)
                     }
-                    c.reconocida && c.montoMinor != null -> formulario.update {
-                        it.copy(
-                            modo = if (c.tipo == TipoCaptura.INGRESO) Modo.INGRESO else Modo.GASTO,
-                            entrada = montoEditable(c.montoMinor),
-                            nota = c.nota ?: "",
-                            cuentaId = "acc-bnc",
-                        )
+                    c.reconocida && c.montoMinor != null -> {
+                        val importada = capturas.pareceImportada(c)
+                        if (formulario.value.capturaId != id) return@launch
+                        formulario.update {
+                            it.copy(
+                                modo = if (c.tipo == TipoCaptura.INGRESO) Modo.INGRESO else Modo.GASTO,
+                                entrada = montoEditable(c.montoMinor),
+                                nota = c.nota ?: "",
+                                cuentaId = CUENTA_BNC,
+                                pareceImportada = importada,
+                            )
+                        }
                     }
                     else -> formulario.update { it.copy(modo = Modo.GASTO, entrada = "", nota = c.textoCrudo.take(200)) }
                 }
@@ -149,7 +157,10 @@ class NuevoViewModel(
         }
     }
 
-    /** Descarta la captura de este formulario y sale a Inicio (D19: tras salir, `guardando` se queda en true). */
+    /**
+     * Descarta la captura de este formulario y sale a Inicio (D19: tras salir, `guardando` se queda en true). Si ya
+     * se registró o descartó desde otra pantalla, `CapturaRepo.descartar` lanza y se avisa sin salir.
+     */
     fun descartarCaptura() {
         val id = formulario.value.capturaId ?: return
         escribir(ocupacion, "No se pudo descartar", reponerAlExito = false) {
@@ -167,6 +178,9 @@ class NuevoViewModel(
     /**
      * Tocar una categoría guarda (≤ 3 toques). D19: tras guardar bien, `guardando` se queda en true (la pantalla
      * sigue viva ~150 ms mientras se cierra y un segundo toque rápido no debe crear un movimiento duplicado).
+     *
+     * Desde una captura, la fecha es el día local en que llegó la notificación (un pago de las 23:50 registrado al
+     * día siguiente queda en su día y en su mes) y el registro es todo-o-nada en `CapturaRepo.registrarConTx`.
      */
     fun guardar(categoryId: String) {
         val e = estado.value
@@ -179,24 +193,17 @@ class NuevoViewModel(
             return
         }
         escribir(ocupacion, "No se pudo guardar", reponerAlExito = false) {
+            val captura = f.capturaId
+            val fecha = captura?.let { capturas.porId(it) }?.let { fechaLocalDeInstante(it.recibidaIso) } ?: todayIso()
             val tx = buildManualTx(
                 type = if (f.modo == Modo.GASTO) TxType.EXPENSE else TxType.INCOME,
                 accountId = cuenta.id,
                 amountMinor = minor,
                 categoryId = categoryId,
-                dateIso = todayIso(),
+                dateIso = fecha,
                 note = f.nota.trim().takeIf { it.isNotEmpty() },
             )
-            val captura = f.capturaId
-            if (captura == null) {
-                repo.agregarTx(tx)
-            } else {
-                // Todo-o-nada: el movimiento y la marca de la captura van juntos (nunca registrada sin tx).
-                repo.db.withTransaction {
-                    repo.agregarTx(tx)
-                    repo.db.capturas().marcarRegistrada(captura, tx.id)
-                }
-            }
+            if (captura == null) repo.agregarTx(tx) else capturas.registrarConTx(captura, tx)
             // El movimiento ya está guardado: si falla solo recordar la cuenta, se avisa y se sale igual (no reintentar).
             try {
                 repo.cambiarSettings { it.copy(lastAccountId = cuenta.id) }

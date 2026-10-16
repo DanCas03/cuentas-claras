@@ -122,6 +122,7 @@ class InicioViewModel(
         repo.cambiarSettings { it.copy(viewCurrency = if (it.viewCurrency == Currency.USD) Currency.VES else Currency.USD) }
     }
 
+    /** Solo una captura PENDIENTE se descarta (y se quita su notificación); si ya se resolvió, se avisa. */
     fun descartarCaptura(id: String) = escribir(ocupacion, "No se pudo descartar") { capturas.descartar(id) }
 
     /** E21: fija el modo manual OPUESTO al que se ve ahora (`oscuroAhora` = `CuentasTema.oscuro`). */
