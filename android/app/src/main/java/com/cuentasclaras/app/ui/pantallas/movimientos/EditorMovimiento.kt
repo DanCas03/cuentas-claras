@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -39,9 +40,9 @@ import com.cuentasclaras.app.ui.theme.CuentasTema
 /**
  * Editor de un movimiento (`EditorMovimiento` de `MovimientosPage.tsx`). Gasto e ingreso: monto, categoría
  * (del mismo tipo), evento (`SelectEvento`; elegir uno pone la categoría del evento, que sigue editable), fecha y
- * nota. `txsAsignadas` son las transacciones CRUDAS con evento (E18). Transferencias y ajustes: solo fecha y nota (el monto afecta dos saldos o es un
- * delta). Los botones quedan deshabilitados mientras se guarda (restricción 9). El estado local se reinicia
- * cuando cambia el movimiento editado.
+ * nota. `txsAsignadas` son las transacciones CRUDAS con evento (E18). Transferencias y ajustes: solo fecha y nota
+ * (el monto afecta dos saldos o es un delta). Los botones quedan deshabilitados mientras se guarda
+ * (restricción 9). El estado local se reinicia cuando cambia el movimiento editado.
  */
 @Composable
 fun EditorMovimiento(
@@ -64,7 +65,7 @@ fun EditorMovimiento(
     var ocurrencia by remember(tx.id) {
         val eventId = tx.eventId
         val eventDate = tx.eventDate
-        mutableStateOf(if (eventId != null && eventDate != null) Ocurrencia(eventId, eventDate) else null)
+        mutableStateOf(if (!eventId.isNullOrEmpty() && eventDate != null) Ocurrencia(eventId, eventDate) else null)
     }
     var confirmando by remember(tx.id) { mutableStateOf(false) }
     val hoy = remember { todayIso() }
@@ -99,8 +100,9 @@ fun EditorMovimiento(
                         ocurrencia = o
                         if (o != null && evento != null) categoryId = evento.categoryId
                     },
+                    // El hueco va dentro: sin eventos aplicables SelectEvento no pinta nada y no queda hueco doble.
+                    modifier = Modifier.padding(bottom = e.m),
                 )
-                Spacer(Modifier.height(e.m))
             }
         } else {
             Text(

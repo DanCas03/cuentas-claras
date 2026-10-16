@@ -63,7 +63,7 @@ class TransferirViewModel(private val repo: CuentasRepo) : ViewModel() {
         val tasaDelDia = effectiveRate(todayIso(), settings.rateSource, tasas)
         val tasa = if (f.tasaTxt.isNotBlank()) f.tasaTxt.trim().replace(',', '.').toDoubleOrNull() else tasaDelDia?.vesPerUsd
         val destinoMinor =
-            if (cruza && monto != null && monto > 0 && tasa != null && tasa > 0) convertMinor(monto, origen!!.currency, destino!!.currency, tasa)
+            if (cruza && monto != null && monto > 0 && tasa != null && tasa > 0) convertMinor(monto, origen.currency, destino.currency, tasa)
             else null
         Estado(f, activas, origen, destino, monto, cruza, tasaDelDia, tasa, destinoMinor)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Estado())

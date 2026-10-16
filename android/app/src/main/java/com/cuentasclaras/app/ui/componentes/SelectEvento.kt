@@ -2,6 +2,7 @@ package com.cuentasclaras.app.ui.componentes
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import com.cuentasclaras.app.domain.CalEvent
 import com.cuentasclaras.app.domain.CtxSugerencia
 import com.cuentasclaras.app.domain.EstadoOcurrencia
@@ -32,7 +33,8 @@ private fun textoEstado(estado: EstadoOcurrencia): String = when (estado) {
  * Opciones: «Sin evento» y las candidatas de `candidatasParaTx(tx, ctx, incluirHechas = true)` con la etiqueta
  * «{título} · {dd/mm} · {estado}». La asignación vigente SIEMPRE se lista: si `actual` no está entre las candidatas
  * (quedó fuera de la ventana) y su evento existe, se antepone «{título} · {dd/mm} · (asignado)». Sin candidatas ni
- * asignación listable no pinta nada (no ocupa espacio).
+ * asignación listable no pinta nada (no ocupa espacio): por eso el hueco que lo separa del campo siguiente va en
+ * `modifier` (p. ej. `Modifier.padding(bottom = …)`) y no en un `Spacer` de quien lo usa, que quedaría doble.
  *
  * La web antepone «📅» a cada opción; aquí no hay emojis de interfaz (DESIGN.md §8) y la etiqueta visible del campo
  * («Evento») ya dice qué se elige. `ctx.txs` son las transacciones CRUDAS asignadas (E18).
@@ -47,6 +49,7 @@ fun SelectEvento(
     etiqueta: String,
     descripcion: String,
     onCambio: (Ocurrencia?, CalEvent?) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val opciones = remember(tx, actual, ctx) {
         val candidatas = candidatasParaTx(tx, ctx, incluirHechas = true).map { c ->
@@ -86,5 +89,6 @@ fun SelectEvento(
         texto = { it.etiqueta },
         onSeleccion = { op -> onCambio(op.o, op.evento) },
         contentDescription = descripcion,
+        modifier = modifier,
     )
 }

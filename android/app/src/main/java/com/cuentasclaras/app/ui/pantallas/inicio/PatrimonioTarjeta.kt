@@ -68,7 +68,8 @@ private fun equivalencia(usdMinor: Long?, vista: Currency, tasa: Rate?): String?
     }
 }
 
-private const val ESPACIO_FIJO = " "
+/** Espacio no separable (U+00A0) que reserva la línea de la equivalencia; por código, sin el carácter literal. */
+private val ESPACIO_FIJO = Char(0xA0).toString()
 
 /** Cifra más grande y más pequeña del texto de la cifra principal si una cantidad en Bs no cabe. */
 private val CIFRA_MINIMA = 24.sp
