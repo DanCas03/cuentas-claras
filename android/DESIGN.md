@@ -193,11 +193,12 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
   ≥ 48 dp de alto; activo en `primario`/`sobrePrimario`, inactivo con `texto`; color animado con la curva propia;
   semántica de pestañas.
 - **`Chip(texto, onClick = null, activo = false, enabled = true, sugerido = false)`** (E6): píldora de 36 dp de alto
-  visual (área táctil 48 dp si es tocable), texto `etiqueta` 600. Normal `borde`/`texto`; activo
+  visual (área táctil 48 dp si es tocable), texto `etiqueta` 600 con dígitos tabulares (`tnum`). Normal `borde`/`texto`; activo
   `primario`/`sobrePrimario`; sugerido: tinte `primario` al 14 % + contorno `primario` de 1 dp + `texto`.
 - **`Banner(texto, tipo: TipoBanner, accion = null)`** (`OK`, `AVISO`, `ERROR`): radio `control`, fondo con tinte del
   12 % del color del tipo (`ingreso`, `aviso`, `error`) sobre `superficieElevada`, ícono `ic_ok` / `ic_aviso` /
-  `ic_error` en círculo de 32 dp con descripción «Correcto» / «Aviso» / «Error», texto `cuerpo` en `texto`.
+  `ic_error` en círculo de 32 dp con descripción «Correcto» / «Aviso» / «Error», texto `cuerpo` en `texto` con
+  dígitos tabulares (`tnum`: los banners llevan montos).
   Región viva educada (lo anuncia el lector de pantalla).
 - **`Vacio(icono: String, texto: String)`**: emoji de 32 sp en un círculo de 72 dp en `superficie` y la frase en
   `cuerpo` + `textoSecundario`, centrados. Toda lista vacía lo usa.

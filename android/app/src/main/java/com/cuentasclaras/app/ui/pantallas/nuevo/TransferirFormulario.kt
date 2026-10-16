@@ -8,17 +8,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cuentasclaras.app.domain.formatMoney
+import com.cuentasclaras.app.domain.textoTasa
 import com.cuentasclaras.app.ui.componentes.Banner
 import com.cuentasclaras.app.ui.componentes.BotonPrincipal
 import com.cuentasclaras.app.ui.componentes.CampoTexto
 import com.cuentasclaras.app.ui.componentes.Selector
 import com.cuentasclaras.app.ui.componentes.TipoBanner
 import com.cuentasclaras.app.ui.theme.CuentasTema
-import kotlin.math.abs
-
-/** Una tasa como la imprime JS (`111` y no `111.0`), para el rótulo y el placeholder de la web. */
-internal fun tasaTexto(tasa: Double): String =
-    if (tasa == Math.rint(tasa) && abs(tasa) < 1e15) tasa.toLong().toString() else tasa.toString()
 
 /** Formulario «Transferir» (TransferForm.tsx): origen, destino, monto, tasa si cruza de moneda, nota. El VM y su `salir` los gestiona NuevoPantalla. */
 @Composable
@@ -54,8 +50,8 @@ fun TransferirFormulario(vm: TransferirViewModel) {
                 valor = f.tasaTxt,
                 onCambio = { v -> vm.cambiar { it.copy(tasaTxt = v) } },
                 etiqueta = "Tasa (Bs por $) — propuesta " +
-                    (if (propuesta != null) "${tasaTexto(propuesta.vesPerUsd)} del ${propuesta.date}" else "no disponible"),
-                placeholder = if (propuesta != null) tasaTexto(propuesta.vesPerUsd) else "ej. 111,02",
+                    (if (propuesta != null) "${textoTasa(propuesta.vesPerUsd)} del ${propuesta.date}" else "no disponible"),
+                placeholder = if (propuesta != null) textoTasa(propuesta.vesPerUsd) else "ej. 111,02",
                 teclado = KeyboardType.Decimal,
             )
             val destino = estado.destino

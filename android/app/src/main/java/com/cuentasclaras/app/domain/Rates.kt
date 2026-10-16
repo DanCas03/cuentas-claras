@@ -1,5 +1,16 @@
 package com.cuentasclaras.app.domain
 
+import java.math.BigDecimal
+
+/** Literal web de la fuente (`RateSource` de types.ts: 'BCV' | 'BINANCE' | 'MANUAL'): su nombre serializado. */
+fun textoFuente(f: RateSource): String = RateSource.serializer().descriptor.getElementName(f.ordinal)
+
+/**
+ * Una tasa como la imprime la web (`${n}` de JS): 185.5 → «185.5», 36.0 → «36». Sin notación científica; en el
+ * rango real de las tasas equivale a `String(n)`.
+ */
+fun textoTasa(vesPerUsd: Double): String = BigDecimal.valueOf(vesPerUsd).stripTrailingZeros().toPlainString()
+
 /** Tasa vigente para una fecha según la fuente activa (mismas reglas que rates.ts):
  *  1) MANUAL exacta del día; 2) la más reciente ≤ fecha de la fuente activa;
  *  3) la más reciente ≤ fecha de cualquier fuente; 4) la más antigua posterior; 5) null. */

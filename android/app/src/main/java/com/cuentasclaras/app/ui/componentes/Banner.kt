@@ -35,7 +35,7 @@ private val CIRCULO_BANNER = 32.dp
 private val ICONO_BANNER = 18.dp
 
 /**
- * Aviso en línea: fondo con un tinte suave del color del tipo, ícono en círculo y texto en `texto`.
+ * Aviso en línea: fondo con un tinte suave del color del tipo, ícono en círculo y texto en `texto` (dígitos tabulares).
  * El tipo se comunica también con el ícono y su descripción, nunca solo con el color.
  */
 @Composable
@@ -78,7 +78,13 @@ fun Banner(
             Icon(painterResource(icono), contentDescription = descripcion, tint = color, modifier = Modifier.size(ICONO_BANNER))
         }
         Spacer(Modifier.width(e.s + e.xs))
-        Text(texto, style = CuentasTema.tipografia.cuerpo, color = c.texto, modifier = Modifier.weight(1f))
+        // Dígitos tabulares: los banners llevan montos («Diferencia: $5.00», «Destino recibirá …»).
+        Text(
+            texto,
+            style = CuentasTema.tipografia.cuerpo.copy(fontFeatureSettings = "tnum"),
+            color = c.texto,
+            modifier = Modifier.weight(1f),
+        )
         if (accion != null) {
             Spacer(Modifier.width(e.s))
             accion()

@@ -23,6 +23,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import com.cuentasclaras.app.domain.Rate
 import com.cuentasclaras.app.domain.RateSource
+import com.cuentasclaras.app.domain.textoFuente
+import com.cuentasclaras.app.domain.textoTasa
 import com.cuentasclaras.app.domain.todayIso
 import com.cuentasclaras.app.ui.componentes.BotonPrincipal
 import com.cuentasclaras.app.ui.componentes.BotonSecundario
@@ -49,10 +51,6 @@ private fun textoFuenteManual(f: RateSource): String = when (f) {
     RateSource.BCV -> "BCV"
     RateSource.MANUAL -> "Manual (override del día)"
 }
-
-/** Una tasa como la imprime la web (`111.02`, `230`): sin el «.0» que Kotlin añade a los enteros. */
-private fun numeroComoWeb(v: Double): String =
-    if (v == Math.floor(v) && Math.abs(v) < 1e15) v.toLong().toString() else v.toString()
 
 /**
  * Tasas de cambio: vigente hoy (sobre el histórico completo), fuente activa, «Actualizar BCV ahora»,
@@ -83,7 +81,7 @@ fun TasasSeccion(
                     withStyle(SpanStyle(fontWeight = FontWeight.W600)) {
                         append(
                             if (vigente != null) {
-                                "${numeroComoWeb(vigente.vesPerUsd)} Bs/$ (${vigente.source.name} ${vigente.date})"
+                                "${textoTasa(vigente.vesPerUsd)} Bs/$ (${textoFuente(vigente.source)} ${vigente.date})"
                             } else {
                                 "sin tasa"
                             },
@@ -179,9 +177,9 @@ private fun TablaHistorico(recientes: List<Rate>) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(r.date, style = cifra, color = c.texto, modifier = Modifier.weight(PESO_FECHA))
-                Row(Modifier.weight(PESO_FUENTE)) { Chip(r.source.name) }
+                Row(Modifier.weight(PESO_FUENTE)) { Chip(textoFuente(r.source)) }
                 Text(
-                    numeroComoWeb(r.vesPerUsd),
+                    textoTasa(r.vesPerUsd),
                     style = cifra,
                     color = c.texto,
                     textAlign = TextAlign.End,

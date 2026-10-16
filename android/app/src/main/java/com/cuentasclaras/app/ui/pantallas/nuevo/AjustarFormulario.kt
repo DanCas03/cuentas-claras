@@ -6,9 +6,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.withStyle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -40,7 +38,7 @@ fun AjustarFormulario(vm: AjustarViewModel) {
             Text(
                 buildAnnotatedString {
                     append("Saldo según la app: ")
-                    withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(formatMoney(estado.actual, cuenta.currency)) }
+                    withStyle(CuentasTema.tipografia.cifra.toSpanStyle()) { append(formatMoney(estado.actual, cuenta.currency)) }
                 },
                 style = CuentasTema.tipografia.cuerpo,
                 color = c.texto,

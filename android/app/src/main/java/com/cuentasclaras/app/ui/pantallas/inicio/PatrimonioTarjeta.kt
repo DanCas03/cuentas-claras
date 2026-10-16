@@ -38,6 +38,8 @@ import com.cuentasclaras.app.domain.Patrimonio
 import com.cuentasclaras.app.domain.PatrimonioLinea
 import com.cuentasclaras.app.domain.Rate
 import com.cuentasclaras.app.domain.formatMoney
+import com.cuentasclaras.app.domain.textoFuente
+import com.cuentasclaras.app.domain.textoTasa
 import com.cuentasclaras.app.domain.usdToVesMinor
 import com.cuentasclaras.app.ui.componentes.Banner
 import com.cuentasclaras.app.ui.componentes.Chip
@@ -47,7 +49,6 @@ import com.cuentasclaras.app.ui.componentes.TipoBanner
 import com.cuentasclaras.app.ui.componentes.Vacio
 import com.cuentasclaras.app.ui.theme.CuentasTema
 import com.cuentasclaras.app.ui.theme.Movimiento
-import java.math.BigDecimal
 
 /** Cifra de una cantidad en USD según la moneda de la vista (misma regla que `enVista` de la web). */
 internal fun enVista(usdMinor: Long?, vista: Currency, tasa: Rate?): String {
@@ -66,10 +67,6 @@ private fun equivalencia(usdMinor: Long?, vista: Currency, tasa: Rate?): String?
         "≈ " + formatMoney(usdMinor, Currency.USD)
     }
 }
-
-/** Como el `${number}` de JS: 185.5 → «185.5», 36.0 → «36», sin notación científica. */
-private fun tasaTexto(vesPerUsd: Double): String =
-    BigDecimal.valueOf(vesPerUsd).stripTrailingZeros().toPlainString()
 
 private const val ESPACIO_FIJO = " "
 
@@ -162,7 +159,7 @@ fun PatrimonioTarjeta(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    "Tasa ${tasa.source.name} del ${tasa.date}: ${tasaTexto(tasa.vesPerUsd)} Bs/$",
+                    "Tasa ${textoFuente(tasa.source)} del ${tasa.date}: ${textoTasa(tasa.vesPerUsd)} Bs/$",
                     style = t.etiqueta.copy(fontFeatureSettings = "tnum"),
                     color = c.textoSecundario,
                     modifier = Modifier.weight(1f, fill = false),

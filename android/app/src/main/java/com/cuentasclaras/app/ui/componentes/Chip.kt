@@ -76,7 +76,8 @@ fun Chip(
     ) {
         Text(
             texto,
-            style = CuentasTema.tipografia.etiqueta.copy(fontWeight = FontWeight.W600),
+            // Dígitos tabulares: hay chips con montos («presup. $50.00») y fechas.
+            style = CuentasTema.tipografia.etiqueta.copy(fontWeight = FontWeight.W600, fontFeatureSettings = "tnum"),
             color = tinta,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
