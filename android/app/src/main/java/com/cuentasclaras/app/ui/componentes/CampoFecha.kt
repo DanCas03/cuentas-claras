@@ -2,7 +2,6 @@ package com.cuentasclaras.app.ui.componentes
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -66,8 +65,7 @@ fun CampoFecha(etiqueta: String, iso: String, onCambio: (String) -> Unit, modifi
     val e = CuentasTema.espacios
     var abierto by remember { mutableStateOf(false) }
     val legible = fechaLegible(iso)
-    Column(modifier.fillMaxWidth()) {
-        EtiquetaCampo(etiqueta) { abierto = true }
+    CampoConEtiqueta(etiqueta, modifier, alTocar = { abierto = true }) {
         Row(
             Modifier
                 .fillMaxWidth()

@@ -3,7 +3,6 @@ package com.cuentasclaras.app.ui.componentes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -51,8 +50,7 @@ fun <T> Selector(
 ) {
     val c = CuentasTema.colores
     var abierto by remember { mutableStateOf(false) }
-    Column(modifier.fillMaxWidth()) {
-        EtiquetaCampo(etiqueta) { abierto = true }
+    CampoConEtiqueta(etiqueta, modifier, alTocar = { abierto = true }) {
         ExposedDropdownMenuBox(expanded = abierto, onExpandedChange = { abierto = it }) {
             AnclaSelector(seleccion?.let(texto), abierto, contentDescription)
             ExposedDropdownMenu(

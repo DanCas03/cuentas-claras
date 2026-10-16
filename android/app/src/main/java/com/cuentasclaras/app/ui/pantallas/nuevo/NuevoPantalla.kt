@@ -101,7 +101,9 @@ fun NuevoPantalla(nav: NavHostController) {
             .padding(horizontal = e.m, vertical = e.s),
         verticalArrangement = Arrangement.spacedBy(e.s),
     ) {
-        if (f.capturaId != null) {
+        // V6: la captura solo se registra desde Gasto o Ingreso. Guardar una transferencia o un ajuste no la consume
+        // (sigue pendiente en Inicio), así que en esos modos el banner y «Descartar» no se muestran.
+        if (f.capturaId != null && (f.modo == Modo.GASTO || f.modo == Modo.INGRESO)) {
             Banner(
                 texto = "Desde una notificación del BNC",
                 tipo = TipoBanner.OK,
@@ -142,7 +144,8 @@ fun NuevoPantalla(nav: NavHostController) {
                         onSeleccion = { vm.cambiarCuenta(it.id) },
                         modifier = Modifier.weight(3f),
                     )
-                    Box(Modifier.weight(2f), contentAlignment = Alignment.BottomEnd) {
+                    // V26: el chip ocupa 48 dp táctiles y el campo 56 dp; `espacios.xs` abajo lo centra con el campo.
+                    Box(Modifier.weight(2f).padding(bottom = e.xs), contentAlignment = Alignment.BottomEnd) {
                         Chip(
                             texto = formulario.nota.trim().ifEmpty { "+ Nota" },
                             onClick = { notaAbierta = !notaAbierta },

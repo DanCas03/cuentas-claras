@@ -29,7 +29,7 @@ import com.cuentasclaras.app.ui.componentes.Banner
 import com.cuentasclaras.app.ui.componentes.BotonPrincipal
 import com.cuentasclaras.app.ui.componentes.BotonSecundario
 import com.cuentasclaras.app.ui.componentes.CampoTexto
-import com.cuentasclaras.app.ui.componentes.EtiquetaCampo
+import com.cuentasclaras.app.ui.componentes.CampoConEtiqueta
 import com.cuentasclaras.app.ui.componentes.HojaModal
 import com.cuentasclaras.app.ui.componentes.TipoBanner
 import com.cuentasclaras.app.ui.theme.CuentasTema
@@ -174,8 +174,7 @@ private fun SelectorCategoriaVuelto(
         categorias.firstOrNull { it.id == id }?.let { "${it.icon} ${it.name}" } ?: "Sin categoría (Vuelto)"
     }
 
-    Column(Modifier.fillMaxWidth()) {
-        EtiquetaCampo(etiqueta) { abierto = true }
+    CampoConEtiqueta(etiqueta, alTocar = { abierto = true }) {
         ExposedDropdownMenuBox(expanded = abierto, onExpandedChange = { abierto = it }) {
             AnclaSelector(texto(seleccion), abierto, contentDescription = null)
             ExposedDropdownMenu(

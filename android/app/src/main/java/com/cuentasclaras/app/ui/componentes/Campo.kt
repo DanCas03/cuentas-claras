@@ -2,7 +2,7 @@ package com.cuentasclaras.app.ui.componentes
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Column
@@ -19,11 +19,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -36,11 +38,14 @@ internal val ALTO_CAMPO = 56.dp
 /** Grosor del anillo de foco de los campos (y del selector abierto). */
 internal val ANILLO_FOCO = 2.dp
 
+/** Opacidad de un campo deshabilitado (DESIGN.md §4: 38 %, como los botones). */
+private const val OPACIDAD_DESHABILITADO = 0.38f
+
 /**
  * Campo de texto con la etiqueta ENCIMA (nunca flotante). Relleno de controles (`borde`), sin línea inferior;
  * al enfocar aparece un anillo de 2 dp en `primario`. El campo editable NO lleva `contentDescription` (TalkBack
  * lee su valor); lo nombra la etiqueta visible, que es un nodo propio y al tocarla enfoca el campo (así
- * `tocar "Etiqueta"` de la verificación por adb lo alcanza).
+ * `tocar "Etiqueta"` de la verificación por adb lo alcanza; [CampoConEtiqueta]).
  */
 @Composable
 fun CampoTexto(
@@ -65,8 +70,7 @@ fun CampoTexto(
     val forma = CuentasTema.formas.control
     val foco = remember { FocusRequester() }
     if (autoFoco) LaunchedEffect(Unit) { foco.requestFocus() }
-    Column(modifier.fillMaxWidth()) {
-        EtiquetaCampo(etiqueta) { foco.requestFocus() }
+    CampoConEtiqueta(etiqueta, modifier, alTocar = { foco.requestFocus() }) {
         TextField(
             value = valor,
             onValueChange = onCambio,
@@ -92,19 +96,39 @@ fun CampoTexto(
 }
 
 /**
- * Etiqueta visible encima de un campo. Es un nodo accesible con su texto (nombra al campo y es lo que busca
- * `tocar`); tocarla ejecuta `alTocar` (enfocar el campo, abrir el menú o el selector de fecha).
+ * Etiqueta encima + campo como UN solo objetivo táctil (V22, DESIGN.md §4 y §6). La etiqueta es un nodo propio con
+ * su texto (nombra al campo y es lo que busca `tocar`) a todo el ancho; un toque en ella o en el hueco hasta el campo
+ * ejecuta `alTocar` (enfocar el campo, abrir el menú o el selector de fecha). Etiqueta y campo suman un objetivo
+ * continuo de ≥ 80 dp de alto dentro del margen, sin el cuadrado de 48 dp desplazado que el sistema le daba a una
+ * etiqueta corta tocable (se salía del margen y se montaba en el control de encima).
+ *
+ * El toque se detecta en la `Column`: los toques que el propio campo consume (escribir, abrir la fecha) no lo
+ * disparan; los que no consume repiten la misma acción, que es idempotente.
  */
 @Composable
-internal fun EtiquetaCampo(etiqueta: String, alTocar: () -> Unit) {
-    Text(
-        etiqueta,
-        style = CuentasTema.tipografia.etiqueta,
-        color = CuentasTema.colores.textoSecundario,
-        modifier = Modifier
-            .padding(bottom = CuentasTema.espacios.xs + 2.dp)
-            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = alTocar),
-    )
+internal fun CampoConEtiqueta(
+    etiqueta: String,
+    modifier: Modifier = Modifier,
+    habilitado: Boolean = true,
+    alTocar: () -> Unit,
+    campo: @Composable () -> Unit,
+) {
+    val accion by rememberUpdatedState(alTocar)
+    Column(
+        modifier
+            .fillMaxWidth()
+            .pointerInput(habilitado) {
+                if (habilitado) detectTapGestures(onTap = { accion() })
+            },
+    ) {
+        Text(
+            etiqueta,
+            style = CuentasTema.tipografia.etiqueta,
+            color = CuentasTema.colores.textoSecundario.copy(alpha = if (habilitado) 1f else OPACIDAD_DESHABILITADO),
+            modifier = Modifier.fillMaxWidth().padding(bottom = CuentasTema.espacios.xs + 2.dp),
+        )
+        campo()
+    }
 }
 
 /** Colores comunes de los campos (texto, selector): relleno de controles y sin indicador inferior. */

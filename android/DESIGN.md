@@ -39,7 +39,9 @@ los radios y la densidad son comunes a toda la app; **el color sale de paletas**
   de gasto deben verse sin desplazar en ~808 dp útiles, 411×891 dp con navegación de 3 botones). Por eso Nuevo no
   tiene cabecera ni rótulo sobre el grid; usa márgenes verticales `espacios.s` y separación `espacios.s` entre
   bloques; la cuenta y la nota comparten fila (la nota es el chip «+ Nota» que despliega el `CampoTexto`, y con nota
-  escrita el chip la muestra); y usa el `Teclado` compacto.
+  escrita el chip la muestra; el chip, de 48 dp táctiles, lleva `espacios.xs` debajo para quedar centrado con el campo
+  de 56 dp); y usa el `Teclado` compacto. El banner «Desde una notificación del BNC» (con «Descartar») solo se ve en
+  Gasto e Ingreso, los únicos modos que registran la captura: en Transferir y Ajustar la captura sigue pendiente.
 - Pantallas equivalentes usan **el mismo layout** (todas las listas iguales, todas las hojas de edición iguales).
 
 ## 2. Tokens
@@ -226,6 +228,9 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
   de ≥ 56 dp con relleno `borde`, radio `control`, sin línea inferior; foco = anillo de 2 dp en `primario`.
   **Accesibilidad de campos (criterio único):** la etiqueta visible es un nodo propio con su texto y nombra al
   campo; tocarla enfoca el campo (`CampoTexto`), abre el menú (`Selector`) o el calendario (`CampoFecha`).
+  Patrón único (`CampoConEtiqueta`): la etiqueta va a todo el ancho, no es un nodo tocable aparte, y etiqueta + hueco
+  + campo forman UN objetivo continuo (≥ 80 dp de alto) dentro del margen; nunca un cuadrado de 48 dp desplazado
+  que se salga del margen o se monte en el control de encima.
   - `CampoTexto(…, autoFoco = false)`: con `autoFoco = true` toma el foco al aparecer (nota desplegada de Nuevo).
   - Campos **editables** (`CampoTexto`): SIN `contentDescription` (TalkBack lee el valor que se escribe).
   - Campos **no editables**: `CampoFecha` lleva una descripción que EMPIEZA con la etiqueta
@@ -291,6 +296,7 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
 - **Ritmo de espacios** en la escala 4/8/16/24/32: dentro de un componente `s`–`m`, entre componentes `m`, entre
   secciones `l`, márgenes de pantalla `m`. Nada de valores sueltos.
 - **Objetivos táctiles** ≥ 48 dp (`CuentasTema.medidas.tactilMinimo`) con ≥ 8 dp entre ellos; teclas del teclado ≥ 56 dp.
+  La etiqueta de un campo no es un objetivo aparte: suma su alto al del campo (`CampoConEtiqueta`, §4).
 - **Accesibilidad**: todo ícono suelto con `contentDescription` en español; los textos visibles y
   `contentDescription` son los que usa `tocar` en la verificación por adb.
 
