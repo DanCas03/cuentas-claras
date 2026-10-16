@@ -26,10 +26,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+
+/** Tablas de Room que cuenta `contarTablas` (los nombres de `@Entity`/`@Query` de `data/db`). */
+private val TABLAS_CONTADAS = arrayOf(
+    "accounts", "transactions", "categories", "rules", "rates", "settings", "debts", "txGroups", "calEvents",
+)
 
 class RespaldoViewModel(private val db: CuentasDb, private val dirSeguridad: File) : ViewModel() {
     data class Pendiente(val backup: BackupFile, val resumen: String)
@@ -48,12 +54,20 @@ class RespaldoViewModel(private val db: CuentasDb, private val dirSeguridad: Fil
     private val ocupacion = Ocupacion({ _estado.value.guardando }) { g -> _estado.update { it.copy(guardando = g) } }
 
     init {
-        refrescarConteos()
+        vigilarConteos()
         refrescarSeguridad()
     }
 
-    private fun refrescarConteos() {
-        viewModelScope.launch { _estado.update { it.copy(conteos = contarTablas(db)) } }
+    /**
+     * «Datos en la app» (D4): se vuelve a contar cada vez que Room invalida alguna de las tablas contadas (alta de
+     * una cuenta, un movimiento, una restauración…), no solo al crear el ViewModel.
+     */
+    private fun vigilarConteos() {
+        viewModelScope.launch {
+            db.invalidationTracker.createFlow(*TABLAS_CONTADAS).collectLatest {
+                _estado.update { it.copy(conteos = contarTablas(db)) }
+            }
+        }
     }
 
     /** Relee la carpeta de respaldos de seguridad: cada restauración añade uno (D16). */
@@ -121,11 +135,16 @@ class RespaldoViewModel(private val db: CuentasDb, private val dirSeguridad: Fil
             alTerminar = {
                 _estado.update { it.copy(pendiente = null) }
                 Avisos.avisar("Datos restaurados ✓")
-                refrescarConteos()
-                refrescarSeguridad()
             },
             aviso = { "No se restauró nada: ${it.message ?: ERROR_DESCONOCIDO}" },
-        ) { restaurarConPrevio(db, dirSeguridad, pendiente.backup) }
+        ) {
+            try {
+                restaurarConPrevio(db, dirSeguridad, pendiente.backup)
+            } finally {
+                // Aunque falle, el previo pudo guardarse (y rotar el más antiguo): la lista se relee siempre.
+                refrescarSeguridad()
+            }
+        }
     }
 
     fun pedirRestaurarSeguridad(r: RespaldoSeguridad) = _estado.update { it.copy(seguridadPorRestaurar = r) }
@@ -147,21 +166,22 @@ class RespaldoViewModel(private val db: CuentasDb, private val dirSeguridad: Fil
             "No se restauró nada",
             alTerminar = {
                 _estado.update { it.copy(seguridadPorRestaurar = null) }
-                if (restaurado) {
-                    Avisos.avisar("Datos restaurados ✓")
-                    refrescarConteos()
-                    refrescarSeguridad()
-                }
+                if (restaurado) Avisos.avisar("Datos restaurados ✓")
             },
             aviso = { "No se restauró nada: ${it.message ?: ERROR_DESCONOCIDO}" },
         ) {
-            val texto = withContext(Dispatchers.IO) { r.archivo.readText() }
-            when (val v = withContext(Dispatchers.Default) { leerRespaldo(texto) }) {
-                is ValidacionRespaldo.Error -> Avisos.avisar(v.mensaje)
-                is ValidacionRespaldo.Ok -> {
-                    restaurarConPrevio(db, dirSeguridad, v.backup)
-                    restaurado = true
+            try {
+                val texto = withContext(Dispatchers.IO) { r.archivo.readText() }
+                when (val v = withContext(Dispatchers.Default) { leerRespaldo(texto) }) {
+                    is ValidacionRespaldo.Error -> Avisos.avisar(v.mensaje)
+                    is ValidacionRespaldo.Ok -> {
+                        restaurarConPrevio(db, dirSeguridad, v.backup)
+                        restaurado = true
+                    }
                 }
+            } finally {
+                // Aunque falle, el previo pudo guardarse (y rotar el más antiguo) o el archivo ya no estar: se relee.
+                refrescarSeguridad()
             }
         }
     }
