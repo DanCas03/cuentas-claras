@@ -12,6 +12,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.cuentasclaras.app.ui.componentes.Proximamente
+import com.cuentasclaras.app.ui.pantallas.inicio.InicioPantalla
 import com.cuentasclaras.app.ui.pantallas.respaldo.RespaldoSeccion
 import com.cuentasclaras.app.ui.theme.CuentasTema
 import com.cuentasclaras.app.ui.theme.Movimiento
@@ -35,7 +36,7 @@ fun CuentasNavHost(nav: NavHostController, modifier: Modifier = Modifier) {
         popEnterTransition = { fadeIn(Movimiento.transicion(Movimiento.LARGO)) },
         popExitTransition = { fadeOut(Movimiento.transicion(Movimiento.CORTO)) },
     ) {
-        composable(Rutas.INICIO) { Proximamente("Inicio llega en la Tarea 13") }
+        composable(Rutas.INICIO) { InicioPantalla(nav) }
         composable(Rutas.NUEVO, arguments = argumentos(Rutas.ARGS_NUEVO)) { Proximamente("Nuevo movimiento llega en la Tarea 12") }
         composable(Rutas.MOVIMIENTOS, arguments = argumentos(Rutas.ARGS_MOVIMIENTOS)) { Proximamente("Movimientos llega en la Tarea 15") }
         composable(Rutas.AJUSTES) { AjustesProvisional() }
