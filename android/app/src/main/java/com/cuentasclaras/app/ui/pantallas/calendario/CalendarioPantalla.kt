@@ -71,6 +71,7 @@ import com.cuentasclaras.app.domain.nombreMes
 import com.cuentasclaras.app.domain.partsOf
 import com.cuentasclaras.app.ui.componentes.BotonPrincipal
 import com.cuentasclaras.app.ui.componentes.Chip
+import com.cuentasclaras.app.ui.componentes.FilaConFinal
 import com.cuentasclaras.app.ui.componentes.Vacio
 import com.cuentasclaras.app.ui.componentes.colorDeCategoria
 import com.cuentasclaras.app.ui.nav.Rutas
@@ -412,26 +413,34 @@ private fun FilaOcurrencia(
             ) {
                 Text(categoria?.icon ?: "📅", fontSize = EMOJI_FILA, modifier = Modifier.clearAndSetSemantics { })
             }
-            Column(Modifier.weight(1f)) {
-                Text(
-                    o.evento.titulo,
-                    style = CuentasTema.tipografia.cuerpo,
-                    color = if (o.estado == EstadoOcurrencia.HECHA) c.textoSecundario else c.texto,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    diaCorto(o.date) + (cuenta?.let { " · $it" } ?: ""),
-                    style = CuentasTema.tipografia.etiqueta,
-                    color = c.textoSecundario,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(e.xs)) {
-                if (cifra.isNotEmpty()) Text(cifra, style = CuentasTema.tipografia.cifra, color = c.texto)
-                EtiquetaEstado(o.estado)
-            }
+            // El monto y el estado bajan juntos bajo el título cuando no caben a su lado (FilaConFinal).
+            FilaConFinal(
+                texto = {
+                    Column {
+                        Text(
+                            o.evento.titulo,
+                            style = CuentasTema.tipografia.cuerpo,
+                            color = if (o.estado == EstadoOcurrencia.HECHA) c.textoSecundario else c.texto,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            diaCorto(o.date) + (cuenta?.let { " · $it" } ?: ""),
+                            style = CuentasTema.tipografia.etiqueta,
+                            color = c.textoSecundario,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                },
+                final = {
+                    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(e.xs)) {
+                        if (cifra.isNotEmpty()) Text(cifra, style = CuentasTema.tipografia.cifra, color = c.texto, maxLines = 1, softWrap = false)
+                        EtiquetaEstado(o.estado)
+                    }
+                },
+                modifier = Modifier.weight(1f),
+            )
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(e.s), verticalArrangement = Arrangement.spacedBy(e.xs)) {
             if (o.estado == EstadoOcurrencia.PENDIENTE || o.estado == EstadoOcurrencia.VENCIDA) {

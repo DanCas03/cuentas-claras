@@ -9,7 +9,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.material3.Text
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -21,18 +22,24 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.cuentasclaras.app.ui.theme.CuentasTema
 import com.cuentasclaras.app.ui.theme.Movimiento
 
 /** Separación entre la pista y el segmento activo. */
 private val HOLGURA_SEGMENTADO = 4.dp
 
+/** Tamaño mínimo del texto de un segmento al encogerse (DESIGN.md §3: nada por debajo de 11 sp). */
+private val TEXTO_MINIMO = 11.sp
+
 /**
  * Control segmentado en píldora: pista en el relleno de controles (`borde`), segmento activo en `primario`.
- * El cambio de selección anima el color con la curva propia.
+ * El cambio de selección anima el color con la curva propia. Si un modo no cabe en su segmento, el texto se
+ * encoge hasta 11 sp sin cambiar el alto (≥ 48 dp).
  */
 @Composable
 fun Segmentado(
@@ -72,13 +79,15 @@ fun Segmentado(
                     .selectable(selected = activo, role = Role.Tab, onClick = { onSeleccion(indice) }),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
+                // En anchos estrechos el texto se encoge hasta 11 sp (mínimo de DESIGN.md §3) antes de recortarse.
+                val estilo = CuentasTema.tipografia.etiqueta
+                BasicText(
                     opcion,
-                    style = CuentasTema.tipografia.etiqueta.copy(fontWeight = FontWeight.W600),
-                    color = tinta,
+                    style = estilo.copy(fontWeight = FontWeight.W600, color = tinta, textAlign = TextAlign.Center),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(horizontal = CuentasTema.espacios.s),
+                    autoSize = TextAutoSize.StepBased(minFontSize = TEXTO_MINIMO, maxFontSize = estilo.fontSize),
+                    modifier = Modifier.padding(horizontal = CuentasTema.espacios.xs),
                 )
             }
         }

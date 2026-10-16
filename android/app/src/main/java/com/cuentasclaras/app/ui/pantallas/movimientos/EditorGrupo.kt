@@ -1,18 +1,14 @@
 package com.cuentasclaras.app.ui.pantallas.movimientos
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -20,17 +16,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import com.cuentasclaras.app.domain.Category
 import com.cuentasclaras.app.domain.CategoryKind
 import com.cuentasclaras.app.domain.ResiduoMoneda
 import com.cuentasclaras.app.domain.TxGroup
 import com.cuentasclaras.app.domain.formatMoney
-import com.cuentasclaras.app.ui.componentes.ALTO_CAMPO
+import com.cuentasclaras.app.ui.componentes.AnclaSelector
 import com.cuentasclaras.app.ui.componentes.Banner
 import com.cuentasclaras.app.ui.componentes.BotonPrincipal
 import com.cuentasclaras.app.ui.componentes.BotonSecundario
@@ -38,12 +32,8 @@ import com.cuentasclaras.app.ui.componentes.CampoTexto
 import com.cuentasclaras.app.ui.componentes.EtiquetaCampo
 import com.cuentasclaras.app.ui.componentes.HojaModal
 import com.cuentasclaras.app.ui.componentes.TipoBanner
-import com.cuentasclaras.app.ui.componentes.coloresCampo
 import com.cuentasclaras.app.ui.theme.CuentasTema
 import kotlin.math.abs
-
-/** Anillo de foco del campo desplegado (el mismo de `Selector`). */
-private val ANILLO_FOCO = 2.dp
 
 /** Valor de la opción «Sin categoría (Vuelto)». */
 private const val SIN_CATEGORIA = ""
@@ -164,8 +154,8 @@ private fun TextoAyuda(texto: String) {
 
 /**
  * Selector de la categoría del vuelto: «Sin categoría (Vuelto)» y las categorías en dos secciones, «Gastos» e
- * «Ingresos» (los `optgroup` de la web). Mismo aspecto y accesibilidad que `Selector` (etiqueta encima que abre el
- * menú, relleno de controles, anillo `primario` al abrir, menú en `superficieElevada`); `Selector` no admite
+ * «Ingresos» (los `optgroup` de la web). Misma ancla que `Selector` (`AnclaSelector`: etiqueta encima que abre el
+ * menú, relleno de controles, anillo `primario` al abrir, valor con «…»; menú en `superficieElevada`); `Selector` no admite
  * encabezados de sección, por eso este campo vive aquí.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -187,21 +177,7 @@ private fun SelectorCategoriaVuelto(
     Column(Modifier.fillMaxWidth()) {
         EtiquetaCampo(etiqueta) { abierto = true }
         ExposedDropdownMenuBox(expanded = abierto, onExpandedChange = { abierto = it }) {
-            TextField(
-                value = texto(seleccion),
-                onValueChange = {},
-                readOnly = true,
-                singleLine = true,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = abierto) },
-                textStyle = CuentasTema.tipografia.cuerpo,
-                shape = CuentasTema.formas.control,
-                colors = coloresCampo(),
-                modifier = Modifier
-                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-                    .fillMaxWidth()
-                    .heightIn(min = ALTO_CAMPO)
-                    .border(ANILLO_FOCO, if (abierto) c.primario else Color.Transparent, CuentasTema.formas.control),
-            )
+            AnclaSelector(texto(seleccion), abierto, contentDescription = null)
             ExposedDropdownMenu(
                 expanded = abierto,
                 onDismissRequest = { abierto = false },

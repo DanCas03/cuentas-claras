@@ -2,6 +2,8 @@ package com.cuentasclaras.app.ui.pantallas.ajustes
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -31,6 +33,7 @@ import com.cuentasclaras.app.ui.componentes.BotonSecundario
 import com.cuentasclaras.app.ui.componentes.CampoFecha
 import com.cuentasclaras.app.ui.componentes.CampoTexto
 import com.cuentasclaras.app.ui.componentes.Chip
+import com.cuentasclaras.app.ui.componentes.FilaConFinal
 import com.cuentasclaras.app.ui.componentes.Selector
 import com.cuentasclaras.app.ui.componentes.Tarjeta
 import com.cuentasclaras.app.ui.componentes.Vacio
@@ -155,7 +158,19 @@ fun TasasSeccion(
     }
 }
 
-/** Fecha · fuente · Bs/$ de las tasas más recientes, con cifras tabulares. */
+/** Texto corto de la fuente en el chip del histórico («Binance», como en el selector «Binance USDT/VES»). */
+private fun textoFuenteTabla(f: RateSource): String = when (f) {
+    RateSource.BCV -> "BCV"
+    RateSource.BINANCE -> "Binance"
+    RateSource.MANUAL -> "Manual"
+}
+
+/**
+ * Fecha · fuente · Bs/$ de las tasas más recientes, con cifras tabulares. Ni la fecha ni el valor se parten
+ * (`softWrap = false`): el valor es el final de una `FilaConFinal` y, si no cabe junto a la fecha y la fuente,
+ * baja a su propia línea; la fuente pasa bajo la fecha cuando no caben juntas.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TablaHistorico(recientes: List<Rate>) {
     val c = CuentasTema.colores
@@ -167,32 +182,30 @@ private fun TablaHistorico(recientes: List<Rate>) {
     }
     Column(verticalArrangement = Arrangement.spacedBy(e.s)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            EncabezadoColumna("Fecha", Modifier.weight(PESO_FECHA))
-            EncabezadoColumna("Fuente", Modifier.weight(PESO_FUENTE))
-            EncabezadoColumna("Bs/$", Modifier.weight(PESO_VALOR), TextAlign.End)
+            EncabezadoColumna("Fecha · fuente", Modifier.weight(1f))
+            EncabezadoColumna("Bs/$", Modifier, TextAlign.End)
         }
         recientes.forEach { r ->
-            Row(
-                Modifier.fillMaxWidth().padding(vertical = e.xs),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(r.date, style = cifra, color = c.texto, modifier = Modifier.weight(PESO_FECHA))
-                Row(Modifier.weight(PESO_FUENTE)) { Chip(textoFuente(r.source)) }
-                Text(
-                    textoTasa(r.vesPerUsd),
-                    style = cifra,
-                    color = c.texto,
-                    textAlign = TextAlign.End,
-                    modifier = Modifier.weight(PESO_VALOR),
-                )
-            }
+            FilaConFinal(
+                texto = {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(e.s),
+                        verticalArrangement = Arrangement.spacedBy(e.xs),
+                        itemVerticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(r.date, style = cifra, color = c.texto, maxLines = 1, softWrap = false)
+                        Chip(textoFuenteTabla(r.source))
+                    }
+                },
+                final = {
+                    Text(textoTasa(r.vesPerUsd), style = cifra, color = c.texto, textAlign = TextAlign.End, maxLines = 1, softWrap = false)
+                },
+                separacion = e.s,
+                modifier = Modifier.fillMaxWidth().padding(vertical = e.xs),
+            )
         }
     }
 }
-
-private const val PESO_FECHA = 1.3f
-private const val PESO_FUENTE = 1.2f
-private const val PESO_VALOR = 1f
 
 @Composable
 private fun EncabezadoColumna(texto: String, modifier: Modifier, alineacion: TextAlign = TextAlign.Start) {

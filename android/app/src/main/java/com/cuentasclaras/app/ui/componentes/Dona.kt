@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -25,7 +26,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -63,8 +67,8 @@ private val PUNTO_LEYENDA = 10.dp
  * Dona de partes de un total dibujada en `Canvas`: anillo de 20 dp que arranca a las 12 en punto y gira en el
  * sentido del reloj, con 2° de separación entre porciones; en el hueco, el total en `cifra` (se encoge para no
  * cortarse con montos largos en Bs). Si hay más de 7 segmentos, los 6 mayores conservan su nombre y el resto se
- * suma en «Otras» (`textoSecundario`). Debajo, una leyenda en dos columnas con el color, el nombre, el monto y
- * el porcentaje: ningún texto vive sobre el anillo, así nada se recorta. Para el lector de pantalla todo el bloque
+ * suma en «Otras» (`textoSecundario`). Debajo, una leyenda (dos columnas si caben, si no una) con el color, el
+ * nombre, el monto y el porcentaje: ningún texto vive sobre el anillo y la cifra nunca se recorta. Para el lector de pantalla todo el bloque
  * es un solo nodo con el resumen en español y los importes formateados.
  */
 @Composable
@@ -137,19 +141,44 @@ fun Dona(
                 )
             }
         }
+        Leyenda(visibles, total, formato)
+    }
+}
+
+/**
+ * Leyenda en dos columnas si en cada una cabe entera la línea «monto · %» más ancha; si no, en una sola. La cifra
+ * y el porcentaje nunca se cortan (DESIGN.md §3); solo el nombre de la categoría puede acabar en «…».
+ */
+@Composable
+private fun Leyenda(visibles: List<SegmentoDona>, total: Long, formato: (Long) -> String) {
+    val e = CuentasTema.espacios
+    val estiloCifra = CuentasTema.tipografia.etiqueta.copy(fontFeatureSettings = "tnum")
+    val medidor = rememberTextMeasurer()
+    val lineas = remember(visibles, total, formato) { visibles.map { lineaCifra(it, total, formato) } }
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val densidad = LocalDensity.current
+        val anchoCifra = remember(lineas, estiloCifra, densidad) {
+            lineas.maxOfOrNull { medidor.measure(it, estiloCifra, maxLines = 1, softWrap = false).size.width } ?: 0
+        }
+        val anchoColumna = with(densidad) { ((maxWidth - e.m) / 2 - PUNTO_LEYENDA - e.s).roundToPx() }
+        val columnas = if (anchoCifra <= anchoColumna) 2 else 1
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(e.s)) {
-            visibles.chunked(2).forEach { fila ->
+            visibles.indices.chunked(columnas).forEach { fila ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(e.m)) {
-                    fila.forEach { s -> ItemLeyenda(s, total, formato, Modifier.weight(1f)) }
-                    if (fila.size == 1) Spacer(Modifier.weight(1f))
+                    fila.forEach { i -> ItemLeyenda(visibles[i], lineas[i], estiloCifra, Modifier.weight(1f)) }
+                    if (fila.size < columnas) Spacer(Modifier.weight(1f))
                 }
             }
         }
     }
 }
 
+/** «$19.18 · 34 %»: la línea de la cifra de un elemento de la leyenda. */
+private fun lineaCifra(s: SegmentoDona, total: Long, formato: (Long) -> String): String =
+    "${formato(s.valor)} · ${porcentaje(s.valor, total)} %"
+
 @Composable
-private fun ItemLeyenda(s: SegmentoDona, total: Long, formato: (Long) -> String, modifier: Modifier) {
+private fun ItemLeyenda(s: SegmentoDona, lineaCifra: String, estiloCifra: TextStyle, modifier: Modifier) {
     val c = CuentasTema.colores
     val t = CuentasTema.tipografia
     Row(modifier, verticalAlignment = Alignment.Top) {
@@ -161,13 +190,8 @@ private fun ItemLeyenda(s: SegmentoDona, total: Long, formato: (Long) -> String,
         )
         Column(Modifier.padding(start = CuentasTema.espacios.s)) {
             Text(s.etiqueta, style = t.etiqueta, color = c.texto, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(
-                "${formato(s.valor)} · ${porcentaje(s.valor, total)} %",
-                style = t.etiqueta.copy(fontFeatureSettings = "tnum"),
-                color = c.textoSecundario,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            // Leyenda en `etiqueta` + `tnum` (excepción a `cifra`, DESIGN.md §7): sin elipsis ni salto.
+            Text(lineaCifra, style = estiloCifra, color = c.textoSecundario, maxLines = 1, softWrap = false)
         }
     }
 }

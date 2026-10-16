@@ -33,8 +33,8 @@ import com.cuentasclaras.app.ui.theme.Movimiento
 /** Alto mínimo de los campos. */
 internal val ALTO_CAMPO = 56.dp
 
-/** Grosor del anillo de foco de los campos. */
-private val ANILLO_FOCO = 2.dp
+/** Grosor del anillo de foco de los campos (y del selector abierto). */
+internal val ANILLO_FOCO = 2.dp
 
 /**
  * Campo de texto con la etiqueta ENCIMA (nunca flotante). Relleno de controles (`borde`), sin línea inferior;

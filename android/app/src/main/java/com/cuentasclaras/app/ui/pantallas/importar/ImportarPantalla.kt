@@ -52,6 +52,7 @@ import com.cuentasclaras.app.ui.componentes.BotonPrincipal
 import com.cuentasclaras.app.ui.componentes.BotonSecundario
 import com.cuentasclaras.app.ui.componentes.CampoTexto
 import com.cuentasclaras.app.ui.componentes.Chip
+import com.cuentasclaras.app.ui.componentes.FilaConFinal
 import com.cuentasclaras.app.ui.componentes.Monto
 import com.cuentasclaras.app.ui.componentes.SelectEvento
 import com.cuentasclaras.app.ui.componentes.Selector
@@ -233,23 +234,30 @@ private fun FilaDraft(
                 onCambio = { v -> onCambio { it.copy(incluir = v) } },
             )
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(e.s)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(e.s), verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        d.tx.note ?: "",
-                        style = CuentasTema.tipografia.cuerpo,
-                        color = c.texto,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Icon(
-                        painterResource(if (ingreso) R.drawable.ic_entra else R.drawable.ic_sale),
-                        contentDescription = null,
-                        tint = if (ingreso) c.ingreso else c.gasto,
-                        modifier = Modifier.size(CuentasTema.medidas.iconoEnLinea),
-                    )
-                    Monto(abs(d.tx.amountMinor), Currency.VES, if (ingreso) Signo.POSITIVO else Signo.NEGATIVO)
-                }
+                // Mismo patrón que las filas de Movimientos: en estrecho, el monto baja bajo la descripción.
+                FilaConFinal(
+                    texto = {
+                        Text(
+                            d.tx.note ?: "",
+                            style = CuentasTema.tipografia.cuerpo,
+                            color = c.texto,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    },
+                    final = {
+                        Row(horizontalArrangement = Arrangement.spacedBy(e.xs), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                painterResource(if (ingreso) R.drawable.ic_entra else R.drawable.ic_sale),
+                                contentDescription = null,
+                                tint = if (ingreso) c.ingreso else c.gasto,
+                                modifier = Modifier.size(CuentasTema.medidas.iconoEnLinea),
+                            )
+                            Monto(abs(d.tx.amountMinor), Currency.VES, if (ingreso) Signo.POSITIVO else Signo.NEGATIVO)
+                        }
+                    },
+                    separacion = e.s,
+                )
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(e.s), verticalArrangement = Arrangement.spacedBy(e.xs)) {
                     Text(
                         "${d.tx.date} ${d.tx.time?.take(8) ?: ""}".trim(),

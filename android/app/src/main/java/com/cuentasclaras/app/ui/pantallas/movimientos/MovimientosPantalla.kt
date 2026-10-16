@@ -80,6 +80,7 @@ import com.cuentasclaras.app.ui.componentes.BotonPrincipal
 import com.cuentasclaras.app.ui.componentes.BotonSecundario
 import com.cuentasclaras.app.ui.componentes.CampoTexto
 import com.cuentasclaras.app.ui.componentes.DialogoConfirmacion
+import com.cuentasclaras.app.ui.componentes.FilaConFinal
 import com.cuentasclaras.app.ui.componentes.Monto
 import com.cuentasclaras.app.ui.componentes.Selector
 import com.cuentasclaras.app.ui.componentes.Signo
@@ -498,14 +499,15 @@ private fun IconoFila(fondo: Color, emoji: String?, vector: Int, marcada: Boolea
 private const val ICONO_EVENTO = "evento"
 
 /**
- * Descripción y meta apiladas; ocupan el ancho que dejan el ícono y el monto. Con `evento`, la meta termina en
- * « · [ic_calendario] título» (📅 en la web; ícono de interfaz, DESIGN.md §8).
+ * Descripción y meta apiladas, en el texto de una `FilaConFinal` (el monto no le quita todo el ancho: en
+ * estrecho baja debajo). Con `evento`, la meta termina en « · [ic_calendario] título» (📅 en la web; ícono de
+ * interfaz, DESIGN.md §8).
  */
 @Composable
-private fun RowScope.TextoFila(principal: String, meta: String, evento: String? = null) {
+private fun TextoFila(principal: String, meta: String, evento: String? = null) {
     val etiqueta = CuentasTema.tipografia.etiqueta
     val tinta = CuentasTema.colores.textoSecundario
-    Column(Modifier.weight(1f)) {
+    Column {
         Text(
             principal,
             style = CuentasTema.tipografia.cuerpo,
@@ -619,20 +621,25 @@ private fun FilaMovimiento(
         atenuada = enSeleccion == EnSeleccion.NO_AGRUPABLE,
     ) {
         IconoFila(fondoIcono, emoji, vector, marcada = enSeleccion == EnSeleccion.SELECCIONADA)
-        TextoFila(descripcion, meta, evento?.titulo)
-        when (t.type) {
-            TxType.INCOME -> MontoConDireccion(t.amountMinor, moneda, Signo.POSITIVO)
-            TxType.EXPENSE -> MontoConDireccion(t.amountMinor, moneda, Signo.NEGATIVO)
-            TxType.ADJUSTMENT ->
-                MontoConDireccion(t.amountMinor, moneda, if (t.amountMinor >= 0) Signo.POSITIVO else Signo.NEGATIVO)
-            TxType.TRANSFER -> Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(CuentasTema.espacios.xs),
-            ) {
-                Text("↔", style = CuentasTema.tipografia.cifra, color = c.textoSecundario)
-                Monto(t.amountMinor, moneda)
-            }
-        }
+        FilaConFinal(
+            texto = { TextoFila(descripcion, meta, evento?.titulo) },
+            final = {
+                when (t.type) {
+                    TxType.INCOME -> MontoConDireccion(t.amountMinor, moneda, Signo.POSITIVO)
+                    TxType.EXPENSE -> MontoConDireccion(t.amountMinor, moneda, Signo.NEGATIVO)
+                    TxType.ADJUSTMENT ->
+                        MontoConDireccion(t.amountMinor, moneda, if (t.amountMinor >= 0) Signo.POSITIVO else Signo.NEGATIVO)
+                    TxType.TRANSFER -> Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(CuentasTema.espacios.xs),
+                    ) {
+                        Text("↔", style = CuentasTema.tipografia.cifra, color = c.textoSecundario)
+                        Monto(t.amountMinor, moneda)
+                    }
+                }
+            },
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 
@@ -664,16 +671,21 @@ private fun FilaGrupo(g: ItemMov.Grupo, abierto: Boolean, cat: Catalogos, onClic
         }
         // Sin categoría, la web pinta 🔁: aquí `ic_grupo` (DESIGN.md §8).
         IconoFila(fondoIcono, categoria?.icon, R.drawable.ic_grupo)
-        TextoFila(nota, meta)
-        Column(horizontalAlignment = Alignment.End) {
-            if (g.residuos.isEmpty()) {
-                Text("sin residuo", style = CuentasTema.tipografia.etiqueta, color = c.textoSecundario)
-            } else {
-                g.residuos.forEach { r ->
-                    MontoConDireccion(abs(r.residuoMinor), r.currency, if (r.residuoMinor >= 0) Signo.POSITIVO else Signo.NEGATIVO)
+        FilaConFinal(
+            texto = { TextoFila(nota, meta) },
+            final = {
+                Column(horizontalAlignment = Alignment.End) {
+                    if (g.residuos.isEmpty()) {
+                        Text("sin residuo", style = CuentasTema.tipografia.etiqueta, color = c.textoSecundario)
+                    } else {
+                        g.residuos.forEach { r ->
+                            MontoConDireccion(abs(r.residuoMinor), r.currency, if (r.residuoMinor >= 0) Signo.POSITIVO else Signo.NEGATIVO)
+                        }
+                    }
                 }
-            }
-        }
+            },
+            modifier = Modifier.weight(1f),
+        )
         Icon(
             painterResource(R.drawable.ic_expandir),
             contentDescription = null,

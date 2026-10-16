@@ -51,6 +51,7 @@ import com.cuentasclaras.app.ui.componentes.Barras
 import com.cuentasclaras.app.ui.componentes.Chip
 import com.cuentasclaras.app.ui.componentes.CurvaAcumulada
 import com.cuentasclaras.app.ui.componentes.Dona
+import com.cuentasclaras.app.ui.componentes.FilaConFinal
 import com.cuentasclaras.app.ui.componentes.GrupoBarras
 import com.cuentasclaras.app.ui.componentes.Monto
 import com.cuentasclaras.app.ui.componentes.SegmentoDona
@@ -351,25 +352,29 @@ private fun FilaCategoria(
                 )
             }
         }
-        Column(
-            Modifier
-                .weight(1f)
-                .padding(horizontal = e.s),
-            verticalArrangement = Arrangement.spacedBy(e.xs),
-        ) {
-            Text(
-                cat?.name ?: "Sin categoría",
-                style = t.cuerpo,
-                color = if (cat != null) c.texto else c.textoSecundario,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            LineaProgreso((if (total > 0L) minor.toDouble() / total else 0.0).toFloat(), color, c.fondo)
-        }
-        Column(horizontalAlignment = Alignment.End) {
-            Monto(minor, moneda, signo)
-            Text("$pct %", style = t.etiqueta.copy(fontFeatureSettings = "tnum"), color = c.textoSecundario)
-        }
+        // Nombre y barra a la izquierda; el monto y el % a la derecha, o debajo si no caben (FilaConFinal).
+        FilaConFinal(
+            texto = {
+                Column(verticalArrangement = Arrangement.spacedBy(e.xs)) {
+                    Text(
+                        cat?.name ?: "Sin categoría",
+                        style = t.cuerpo,
+                        color = if (cat != null) c.texto else c.textoSecundario,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    LineaProgreso((if (total > 0L) minor.toDouble() / total else 0.0).toFloat(), color, c.fondo)
+                }
+            },
+            final = {
+                Column(horizontalAlignment = Alignment.End) {
+                    Monto(minor, moneda, signo)
+                    Text("$pct %", style = t.etiqueta.copy(fontFeatureSettings = "tnum"), color = c.textoSecundario, maxLines = 1, softWrap = false)
+                }
+            },
+            separacion = e.s,
+            modifier = Modifier.weight(1f).padding(start = e.s),
+        )
     }
 }
 
@@ -431,22 +436,29 @@ private fun TarjetaPresupuestos(presupuestos: List<EstadoPresupuesto>, mes: Stri
                     Modifier.semantics(mergeDescendants = true) { },
                     verticalArrangement = Arrangement.spacedBy(e.xs),
                 ) {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            "${p.category.icon} ${p.category.name}",
-                            style = t.cuerpo,
-                            color = c.texto,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f).padding(end = e.s),
-                        )
-                        Text(
-                            "${formatMoney(p.gastoUsdMinor, Currency.USD)} / ${formatMoney(p.presupuestoMinor, Currency.USD)}",
-                            style = t.cuerpo.copy(fontFeatureSettings = "tnum"),
-                            color = if (excedido) c.gasto else c.texto,
-                            maxLines = 1,
-                        )
-                    }
+                    // «gastado / tope» nunca se corta: si no cabe junto al nombre, baja a su propia línea.
+                    FilaConFinal(
+                        texto = {
+                            Text(
+                                "${p.category.icon} ${p.category.name}",
+                                style = t.cuerpo,
+                                color = c.texto,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        },
+                        final = {
+                            Text(
+                                "${formatMoney(p.gastoUsdMinor, Currency.USD)} / ${formatMoney(p.presupuestoMinor, Currency.USD)}",
+                                style = t.cuerpo.copy(fontFeatureSettings = "tnum"),
+                                color = if (excedido) c.gasto else c.texto,
+                                maxLines = 1,
+                                softWrap = false,
+                            )
+                        },
+                        separacion = e.s,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                     LineaProgreso(
                         (minOf(100.0, p.ratio * 100) / 100).toFloat(),
                         relleno = when {

@@ -41,6 +41,7 @@ import com.cuentasclaras.app.ui.componentes.BotonPrincipal
 import com.cuentasclaras.app.ui.componentes.BotonSecundario
 import com.cuentasclaras.app.ui.componentes.Chip
 import com.cuentasclaras.app.ui.componentes.DialogoConfirmacion
+import com.cuentasclaras.app.ui.componentes.FilaConFinal
 import com.cuentasclaras.app.ui.componentes.Monto
 import com.cuentasclaras.app.ui.componentes.Segmentado
 import com.cuentasclaras.app.ui.componentes.Tarjeta
@@ -126,14 +127,12 @@ fun DeudasPantalla(nav: NavHostController) {
         items(estado.pendientes, key = { it.id }) { deuda ->
             Tarjeta {
                 Column(verticalArrangement = Arrangement.spacedBy(e.s)) {
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(e.s),
-                    ) {
-                        Text(deuda.concepto, style = t.cuerpo, color = c.texto, modifier = Modifier.weight(1f))
-                        Monto(deuda.amountMinor, monedaDe(deuda.accountId))
-                    }
+                    FilaConFinal(
+                        texto = { Text(deuda.concepto, style = t.cuerpo, color = c.texto) },
+                        final = { Monto(deuda.amountMinor, monedaDe(deuda.accountId)) },
+                        separacion = e.s,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                     Text(
                         "${nombreCuenta(deuda.accountId)} · registrada el ${deuda.createdIso.take(10)}",
                         style = t.etiqueta,
@@ -275,13 +274,14 @@ private fun FilaCerrada(deuda: Debt, moneda: Currency, habilitada: Boolean, onEl
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(e.s),
     ) {
-        Text(
-            "${deuda.concepto} · ${deuda.settledIso}",
-            style = CuentasTema.tipografia.cuerpo,
-            color = c.textoSecundario,
+        FilaConFinal(
+            texto = {
+                Text("${deuda.concepto} · ${deuda.settledIso}", style = CuentasTema.tipografia.cuerpo, color = c.textoSecundario)
+            },
+            final = { Monto(deuda.amountMinor, moneda) },
+            separacion = e.s,
             modifier = Modifier.weight(1f),
         )
-        Monto(deuda.amountMinor, moneda)
         Chip(
             "eliminar",
             onClick = onEliminar,

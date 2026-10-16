@@ -6,9 +6,11 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Text
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -19,12 +21,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.cuentasclaras.app.ui.theme.CuentasTema
 import com.cuentasclaras.app.ui.theme.Movimiento
 import com.cuentasclaras.app.ui.theme.sobreError
 
 /** Alto mínimo de los botones (objetivo táctil holgado). */
 private val ALTO_BOTON = 52.dp
+
+/** Tamaño mínimo del texto de un botón al encogerse (DESIGN.md §3: nada por debajo de 11 sp). */
+private val TEXTO_MINIMO = 11.sp
 
 /** Acción principal de la pantalla (una por pantalla): píldora en `primario`. */
 @Composable
@@ -47,7 +53,10 @@ fun BotonPeligro(texto: String, onClick: () -> Unit, enabled: Boolean = true, mo
     BotonBase(texto, onClick, enabled, modifier, fondo = c.error, tinta = c.sobreError())
 }
 
-/** Píldora con hundimiento por resorte al presionar (escala 0,97) y estado deshabilitado al 38 %. */
+/**
+ * Píldora con hundimiento por resorte al presionar (escala 0,97) y estado deshabilitado al 38 %. Si el texto no
+ * cabe (botones a medio ancho en teléfonos estrechos), se encoge antes de acabar en «…».
+ */
 @Composable
 private fun BotonBase(
     texto: String,
@@ -80,11 +89,14 @@ private fun BotonBase(
         contentPadding = PaddingValues(horizontal = CuentasTema.espacios.l, vertical = CuentasTema.espacios.s),
         interactionSource = interaccion,
     ) {
-        Text(
+        // En anchos estrechos el texto se encoge hasta 11 sp (DESIGN.md §3) antes de recurrir a la elipsis.
+        val estilo = CuentasTema.tipografia.cuerpo
+        BasicText(
             texto,
-            style = CuentasTema.tipografia.cuerpo.copy(fontWeight = FontWeight.W600),
+            style = estilo.copy(fontWeight = FontWeight.W600, color = LocalContentColor.current),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            autoSize = TextAutoSize.StepBased(minFontSize = TEXTO_MINIMO, maxFontSize = estilo.fontSize),
         )
     }
 }

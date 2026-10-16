@@ -35,7 +35,8 @@ enum class Signo { NINGUNO, POSITIVO, NEGATIVO }
 
 /**
  * Tarjeta con doble bisel: una carcasa exterior en `superficie` y un núcleo concéntrico en `superficieElevada`
- * con un filo superior apenas iluminado. Sin bordes grises de 1 px ni sombras duras.
+ * con un filo superior apenas iluminado. Sin bordes grises de 1 px ni sombras duras. El título (hasta 3 líneas) y
+ * la acción comparten fila mientras al título le quede `medidas.anchoMinimoTexto`; si no, la acción baja.
  */
 @Composable
 fun Tarjeta(
@@ -62,24 +63,27 @@ fun Tarjeta(
                 .border(1.dp, Brush.verticalGradient(listOf(c.texto.copy(alpha = 0.06f), Color.Transparent)), nucleo)
                 .padding(e.m),
         ) {
-            if (titulo != null || accion != null) {
-                Row(
-                    Modifier.fillMaxWidth().padding(bottom = e.s),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (titulo != null) {
+            if (titulo != null) {
+                // Si el título no cabe junto a la acción, la acción baja bajo él (FilaConFinal): nunca «Acceso a notificacion…».
+                FilaConFinal(
+                    texto = {
                         Text(
                             titulo,
                             style = CuentasTema.tipografia.subtitulo,
                             color = c.texto,
-                            maxLines = 2,
+                            maxLines = 3,
                             overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f).semantics { heading() },
+                            modifier = Modifier.semantics { heading() },
                         )
-                    } else {
-                        Spacer(Modifier.weight(1f))
-                    }
-                    accion?.invoke()
+                    },
+                    final = { accion?.invoke() },
+                    separacion = e.s,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = e.s),
+                )
+            } else if (accion != null) {
+                Row(Modifier.fillMaxWidth().padding(bottom = e.s), verticalAlignment = Alignment.CenterVertically) {
+                    Spacer(Modifier.weight(1f))
+                    accion()
                 }
             }
             contenido()

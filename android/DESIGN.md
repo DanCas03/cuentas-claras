@@ -49,7 +49,7 @@ Se leen SIEMPRE desde `CuentasTema` (`CuentasTema.colores`, `.tipografia`, `.for
 | Tipografía | `data class Tipografia` | `titulo`, `subtitulo`, `cuerpo`, `etiqueta`, `cifraGrande`, `cifra` |
 | Formas | `data class Formas` | `tarjeta` = 20 dp · `control` = 12 dp · `pildora` = 50 % |
 | Espacios | `data class Espacios` | `xs` 4 · `s` 8 · `m` 16 · `l` 24 · `xl` 32 dp |
-| Medidas | `data class Medidas` (`ui/theme/Medidas.kt`) | `tactilMinimo` = 48 dp (objetivo táctil, §6) · `alfaTinteCategoria` = 0,18 (tinte del color de categoría tras su emoji o ícono) · `iconoEnLinea` = 16 dp (ícono en línea con una cifra, §4) · `alfaAtenuado` = 0,45 (elemento visible que no cuenta, p. ej. fila duplicada en la previa del import) |
+| Medidas | `data class Medidas` (`ui/theme/Medidas.kt`) | `tactilMinimo` = 48 dp (objetivo táctil, §6) · `alfaTinteCategoria` = 0,18 (tinte del color de categoría tras su emoji o ícono) · `iconoEnLinea` = 16 dp (ícono en línea con una cifra, §4) · `alfaAtenuado` = 0,45 (elemento visible que no cuenta, p. ej. fila duplicada en la previa del import) · `anchoMinimoTexto` = 120 dp (ancho que una `FilaConFinal` deja al texto antes de apilarse, §4) |
 
 Roles de color:
 - `fondo`: lienzo de la pantalla. `superficie`: carcasa exterior de tarjetas, hojas modales, círculos de estado vacío.
@@ -170,7 +170,15 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
 - **`Tarjeta(modifier, titulo: String? = null, accion: (@Composable () -> Unit)? = null, contenido)`**: doble bisel.
   Carcasa `superficie`, radio 20 dp, bisel de 4 dp; núcleo `superficieElevada`, radio 16 dp (concéntrico), relleno
   16 dp, filo superior con degradado `texto` al 6 % → transparente. Título en `subtitulo` (encabezado accesible),
-  acción a la derecha. Sin sombras.
+  acción a la derecha; el título llega a 3 líneas y, si junto a la acción le quedan menos de
+  `medidas.anchoMinimoTexto`, la acción baja bajo él (mismo criterio que `FilaConFinal`). Sin sombras.
+- **`FilaConFinal(texto, final, modifier, separacion = espacios.m)`**: patrón único de «fila con algo a la derecha»
+  (monto, estado, acción) en todas las listas: Movimientos, Esta semana, Calendario, vista previa de Importar,
+  categorías y presupuestos de Inicio, Deudas, histórico de tasas. El final se mide primero con su ancho natural;
+  si al texto le quedan menos de `medidas.anchoMinimoTexto` (120 dp), la fila se apila: el texto arriba a todo el
+  ancho y el final debajo alineado al final (`espacios.xs` entre ambos), con su estado («vencida», «pendiente»)
+  incluido. El cuadro del ícono y los chevrons quedan fuera, en la `Row` que la contiene. Así una cifra de dinero
+  nunca se parte ni se corta y el título no queda en 25 dp (objetivo: legible a 320 dp; a 277 dp, degradación digna).
 - **`Monto(minor, currency, signo = Signo.NINGUNO, grande = false)`** (en `Tarjeta.kt`): `formatMoney` + `cifra` /
   `cifraGrande`. `POSITIVO` → «+» y `ingreso`; `NEGATIVO` → «−» (U+2212) y `gasto`; `NINGUNO` → `formatMoney` tal
   cual en `texto`. En filas de movimientos el monto va acompañado SIEMPRE de un ícono `ic_entra` / `ic_sale` (16 dp,
@@ -187,12 +195,14 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
   - Nunca se escribe un signo a mano delante de `formatMoney`: o se usa `Monto(signo)` o el formato de
     `formatMoney` tal cual.
 - **Botones** (`BotonPrincipal`, `BotonSecundario`, `BotonPeligro`; `(texto, onClick, enabled = true, modifier)`):
-  píldora, alto mínimo 52 dp, relleno horizontal 24 dp, texto `cuerpo` 600. Principal `primario`/`sobrePrimario`;
+  píldora, alto mínimo 52 dp, relleno horizontal 24 dp, texto `cuerpo` 600 en una línea (si no cabe se encoge
+  hasta 11 sp antes de acabar en «…»: nunca «Elimi…» en botones a medio ancho). Principal `primario`/`sobrePrimario`;
   secundario `borde`/`texto`; peligro `error`/`sobreError()`. Al presionar se hunden a escala 0,97 con resorte;
   deshabilitados al 38 %. Un solo principal por pantalla. Acción con guardado: `enabled = !estado.guardando`.
 - **`Segmentado(opciones, seleccion, onSeleccion)`**: pista píldora en `borde` con holgura de 4 dp; cada segmento
   ≥ 48 dp de alto; activo en `primario`/`sobrePrimario`, inactivo con `texto`; color animado con la curva propia;
-  semántica de pestañas.
+  semántica de pestañas. Texto `etiqueta` 600 con relleno horizontal `espacios.xs`: si un modo no cabe, se encoge
+  (`TextAutoSize.StepBased`) hasta 11 sp sin cambiar el alto; la elipsis es el último recurso.
 - **`Chip(texto, onClick = null, activo = false, enabled = true, sugerido = false)`** (E6): píldora de 36 dp de alto
   visual (área táctil 48 dp si es tocable), texto `etiqueta` 600 con dígitos tabulares (`tnum`). Normal `borde`/`texto`; activo
   `primario`/`sobrePrimario`; sugerido: tinte `primario` al 14 % + contorno `primario` de 1 dp + `texto`.
@@ -218,7 +228,9 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
     y eso enfoca o abre el campo; después `escribir "120"`. Nunca se busca un campo por su valor.
 
   Error de validación: `Banner` de tipo `ERROR` justo debajo
-  del campo. `Selector` usa `ExposedDropdownMenuBox` con menú en `superficieElevada`. `CampoFecha` muestra
+  del campo. `Selector` usa `ExposedDropdownMenuBox` con menú en `superficieElevada`; su ancla (`AnclaSelector`,
+  también la del selector de categoría del vuelto) tiene el aspecto del campo y muestra el valor en UNA línea con
+  «…» si no cabe (sin valor, «Elegir» en `textoSecundario`). `CampoFecha` muestra
   «jueves 15 de octubre de 2026» con `ic_calendario` y abre el `DatePickerDialog` de Material 3; conversión con
   `isoDesdeDatePicker` / `millisParaDatePicker` (UTC, nunca la zona local).
 - **`HojaModal(titulo, onCerrar, contenido)`**: `ModalBottomSheet` siempre expandida, `superficie`, radio superior
@@ -279,7 +291,9 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
 
 - Dona de gastos por categoría: **usa los colores de categoría del usuario** (`colorDeCategoria`), grosor de anillo
   20 dp, separación entre porciones de 2° en el color `superficieElevada`; centro con el total en `cifra`.
-  Máximo 6 porciones + «Otras» en `textoSecundario`. Leyenda debajo, en filas con el color, el nombre y el monto.
+  Máximo 6 porciones + «Otras» en `textoSecundario`. Leyenda debajo, en filas con el color, el nombre y la línea
+  «monto · %»: dos columnas si en cada una cabe entera la línea más ancha, si no una sola; la línea de la cifra
+  nunca se corta ni se parte (solo el nombre puede acabar en «…»).
 - Series (barras/líneas de comparativa): serie actual en `primario`, serie anterior en `textoSecundario` al 60 %;
   ingreso/gasto siempre en `ingreso`/`gasto` con signo en la etiqueta. Líneas de 2,5 dp con extremos redondeados;
   barras con radio superior de 6 dp. Rejilla de 1 dp en `borde`, sin ejes pesados.
