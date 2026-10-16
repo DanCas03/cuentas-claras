@@ -33,7 +33,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.cuentasclaras.app.R
@@ -57,10 +56,6 @@ import com.cuentasclaras.app.ui.componentes.Vacio
 import com.cuentasclaras.app.ui.theme.CuentasTema
 import com.cuentasclaras.app.ui.vmCon
 import kotlin.math.abs
-
-private val ALTO_TACTIL = 48.dp
-private val ICONO_FLECHA = 16.dp
-private const val ALFA_DUPLICADA = 0.45f
 
 /** Importar: TXT del BNC (archivo por SAF o texto pegado), vista previa editable y confirmación. */
 @Suppress("UNUSED_PARAMETER")
@@ -219,7 +214,8 @@ private fun FilaDraft(
     val n = indice + 1
     val duplicada = d.draft.duplicate
     val ingreso = d.tx.type == TxType.INCOME
-    Tarjeta(modifier = Modifier.graphicsLayer { alpha = if (duplicada) ALFA_DUPLICADA else 1f }) {
+    val alfa = if (duplicada) CuentasTema.medidas.alfaAtenuado else 1f
+    Tarjeta(modifier = Modifier.graphicsLayer { alpha = alfa }) {
         Row(horizontalArrangement = Arrangement.spacedBy(e.s), verticalAlignment = Alignment.Top) {
             Casilla(
                 texto = null,
@@ -242,7 +238,7 @@ private fun FilaDraft(
                         painterResource(if (ingreso) R.drawable.ic_entra else R.drawable.ic_sale),
                         contentDescription = null,
                         tint = if (ingreso) c.ingreso else c.gasto,
-                        modifier = Modifier.size(ICONO_FLECHA),
+                        modifier = Modifier.size(CuentasTema.medidas.iconoEnLinea),
                     )
                     Monto(abs(d.tx.amountMinor), Currency.VES, if (ingreso) Signo.POSITIVO else Signo.NEGATIVO)
                 }
@@ -300,7 +296,7 @@ private fun Casilla(
     val c = CuentasTema.colores
     Row(
         Modifier
-            .heightIn(min = ALTO_TACTIL)
+            .heightIn(min = CuentasTema.medidas.tactilMinimo)
             .toggleable(value = marcado, enabled = habilitada, role = Role.Checkbox, onValueChange = onCambio)
             .semantics { contentDescription = descripcion },
         verticalAlignment = Alignment.CenterVertically,

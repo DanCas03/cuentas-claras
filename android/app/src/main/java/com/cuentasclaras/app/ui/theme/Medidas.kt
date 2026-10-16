@@ -9,9 +9,15 @@ data class Medidas(
     val tactilMinimo: Dp,
     /** Opacidad del tinte del color de una categoría tras su emoji o su ícono (grid de Nuevo, filas de listas). */
     val alfaTinteCategoria: Float,
+    /** Lado de un ícono en línea con una cifra (DESIGN.md §4: 16 dp), p. ej. `ic_entra` / `ic_sale` junto a un monto. */
+    val iconoEnLinea: Dp,
+    /** Opacidad de un elemento que se muestra pero no cuenta (fila duplicada en la previa del import). */
+    val alfaAtenuado: Float,
 )
 
 val MedidasCuentas = Medidas(
     tactilMinimo = 48.dp,
     alfaTinteCategoria = 0.18f,
+    iconoEnLinea = 16.dp,
+    alfaAtenuado = 0.45f,
 )

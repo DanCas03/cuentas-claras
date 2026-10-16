@@ -49,7 +49,7 @@ Se leen SIEMPRE desde `CuentasTema` (`CuentasTema.colores`, `.tipografia`, `.for
 | Tipografía | `data class Tipografia` | `titulo`, `subtitulo`, `cuerpo`, `etiqueta`, `cifraGrande`, `cifra` |
 | Formas | `data class Formas` | `tarjeta` = 20 dp · `control` = 12 dp · `pildora` = 50 % |
 | Espacios | `data class Espacios` | `xs` 4 · `s` 8 · `m` 16 · `l` 24 · `xl` 32 dp |
-| Medidas | `data class Medidas` (`ui/theme/Medidas.kt`) | `tactilMinimo` = 48 dp (objetivo táctil, §6) · `alfaTinteCategoria` = 0,18 (tinte del color de categoría tras su emoji o ícono) |
+| Medidas | `data class Medidas` (`ui/theme/Medidas.kt`) | `tactilMinimo` = 48 dp (objetivo táctil, §6) · `alfaTinteCategoria` = 0,18 (tinte del color de categoría tras su emoji o ícono) · `iconoEnLinea` = 16 dp (ícono en línea con una cifra, §4) · `alfaAtenuado` = 0,45 (elemento visible que no cuenta, p. ej. fila duplicada en la previa del import) |
 
 Roles de color:
 - `fondo`: lienzo de la pantalla. `superficie`: carcasa exterior de tarjetas, hojas modales, círculos de estado vacío.

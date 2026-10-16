@@ -4,6 +4,7 @@ import android.content.ContentResolver
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cuentasclaras.app.data.CUENTA_BNC
 import com.cuentasclaras.app.data.CuentasRepo
 import com.cuentasclaras.app.data.db.toDomain
 import com.cuentasclaras.app.data.ops.ParcheCuentaBnc
@@ -25,6 +26,9 @@ import com.cuentasclaras.app.importar.bnc.newestRow
 import com.cuentasclaras.app.importar.bnc.parseBncTxt
 import com.cuentasclaras.app.importar.bnc.validateChain
 import com.cuentasclaras.app.ui.Avisos
+import com.cuentasclaras.app.ui.ERROR_DESCONOCIDO
+import com.cuentasclaras.app.ui.Ocupacion
+import com.cuentasclaras.app.ui.escribir
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,9 +41,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private const val MAX_BYTES = 1_000_000
-
-/** El TXT del BNC siempre va a la cuenta bancaria en Bs del seed. */
-const val CUENTA_BNC = "acc-bnc"
 
 data class DraftUI(
     val draft: BncDraft,
@@ -65,7 +66,7 @@ class ImportarViewModel(private val repo: CuentasRepo) : ViewModel() {
         val rotos: List<Int> = emptyList(),
         val saldoTxt: Long? = null,
         val sinResultados: Boolean = false,
-        /** Important #6: oculta el banner tras crear el ajuste (evita un segundo ajuste). */
+        /** Oculta el banner tras crear el ajuste: un segundo toque crearía otro ajuste sobre un saldo ya cuadrado. */
         val ajusteHecho: Boolean = false,
         val guardando: Boolean = false,
     )
@@ -75,7 +76,7 @@ class ImportarViewModel(private val repo: CuentasRepo) : ViewModel() {
         val categorias: List<Category> = emptyList(),
         val cuentas: List<Account> = emptyList(),
         val saldoApp: Long = 0,
-        /** Descuadre ofrecible como ajuste: null si no aplica (Important #1). */
+        /** Descuadre ofrecible como ajuste: null si no hay descuadre o si hay movimientos posteriores al TXT. */
         val descuadre: Long? = null,
         val rawMismatch: Boolean = false,
         val hayTxsPosteriores: Boolean = false,
@@ -85,12 +86,13 @@ class ImportarViewModel(private val repo: CuentasRepo) : ViewModel() {
     }
 
     private val ui = MutableStateFlow(Ui())
+    private val ocupacion = Ocupacion({ ui.value.guardando }) { g -> ui.update { it.copy(guardando = g) } }
 
     // Saldos con las transacciones CRUDAS (restricción 7): nunca txsEfectivas().
     val estado: StateFlow<Estado> = combine(ui, repo.txs, repo.categorias, repo.cuentas) { u, txs, categorias, cuentas ->
         val saldoApp = accountBalanceMinor(CUENTA_BNC, txs)
         val rawMismatch = u.fase == FaseImport.HECHO && u.saldoTxt != null && saldoApp != u.saldoTxt
-        // Important #1: si ya hay movimientos posteriores al último renglón del TXT, el delta ya no
+        // Si ya hay movimientos posteriores al último renglón del TXT, el delta ya no
         // representa «movimientos previos al primer export» y ofrecer el ajuste podría corromper el saldo.
         val finArchivo = u.resultado?.let { newestRow(it.rows)?.date }
         val hayPosteriores = finArchivo != null && txs.any { it.accountId == CUENTA_BNC && it.date > finArchivo }
@@ -137,47 +139,41 @@ class ImportarViewModel(private val repo: CuentasRepo) : ViewModel() {
     }
 
     fun analizar() {
-        if (ui.value.guardando) return
+        if (ocupacion.activa) return
         val texto = ui.value.texto
-        ui.update { it.copy(guardando = true) }
-        viewModelScope.launch {
-            try {
-                val r = parseBncTxt(texto)
-                if (r.rows.isEmpty()) {
-                    ui.update { it.copy(sinResultados = true) }
-                    Avisos.avisar("No se encontraron movimientos en el texto")
-                    return@launch
-                }
-                val db = repo.db
-                val reglas = db.rules().todas().map { it.toDomain() }
-                val existentes = db.transactions().importKeys().toSet()
-                // E19/E24: solo capturas REGISTRADA cuyo movimiento existe, con su sentido (DAO de capturas).
-                val capturadas = db.capturas().registradas()
-                val categorias = db.categories().todas().map { it.toDomain() }
-                val cuenta = db.accounts().porId(CUENTA_BNC)
-                val mapeados = mapBncRows(r.rows, CUENTA_BNC, existentes, reglas, categorias, capturadas)
-                val vistas = mutableSetOf<String>()
-                val borradores = mapeados.map { d ->
-                    // Fila repetida dentro del mismo texto: solo la primera entra marcada.
-                    val repetida = !d.duplicate && !vistas.add(d.tx.importKey ?: d.tx.id)
-                    DraftUI(d, d.tx, incluir = !d.duplicate && !repetida, crearRegla = false, patron = d.tx.note ?: "", repetida = repetida)
-                }
-                ui.update {
-                    it.copy(
-                        sinResultados = false, ajusteHecho = false, resultado = r,
-                        rotos = validateChain(r.rows),
-                        gap = detectGap(r.rows, cuenta?.bncLastImportKey, cuenta?.bncLastSaldoMinor),
-                        saldoTxt = newestRow(r.rows)?.saldoMinor,
-                        drafts = borradores,
-                        fase = FaseImport.PREVIA,
-                    )
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Avisos.avisar("No se pudo analizar: ${e.message}")
-            } finally {
-                ui.update { it.copy(guardando = false) }
+        escribir(ocupacion, "No se pudo analizar", aviso = { "No se pudo analizar: ${it.message ?: ERROR_DESCONOCIDO}" }) {
+            val r = parseBncTxt(texto)
+            if (r.rows.isEmpty()) {
+                ui.update { it.copy(sinResultados = true) }
+                Avisos.avisar("No se encontraron movimientos en el texto")
+                return@escribir
+            }
+            val db = repo.db
+            val reglas = db.rules().todas().map { it.toDomain() }
+            val existentes = db.transactions().importKeys().toSet()
+            // E19/E24: solo capturas REGISTRADA cuyo movimiento existe, con su sentido (DAO de capturas).
+            val capturadas = db.capturas().registradas()
+            val categorias = db.categories().todas().map { it.toDomain() }
+            val cuenta = db.accounts().porId(CUENTA_BNC)
+            val mapeados = mapBncRows(r.rows, CUENTA_BNC, existentes, reglas, categorias, capturadas)
+            val vistas = mutableSetOf<String>()
+            val borradores = mapeados.map { d ->
+                // Fila repetida dentro del mismo texto: solo la primera entra marcada. TODA fila se anota en
+                // `vistas`, también la duplicada por captura: si no, la segunda copia de un pago ya capturado
+                // (export pegado dos veces) no se vería repetida y se importaría.
+                val nueva = vistas.add(d.tx.importKey ?: d.tx.id)
+                val repetida = !d.duplicate && !nueva
+                DraftUI(d, d.tx, incluir = !d.duplicate && !repetida, crearRegla = false, patron = d.tx.note ?: "", repetida = repetida)
+            }
+            ui.update {
+                it.copy(
+                    sinResultados = false, ajusteHecho = false, resultado = r,
+                    rotos = validateChain(r.rows),
+                    gap = detectGap(r.rows, cuenta?.bncLastImportKey, cuenta?.bncLastSaldoMinor),
+                    saldoTxt = newestRow(r.rows)?.saldoMinor,
+                    drafts = borradores,
+                    fase = FaseImport.PREVIA,
+                )
             }
         }
     }
@@ -186,55 +182,48 @@ class ImportarViewModel(private val repo: CuentasRepo) : ViewModel() {
         ui.update { u -> u.copy(drafts = u.drafts.mapIndexed { j, d -> if (j == i) cambio(d) else d }) }
 
     fun confirmar() {
-        val u = ui.value
-        if (u.guardando) return
-        val resultado = u.resultado ?: return
-        val nuevas = u.drafts.filter { it.incluir && !it.draft.duplicate }
-        val duplicadas = u.drafts.count { it.draft.duplicate }
-        ui.update { it.copy(guardando = true) }
-        viewModelScope.launch {
-            try {
-                val reglasNuevas = nuevas
-                    .filter { it.crearRegla && it.tx.categoryId != null && it.patron.isNotBlank() }
-                    .map { buildRule(it.patron, it.tx.categoryId!!) }
-                val fila = newestRow(resultado.rows)
-                commitImport(
-                    repo.db,
-                    txs = nuevas.map { it.tx },
-                    newRules = reglasNuevas,
-                    accountPatch = fila?.let { ParcheCuentaBnc(CUENTA_BNC, bncImportKey(it), it.saldoMinor) },
-                )
+        if (ocupacion.activa) return
+        // `Estado.nuevas` es la única definición de qué filas se importan (la misma que pinta la previa); se
+        // calcula sobre la `Ui` actual para no depender de que `estado` ya haya combinado el último cambio.
+        val e = Estado(ui = ui.value)
+        val resultado = e.ui.resultado ?: return
+        val nuevas = e.nuevas
+        val duplicadas = e.duplicadas
+        escribir(
+            ocupacion,
+            "No se importó nada",
+            aviso = { "No se importó nada: ${it.message ?: ERROR_DESCONOCIDO}" },
+            alTerminar = {
                 Avisos.avisar("${nuevas.size} importados, $duplicadas duplicados omitidos ✓")
                 ui.update { it.copy(fase = FaseImport.HECHO) }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Avisos.avisar("No se importó nada: ${e.message}")
-            } finally {
-                ui.update { it.copy(guardando = false) }
-            }
+            },
+        ) {
+            val reglasNuevas = nuevas
+                .filter { it.crearRegla && it.tx.categoryId != null && it.patron.isNotBlank() }
+                .map { buildRule(it.patron, it.tx.categoryId!!) }
+            val fila = newestRow(resultado.rows)
+            commitImport(
+                repo.db,
+                txs = nuevas.map { it.tx },
+                newRules = reglasNuevas,
+                accountPatch = fila?.let { ParcheCuentaBnc(CUENTA_BNC, bncImportKey(it), it.saldoMinor) },
+            )
         }
     }
 
     fun crearAjuste() {
+        if (ocupacion.activa) return
         val e = estado.value
-        if (e.ui.guardando) return
         val saldoTxt = e.ui.saldoTxt ?: return
         if (e.descuadre == null) return
-        ui.update { it.copy(guardando = true) }
-        viewModelScope.launch {
-            try {
-                repo.agregarTx(buildAdjustment(CUENTA_BNC, e.saldoApp, saldoTxt, todayIso(), "Cuadre tras import BNC"))
+        escribir(
+            ocupacion,
+            "No se pudo crear el ajuste",
+            alTerminar = {
                 Avisos.avisar("Saldo cuadrado con el banco ✓")
                 ui.update { it.copy(ajusteHecho = true) }
-            } catch (ex: CancellationException) {
-                throw ex
-            } catch (ex: Exception) {
-                Avisos.avisar(ex.message ?: "No se pudo crear el ajuste")
-            } finally {
-                ui.update { it.copy(guardando = false) }
-            }
-        }
+            },
+        ) { repo.agregarTx(buildAdjustment(CUENTA_BNC, e.saldoApp, saldoTxt, todayIso(), "Cuadre tras import BNC")) }
     }
 
     fun reiniciar() = ui.update { Ui() }
