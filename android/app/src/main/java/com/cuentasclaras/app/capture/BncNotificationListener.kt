@@ -6,6 +6,7 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
 import com.cuentasclaras.app.CuentasApp
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -26,12 +27,27 @@ class BncNotificationListener : NotificationListenerService() {
     private var ultimoLatidoMs = 0L
     private val container get() = (application as CuentasApp).container
 
+    /** Ejecuta `bloque` en el scope del servicio; los fallos (DataStore, etc.) quedan en logcat. */
+    private fun conLog(mensaje: String, bloque: suspend () -> Unit) {
+        scope.launch {
+            try {
+                bloque()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w("CuentasClaras", mensaje, e)
+            }
+        }
+    }
+
     override fun onListenerConnected() {
-        scope.launch { runCatching { container.estadoListener.latido() } }
+        container.estadoListener.marcarEnlazado(true)
+        conLog("No se pudo guardar el latido") { container.estadoListener.latido() }
     }
 
     override fun onListenerDisconnected() {
-        scope.launch { runCatching { container.estadoListener.desconectado() } }
+        container.estadoListener.marcarEnlazado(false)
+        conLog("No se pudo guardar la desconexión") { container.estadoListener.desconectado() }
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
@@ -39,7 +55,7 @@ class BncNotificationListener : NotificationListenerService() {
             val ahora = System.currentTimeMillis()
             if (ahora - ultimoLatidoMs > 15 * 60 * 1000L) {
                 ultimoLatidoMs = ahora
-                scope.launch { runCatching { container.estadoListener.latido() } }
+                conLog("No se pudo guardar el latido") { container.estadoListener.latido() }
             }
             if (sbn.packageName !in paquetesCapturables(this)) return
             val texto = textoDeNotificacion(sbn.notification.extras)
@@ -48,6 +64,8 @@ class BncNotificationListener : NotificationListenerService() {
                 try {
                     val captura = container.capturas.registrar(texto) ?: return@launch
                     Notificador.publicar(this@BncNotificationListener, captura)
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     Log.w("CuentasClaras", "No se pudo guardar la captura", e)
                 }
@@ -58,6 +76,7 @@ class BncNotificationListener : NotificationListenerService() {
     }
 
     override fun onDestroy() {
+        container.estadoListener.marcarEnlazado(false)
         scope.cancel()
         super.onDestroy()
     }

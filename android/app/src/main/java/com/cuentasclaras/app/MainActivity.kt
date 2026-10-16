@@ -54,7 +54,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        leerCaptura(intent)
+        if (savedInstanceState == null) leerCaptura(intent)
         val container = (application as CuentasApp).container
         setContent {
             CuentasTema {
@@ -102,7 +102,15 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         val container = (application as CuentasApp).container
-        lifecycleScope.launch { runCatching { container.estadoListener.reenlazarSiHaceFalta() } }
+        lifecycleScope.launch {
+            try {
+                container.estadoListener.reenlazarSiHaceFalta()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w("CuentasClaras", "No se pudo re-enlazar el listener", e)
+            }
+        }
     }
 
     private fun leerCaptura(intent: Intent?) {
@@ -144,7 +152,7 @@ private fun RaizApp(capturaPedida: MutableStateFlow<String?>) {
     LaunchedEffect(Unit) { Avisos.mensajes.collect { snackbar.showSnackbar(it) } }
     LaunchedEffect(Unit) {
         capturaPedida.filterNotNull().collect { id ->
-            nav.navigate(Rutas.nuevo(capturaId = id))
+            nav.navigate(Rutas.nuevo(capturaId = id)) { launchSingleTop = true }
             capturaPedida.value = null
         }
     }

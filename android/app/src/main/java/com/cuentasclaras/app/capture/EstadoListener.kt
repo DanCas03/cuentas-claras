@@ -8,11 +8,14 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 
 private val Context.almacenListener by preferencesDataStore(name = "estado_listener")
 private val ULTIMO_LATIDO = longPreferencesKey("ultimoLatidoMillis")
 private val ULTIMO_REENLACE = longPreferencesKey("ultimoReenlaceMillis")
+@Volatile private var enlazadoEnProceso = false
 private const val SIN_LATIDO_MAX_MS = 6 * 60 * 60 * 1000L
 private const val ENTRE_REENLACES_MS = 10 * 60 * 1000L
 
@@ -21,6 +24,12 @@ class EstadoListener(private val context: Context) {
 
     fun accesoConcedido(): Boolean =
         NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)
+
+    /** El listener lo marca de forma síncrona en onListenerConnected/Disconnected: si está enlazado
+     *  en ESTE proceso no hace falta alternar el componente (cada alternancia arriesga el acceso). */
+    fun marcarEnlazado(enlazado: Boolean) {
+        enlazadoEnProceso = enlazado
+    }
 
     suspend fun latido() {
         context.almacenListener.edit { it[ULTIMO_LATIDO] = System.currentTimeMillis() }
@@ -33,7 +42,8 @@ class EstadoListener(private val context: Context) {
     /** Llamado en MainActivity.onResume. El re-enlace efectivo es alternar el componente (E28):
      *  `requestRebind` solo deshace un `requestUnbind` propio y no sirve si el proceso murió. */
     suspend fun reenlazarSiHaceFalta() {
-        if (!accesoConcedido()) return
+        if (enlazadoEnProceso) return
+        if (!withContext(Dispatchers.IO) { accesoConcedido() }) return
         val ahora = System.currentTimeMillis()
         val datos = context.almacenListener.data.first()
         val ultimo = datos[ULTIMO_LATIDO] ?: 0L
@@ -43,9 +53,11 @@ class EstadoListener(private val context: Context) {
         context.almacenListener.edit { it[ULTIMO_REENLACE] = ahora }
         Log.w("CuentasClaras", "Listener sin latido reciente: re-enlazando")
         val pm = context.packageManager
-        // Las dos llamadas seguidas y con DONT_KILL_APP: si el PACKAGE_CHANGED se procesara con el
-        // componente deshabilitado, el sistema revocaría el acceso a notificaciones.
-        pm.setComponentEnabledSetting(componente, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
-        pm.setComponentEnabledSetting(componente, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
+        // Las dos llamadas seguidas, en el mismo bloque y sin suspensión entre medias, con DONT_KILL_APP:
+        // si el PACKAGE_CHANGED se procesara con el componente deshabilitado, el sistema revocaría el acceso.
+        withContext(Dispatchers.IO) {
+            pm.setComponentEnabledSetting(componente, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
+            pm.setComponentEnabledSetting(componente, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
+        }
     }
 }
