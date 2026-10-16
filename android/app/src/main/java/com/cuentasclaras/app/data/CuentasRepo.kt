@@ -1,5 +1,6 @@
 package com.cuentasclaras.app.data
 
+import androidx.room.withTransaction
 import com.cuentasclaras.app.data.db.CuentasDb
 import com.cuentasclaras.app.data.db.toDomain
 import com.cuentasclaras.app.data.db.toEntity
@@ -64,7 +65,15 @@ class CuentasRepo(val db: CuentasDb) {
     }
 
     suspend fun agregarTx(tx: Transaction) = db.transactions().insertar(tx.toEntity())
-    suspend fun actualizarTx(tx: Transaction) = db.transactions().actualizar(tx.toEntity())
+    /**
+     * Relee el movimiento DENTRO de una transacción y le aplica solo `cambios`: así un campo que el editor no toca
+     * (p. ej. un `groupId` asignado mientras estaba abierto) no se pisa con una copia vieja.
+     */
+    suspend fun actualizarTxParcial(id: String, cambios: (Transaction) -> Transaction) = db.withTransaction {
+        val actual = db.transactions().porId(id)?.toDomain()
+            ?: throw IllegalStateException("El movimiento ya no existe")
+        db.transactions().actualizar(cambios(actual).toEntity())
+    }
     suspend fun borrarTx(id: String) = db.transactions().borrar(id)
     suspend fun guardarCuenta(a: Account) = db.accounts().guardar(a.toEntity())
     suspend fun guardarCategoria(c: Category) = db.categories().guardar(c.toEntity())

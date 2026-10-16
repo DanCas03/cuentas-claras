@@ -3,10 +3,7 @@ package com.cuentasclaras.app.ui.pantallas.movimientos
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.room.withTransaction
 import com.cuentasclaras.app.data.CuentasRepo
-import com.cuentasclaras.app.data.db.toDomain
-import com.cuentasclaras.app.data.db.toEntity
 import com.cuentasclaras.app.data.ops.actualizarGrupo
 import com.cuentasclaras.app.data.ops.agruparTxs
 import com.cuentasclaras.app.data.ops.anadirAGrupo
@@ -67,7 +64,7 @@ fun construirItems(txs: List<Transaction>, grupos: List<TxGroup>, accounts: List
     val sueltas = mutableListOf<Transaction>()
     for (t in visibles) {
         val gid = t.groupId
-        if (gid != null) gruposVisibles[gid] = (gruposVisibles[gid] ?: emptyList()) + t else sueltas.add(t)
+        if (!gid.isNullOrEmpty()) gruposVisibles[gid] = (gruposVisibles[gid] ?: emptyList()) + t else sueltas.add(t)
     }
     if (!filtro.categoryId.isNullOrEmpty()) {
         val sinFiltroDeCategoria = filterTxs(txs, filtro.copy(categoryId = null))
@@ -78,7 +75,7 @@ fun construirItems(txs: List<Transaction>, grupos: List<TxGroup>, accounts: List
         }
     }
     val grupoDe = grupos.associateBy { it.id }
-    val miembrosDe = txs.filter { it.groupId != null }.groupBy { it.groupId }
+    val miembrosDe = txs.filter { !it.groupId.isNullOrEmpty() }.groupBy { it.groupId }
     val items: List<ItemMov> = sueltas.map { ItemMov.Suelta(it) } + gruposVisibles.map { (gid, vis) ->
         val todos = miembrosDe[gid] ?: emptyList()
         ItemMov.Grupo(gid, vis, todos, residuosDeGrupo(todos, accounts), grupoDe[gid])
@@ -87,7 +84,7 @@ fun construirItems(txs: List<Transaction>, grupos: List<TxGroup>, accounts: List
 }
 
 /** Se agrupan solo gastos e ingresos sueltos (`esAgrupable` de `MovimientosPage.tsx`). */
-internal fun esAgrupable(t: Transaction) = (t.type == TxType.INCOME || t.type == TxType.EXPENSE) && t.groupId == null
+internal fun esAgrupable(t: Transaction) = (t.type == TxType.INCOME || t.type == TxType.EXPENSE) && t.groupId.isNullOrEmpty()
 
 class MovimientosViewModel(private val repo: CuentasRepo, args: SavedStateHandle) : ViewModel() {
     data class Ui(
@@ -182,13 +179,9 @@ class MovimientosViewModel(private val repo: CuentasRepo, args: SavedStateHandle
                 ui.update { it.copy(editando = null) }
             },
         ) {
-            val db = repo.db
-            db.withTransaction {
-                val actual = db.transactions().porId(original.id)?.toDomain()
-                    ?: throw IllegalStateException("El movimiento ya no existe")
-                var cambiado = actual.copy(note = notaLimpia, date = fecha)
-                if (montoNuevo != null) cambiado = cambiado.copy(amountMinor = montoNuevo, categoryId = categoriaNueva)
-                db.transactions().actualizar(cambiado.toEntity())
+            repo.actualizarTxParcial(original.id) { actual ->
+                val cambiado = actual.copy(note = notaLimpia, date = fecha)
+                if (montoNuevo != null) cambiado.copy(amountMinor = montoNuevo, categoryId = categoriaNueva) else cambiado
             }
         }
     }
