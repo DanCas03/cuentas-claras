@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -97,6 +98,9 @@ fun PermisosPantalla(nav: NavHostController) {
         if (!abierto) Avisos.avisar("No se pudo abrir el ajuste. Búscalo en Ajustes → Apps → Cuentas Claras.")
     }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { releer() }
+    // D5: al ir a un ajuste del sistema, «Probar captura» suelta el foco; si no, al volver reaparece el teclado.
+    val foco = LocalFocusManager.current
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { foco.clearFocus() }
 
     val pedirAvisos = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { concedido ->
         avisoPermisoDenegado = !concedido
@@ -218,6 +222,7 @@ fun PermisosPantalla(nav: NavHostController) {
                     BotonPrincipal(
                         "Probar",
                         onClick = {
+                            foco.clearFocus()
                             prueba = parseNotificacionBnc(textoPrueba)?.let {
                                 val tipo = if (it.tipo == TipoCaptura.INGRESO) "Ingreso" else "Gasto"
                                 Prueba.Reconocida("Reconocida: $tipo · ${formatMoney(it.montoMinor, Currency.VES)} · ${it.nota}")
