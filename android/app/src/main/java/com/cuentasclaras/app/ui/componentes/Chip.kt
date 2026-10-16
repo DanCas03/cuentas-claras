@@ -27,7 +27,7 @@ import com.cuentasclaras.app.ui.theme.CuentasTema
 import com.cuentasclaras.app.ui.theme.Movimiento
 
 /** Alto visual del chip; si es tocable, el área táctil se amplía a 48 dp. */
-private val ALTO_CHIP = 36.dp
+internal val ALTO_CHIP = 36.dp
 
 /**
  * Chip en píldora. Normal: relleno de controles (`borde`) con `texto`. `activo`: `primario` con `sobrePrimario`.

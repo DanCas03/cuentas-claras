@@ -41,7 +41,7 @@ import com.cuentasclaras.app.ui.componentes.Banner
 import com.cuentasclaras.app.ui.componentes.BotonPrincipal
 import com.cuentasclaras.app.ui.componentes.BotonSecundario
 import com.cuentasclaras.app.ui.componentes.CampoTexto
-import com.cuentasclaras.app.ui.componentes.Chip
+import com.cuentasclaras.app.ui.componentes.IndicadorEstado
 import com.cuentasclaras.app.ui.componentes.Tarjeta
 import com.cuentasclaras.app.ui.componentes.TipoBanner
 import com.cuentasclaras.app.ui.theme.CuentasTema
@@ -74,10 +74,12 @@ fun PermisosPantalla(nav: NavHostController) {
     val listener = remember { (ctx.applicationContext as CuentasApp).container.estadoListener }
     val e = CuentasTema.espacios
 
-    var acceso by remember { mutableStateOf(false) }
-    var bateria by remember { mutableStateOf(false) }
-    var avisos by remember { mutableStateOf(false) }
-    var faltaPermisoAvisos by remember { mutableStateOf(false) }
+    // V13: el primer frame ya muestra la lectura real (son consultas síncronas y baratas); antes nacían en `false`
+    // y «Falta» parpadeaba unos 300 ms en permisos concedidos. `releer()` sigue en cada ON_RESUME.
+    var acceso by remember { mutableStateOf(listener.accesoConcedido()) }
+    var bateria by remember { mutableStateOf(PermisosXiaomi.bateriaSinRestricciones(ctx)) }
+    var avisos by remember { mutableStateOf(PermisosXiaomi.notificacionesPermitidas(ctx)) }
+    var faltaPermisoAvisos by remember { mutableStateOf(PermisosXiaomi.faltaPermisoDeAvisos(ctx)) }
     var avisoAutoinicio by remember { mutableStateOf(false) }
     var avisoPermisoDenegado by remember { mutableStateOf(false) }
     var textoPrueba by remember { mutableStateOf("") }
@@ -239,7 +241,11 @@ fun PermisosPantalla(nav: NavHostController) {
     }
 }
 
-/** Tarjeta de un ajuste: el estado va junto al título (con texto, no solo color), luego la ayuda y las acciones. */
+/**
+ * Tarjeta de un ajuste: el estado va junto al título (o debajo, si el título no cabe a su lado) con texto e ícono,
+ * no solo color (V12): «Concedido» con tinte `ingreso` e `ic_ok`, «Falta» con tinte `aviso` e `ic_aviso`, «No
+ * detectable» neutro. Ya no usa el chip activo en `primario`, que competía con la acción principal.
+ */
 @Composable
 private fun Permiso(
     titulo: String,
@@ -247,7 +253,12 @@ private fun Permiso(
     ayuda: String,
     contenido: @Composable ColumnScope.() -> Unit,
 ) {
-    Tarjeta(titulo = titulo, accion = { Chip(estado.texto, activo = estado == Estado.CONCEDIDO) }) {
+    val tipo = when (estado) {
+        Estado.CONCEDIDO -> TipoBanner.OK
+        Estado.FALTA -> TipoBanner.AVISO
+        Estado.NO_DETECTABLE -> null
+    }
+    Tarjeta(titulo = titulo, accion = { IndicadorEstado(estado.texto, tipo) }) {
         Column(verticalArrangement = Arrangement.spacedBy(CuentasTema.espacios.s)) {
             Text(ayuda, style = CuentasTema.tipografia.cuerpo, color = CuentasTema.colores.textoSecundario)
             contenido()

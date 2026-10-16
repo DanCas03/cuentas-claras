@@ -211,6 +211,11 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
 - **`Chip(texto, onClick = null, activo = false, enabled = true, sugerido = false)`** (E6): píldora de 36 dp de alto
   visual (área táctil 48 dp si es tocable), texto `etiqueta` 600 con dígitos tabulares (`tnum`). Normal `borde`/`texto`; activo
   `primario`/`sobrePrimario`; sugerido: tinte `primario` al 14 % + contorno `primario` de 1 dp + `texto`.
+- **`IndicadorEstado(texto, tipo: TipoBanner?)`**: estado no tocable (Permisos): píldora de 36 dp, texto `etiqueta`
+  600 en `texto`; con `tipo`, tinte del 12 % del color del tipo sobre `superficieElevada` + su ícono (`ic_ok` /
+  `ic_aviso` / `ic_error`, 16 dp, en ese color); sin `tipo`, neutro en `borde` y sin ícono. «Concedido» = `OK`,
+  «Falta» = `AVISO`, «No detectable» = neutro. Nunca usa `primario` (no compite con la acción principal) ni un
+  `Chip` (que parece tocable).
 - **`LineaProgreso(fraccion, relleno)`**: la línea de «Este mes» y de los presupuestos (§7).
 - **`BotonChevron(descripcion, haciaLaIzquierda, onClick, habilitado = true)`**: flecha de mes anterior / siguiente
   (Calendario y «Este mes»): `ic_expandir` girado ±90° en `texto`, objetivo circular de 48 dp, deshabilitado al

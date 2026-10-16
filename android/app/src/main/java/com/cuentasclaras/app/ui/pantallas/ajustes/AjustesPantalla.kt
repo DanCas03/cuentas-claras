@@ -1,6 +1,5 @@
 package com.cuentasclaras.app.ui.pantallas.ajustes
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -94,10 +93,14 @@ fun AjustesPantalla(nav: NavHostController) {
     }
 }
 
-/** «Permisos de captura»: lleva a la lista de verificación de la captura de notificaciones. */
+/**
+ * «Permisos de captura»: lleva a la lista de verificación de la captura de notificaciones. Un solo objetivo táctil,
+ * «Revisar permisos» (V14): la tarjeta entera ya no es tocable, así no hay dos objetivos anidados ni un resalte
+ * rectangular que se salga del radio de la tarjeta.
+ */
 @Composable
 private fun FilaPermisos(onAbrir: () -> Unit) {
-    Tarjeta(titulo = "Permisos de captura", modifier = Modifier.clickable(onClick = onAbrir)) {
+    Tarjeta(titulo = "Permisos de captura") {
         Column(verticalArrangement = Arrangement.spacedBy(CuentasTema.espacios.s)) {
             Text(
                 "Acceso a notificaciones, batería y defensas de Xiaomi.",
