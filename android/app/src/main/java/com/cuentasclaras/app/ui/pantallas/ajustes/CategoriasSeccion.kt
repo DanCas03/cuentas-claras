@@ -84,7 +84,7 @@ private fun presupuestoInicial(c: Category): String {
 fun CategoriasSeccion(
     categorias: List<Category>,
     guardando: Boolean,
-    onGuardar: (Category, String) -> Boolean,
+    onGuardar: (Category, String, alGuardar: () -> Unit) -> Unit,
 ) {
     val e = CuentasTema.espacios
     var editando by remember { mutableStateOf<Category?>(null) }
@@ -123,7 +123,7 @@ fun CategoriasSeccion(
             inicial = categoria,
             guardando = guardando,
             onCerrar = { editando = null },
-            onGuardar = { cambiada, presupuesto -> if (onGuardar(cambiada, presupuesto)) editando = null },
+            onGuardar = { cambiada, presupuesto -> onGuardar(cambiada, presupuesto) { editando = null } },
         )
     }
 }
@@ -195,7 +195,7 @@ private fun HojaCategoria(
                 textoGuardar = "Guardar categoría",
                 guardando = guardando,
                 onGuardar = {
-                    if (hexValido) onGuardar(categoria, presupuesto) else Avisos.avisar("Color inválido: usa el formato #RRGGBB")
+                    if (hexValido) onGuardar(categoria, presupuesto) else Avisos.avisar("Color inválido: usa el formato #RRGGBB.")
                 },
                 onCancelar = onCerrar,
             )

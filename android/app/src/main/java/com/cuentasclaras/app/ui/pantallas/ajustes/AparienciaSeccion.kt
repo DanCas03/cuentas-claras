@@ -38,6 +38,7 @@ import com.cuentasclaras.app.ui.theme.CuentasTema
 import com.cuentasclaras.app.ui.theme.PALETAS_CLARAS
 import com.cuentasclaras.app.ui.theme.PALETAS_OSCURAS
 import com.cuentasclaras.app.ui.theme.Paleta
+import com.cuentasclaras.app.ui.theme.paletaPorId
 import com.cuentasclaras.app.ui.vmCon
 
 /** Lado de la muestra de color de una paleta. */
@@ -70,8 +71,8 @@ fun AparienciaSeccion() {
                     onSeleccion = { vm.cambiarModo(MODOS[it]) },
                 )
             }
-            GrupoPaletas("Paleta oscura", PALETAS_OSCURAS, actual.idPaletaOscura, vm::cambiarPaletaOscura)
-            GrupoPaletas("Paleta clara", PALETAS_CLARAS, actual.idPaletaClara, vm::cambiarPaletaClara)
+            GrupoPaletas("Paleta oscura", PALETAS_OSCURAS, paletaPorId(actual.idPaletaOscura, oscura = true).id, vm::cambiarPaletaOscura)
+            GrupoPaletas("Paleta clara", PALETAS_CLARAS, paletaPorId(actual.idPaletaClara, oscura = false).id, vm::cambiarPaletaClara)
         }
     }
 }

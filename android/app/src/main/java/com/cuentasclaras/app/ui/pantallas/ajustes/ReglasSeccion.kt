@@ -15,6 +15,7 @@ import com.cuentasclaras.app.ui.theme.CuentasTema
 fun ReglasSeccion(
     reglas: List<Rule>,
     categorias: List<Category>,
+    guardando: Boolean,
     onEliminar: (String) -> Unit,
 ) {
     val e = CuentasTema.espacios
@@ -30,6 +31,7 @@ fun ReglasSeccion(
                         accion = "eliminar",
                         descripcionAccion = "Eliminar regla «${regla.pattern}»",
                         onAccion = { onEliminar(regla.id) },
+                        habilitada = !guardando,
                     ) {
                         Text(
                             "«${regla.pattern}» → ${nombre(regla.categoryId)}",

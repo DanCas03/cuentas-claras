@@ -84,7 +84,12 @@ fun AjustesPantalla(nav: NavHostController) {
                 )
             }
             item(key = "reglas") {
-                ReglasSeccion(reglas = datos.reglas, categorias = datos.categorias, onEliminar = vm::borrarRegla)
+                ReglasSeccion(
+                    reglas = datos.reglas,
+                    categorias = datos.categorias,
+                    guardando = estado.ocupado.guardando,
+                    onEliminar = vm::borrarRegla,
+                )
             }
         }
         item(key = "respaldo") { RespaldoSeccion() }
@@ -109,6 +114,7 @@ internal fun FilaConAccion(
     accion: String,
     descripcionAccion: String,
     onAccion: () -> Unit,
+    habilitada: Boolean = true,
     contenido: @Composable ColumnScope.() -> Unit,
 ) {
     val e = CuentasTema.espacios
@@ -118,7 +124,7 @@ internal fun FilaConAccion(
         horizontalArrangement = Arrangement.spacedBy(e.s),
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(e.xs), content = contenido)
-        Chip(accion, onClick = onAccion, modifier = Modifier.semantics { contentDescription = descripcionAccion })
+        Chip(accion, onClick = onAccion, enabled = habilitada, modifier = Modifier.semantics { contentDescription = descripcionAccion })
     }
 }
 

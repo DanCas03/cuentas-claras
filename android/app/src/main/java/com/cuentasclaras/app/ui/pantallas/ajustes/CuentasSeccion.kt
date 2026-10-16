@@ -56,7 +56,7 @@ private fun cuentaNueva() = Account(
 fun CuentasSeccion(
     cuentas: List<Account>,
     guardando: Boolean,
-    onGuardar: (Account) -> Boolean,
+    onGuardar: (Account, alGuardar: () -> Unit) -> Unit,
 ) {
     val c = CuentasTema.colores
     val e = CuentasTema.espacios
@@ -95,7 +95,7 @@ fun CuentasSeccion(
             esNueva = cuentas.none { it.id == cuenta.id },
             guardando = guardando,
             onCerrar = { editando = null },
-            onGuardar = { if (onGuardar(it)) editando = null },
+            onGuardar = { onGuardar(it) { editando = null } },
         )
     }
 }

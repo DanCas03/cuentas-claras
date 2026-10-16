@@ -31,6 +31,7 @@ import com.cuentasclaras.app.ui.componentes.CampoTexto
 import com.cuentasclaras.app.ui.componentes.Chip
 import com.cuentasclaras.app.ui.componentes.Selector
 import com.cuentasclaras.app.ui.componentes.Tarjeta
+import com.cuentasclaras.app.ui.componentes.Vacio
 import com.cuentasclaras.app.ui.theme.CuentasTema
 
 private val FUENTES_ACTIVAS = listOf(RateSource.BCV, RateSource.BINANCE, RateSource.MANUAL)
@@ -66,7 +67,7 @@ fun TasasSeccion(
     buscando: Boolean,
     onCambiarFuente: (RateSource) -> Unit,
     onActualizarBcv: () -> Unit,
-    onGuardarManual: (fecha: String, fuente: RateSource, valorTxt: String) -> Boolean,
+    onGuardarManual: (fecha: String, fuente: RateSource, valorTxt: String, alGuardar: () -> Unit) -> Unit,
 ) {
     val c = CuentasTema.colores
     val e = CuentasTema.espacios
@@ -140,7 +141,7 @@ fun TasasSeccion(
             )
             BotonPrincipal(
                 texto = "Guardar",
-                onClick = { if (onGuardarManual(fecha, fuenteManual, valorTxt)) valorTxt = "" },
+                onClick = { onGuardarManual(fecha, fuenteManual, valorTxt) { valorTxt = "" } },
                 enabled = !guardando,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -163,7 +164,7 @@ private fun TablaHistorico(recientes: List<Rate>) {
     val e = CuentasTema.espacios
     val cifra = CuentasTema.tipografia.cuerpo.copy(fontFeatureSettings = "tnum")
     if (recientes.isEmpty()) {
-        Text("Aún no hay tasas registradas.", style = CuentasTema.tipografia.cuerpo, color = c.textoSecundario)
+        Vacio("📈", "Aún no hay tasas registradas.")
         return
     }
     Column(verticalArrangement = Arrangement.spacedBy(e.s)) {

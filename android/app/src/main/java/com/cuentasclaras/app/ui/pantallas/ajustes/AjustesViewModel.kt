@@ -43,13 +43,18 @@ class AjustesViewModel(private val repo: CuentasRepo, private val http: OkHttpCl
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Estado())
 
-    private fun guardarCon(exito: String, trabajo: suspend () -> Unit) {
+    /**
+     * Guard primero (E7); si ya hay un guardado en curso no hace nada. `alTerminar` se llama en el hilo
+     * principal solo tras guardar con éxito (la hoja se cierra o el campo se vacía ahí, como la web).
+     */
+    private fun guardarCon(exito: String?, alTerminar: () -> Unit = {}, trabajo: suspend () -> Unit) {
         if (ocupado.value.guardando) return
         ocupado.update { it.copy(guardando = true) }
         viewModelScope.launch {
             try {
                 trabajo()
-                Avisos.avisar(exito)
+                alTerminar()
+                if (exito != null) Avisos.avisar(exito)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -60,23 +65,23 @@ class AjustesViewModel(private val repo: CuentasRepo, private val http: OkHttpCl
         }
     }
 
-    /** Devuelve false (y avisa) si la validación falla, para que la hoja no se cierre. */
-    fun guardarCuenta(a: Account): Boolean {
-        if (a.name.isBlank()) { Avisos.avisar("Ponle nombre a la cuenta"); return false }
-        guardarCon("Cuenta guardada ✓") { repo.guardarCuenta(a.copy(name = a.name.trim())) }
-        return true
+    /** La hoja se cierra solo desde `alGuardar`, tras escribir; si falla o hay un guardado en curso queda abierta. */
+    fun guardarCuenta(a: Account, alGuardar: () -> Unit) {
+        if (ocupado.value.guardando) return
+        if (a.name.isBlank()) { Avisos.avisar("Ponle nombre a la cuenta"); return }
+        guardarCon("Cuenta guardada ✓", alGuardar) { repo.guardarCuenta(a.copy(name = a.name.trim())) }
     }
 
-    fun guardarCategoria(c: Category, presupuestoTxt: String): Boolean {
-        if (c.name.isBlank()) { Avisos.avisar("Ponle nombre a la categoría"); return false }
+    fun guardarCategoria(c: Category, presupuestoTxt: String, alGuardar: () -> Unit) {
+        if (ocupado.value.guardando) return
+        if (c.name.isBlank()) { Avisos.avisar("Ponle nombre a la categoría"); return }
         val limpio = presupuestoTxt.trim().replace(',', '.')
         val presupuesto: Long? = if (limpio.isEmpty()) null else {
             val v = limpio.toDoubleOrNull()
-            if (v == null || !v.isFinite() || v <= 0) { Avisos.avisar("Presupuesto inválido"); return false }
+            if (v == null || !v.isFinite() || v <= 0) { Avisos.avisar("Presupuesto inválido"); return }
             Math.round(v * 100)
         }
-        guardarCon("Categoría guardada ✓") { repo.guardarCategoria(c.copy(name = c.name.trim(), monthlyBudgetMinor = presupuesto)) }
-        return true
+        guardarCon("Categoría guardada ✓", alGuardar) { repo.guardarCategoria(c.copy(name = c.name.trim(), monthlyBudgetMinor = presupuesto)) }
     }
 
     fun cambiarFuente(f: RateSource) {
@@ -91,11 +96,11 @@ class AjustesViewModel(private val repo: CuentasRepo, private val http: OkHttpCl
         }
     }
 
-    fun guardarTasaManual(fecha: String, fuente: RateSource, valorTxt: String): Boolean {
+    fun guardarTasaManual(fecha: String, fuente: RateSource, valorTxt: String, alGuardar: () -> Unit) {
+        if (ocupado.value.guardando) return
         val v = valorTxt.replace(',', '.').toDoubleOrNull()
-        if (v == null || !v.isFinite() || v <= 0 || !esFechaIso(fecha)) { Avisos.avisar("Tasa o fecha inválida"); return false }
-        guardarCon("Tasa guardada ✓") { repo.guardarTasa(Rate(fecha, fuente, v)) }
-        return true
+        if (v == null || !v.isFinite() || v <= 0 || !esFechaIso(fecha)) { Avisos.avisar("Tasa o fecha inválida"); return }
+        guardarCon("Tasa guardada ✓", alGuardar) { repo.guardarTasa(Rate(fecha, fuente, v)) }
     }
 
     fun actualizarBcvAhora() {
@@ -115,15 +120,8 @@ class AjustesViewModel(private val repo: CuentasRepo, private val http: OkHttpCl
         }
     }
 
+    /** Con guard `guardando` (E7); sin aviso de éxito, como antes. */
     fun borrarRegla(id: String) {
-        viewModelScope.launch {
-            try {
-                repo.borrarRegla(id)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Avisos.avisar(e.message ?: "No se pudo eliminar la regla")
-            }
-        }
+        guardarCon(exito = null) { repo.borrarRegla(id) }
     }
 }
