@@ -92,6 +92,12 @@ Antes de restaurar, la app valida el archivo y escribe un respaldo de seguridad 
 (`cuentas-claras-respaldo-previo-<fecha>-<hora>.json`), del que conserva los 5 más recientes. Si ese respaldo
 previo falla, la restauración no se hace.
 
+Los respaldos de seguridad se ven en Ajustes → Respaldo → «Respaldos de seguridad», con su fecha y hora y un
+botón «Restaurar» en cada uno (pide confirmación y, antes, guarda otro respaldo de seguridad de lo actual).
+
+La app tiene `allowBackup="false"`: Android no copia sus datos a la nube. Al cambiar de teléfono o reinstalar,
+solo se conservan los datos con el JSON exportado desde Ajustes → Respaldo → «Exportar respaldo».
+
 ## Captura de notificaciones del BNC
 
 Un `NotificationListenerService` lee las notificaciones del BNC, extrae el pago móvil y lo deja como captura

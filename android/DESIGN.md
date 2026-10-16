@@ -223,7 +223,7 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
   `isoDesdeDatePicker` / `millisParaDatePicker` (UTC, nunca la zona local).
 - **`HojaModal(titulo, onCerrar, contenido)`**: `ModalBottomSheet` siempre expandida, `superficie`, radio superior
   28 dp, asa en `borde`, título en `titulo` + botón «Cerrar» (`ic_cerrar`), contenido desplazable con
-  `imePadding()` y márgenes de 16 dp. Para editar. Las confirmaciones destructivas van en `AlertDialog`.
+  `imePadding()` y márgenes de 16 dp. Para editar. Las confirmaciones destructivas van en `DialogoConfirmacion` (abajo).
 - **`Teclado(onTecla, compacto = false)`**: 4 × 3 (`1 2 3 / 4 5 6 / 7 8 9 / , 0 ⌫`), teclas de 56 dp de alto separadas 8 dp
   (248 dp en total; `compacto = true`, solo Nuevo: teclas de 52 dp, 232 dp en total, nunca menos de 48 dp), fondo `superficieElevada`, radio `control`, dígitos en `cifra` a 24 sp, «⌫» con `ic_borrar`.
   `contentDescription` «coma» y «borrar». Vibración corta de tecla.
