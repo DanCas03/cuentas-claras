@@ -18,6 +18,8 @@ data class Medidas(
      * queda, el final baja bajo el texto (DESIGN.md §4).
      */
     val anchoMinimoTexto: Dp,
+    /** Lado del cuadro del emoji o del ícono de una fila de lista (`CuadroCategoria`, DESIGN.md §4). */
+    val cuadroFila: Dp,
 )
 
 val MedidasCuentas = Medidas(
@@ -26,4 +28,5 @@ val MedidasCuentas = Medidas(
     iconoEnLinea = 16.dp,
     alfaAtenuado = 0.45f,
     anchoMinimoTexto = 120.dp,
+    cuadroFila = 44.dp,
 )

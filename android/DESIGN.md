@@ -54,7 +54,7 @@ Se leen SIEMPRE desde `CuentasTema` (`CuentasTema.colores`, `.tipografia`, `.for
 | Tipografía | `data class Tipografia` | `titulo`, `subtitulo`, `cuerpo`, `etiqueta`, `cifraGrande`, `cifra` |
 | Formas | `data class Formas` | `tarjeta` = 20 dp · `control` = 12 dp · `pildora` = 50 % |
 | Espacios | `data class Espacios` | `xs` 4 · `s` 8 · `m` 16 · `l` 24 · `xl` 32 dp |
-| Medidas | `data class Medidas` (`ui/theme/Medidas.kt`) | `tactilMinimo` = 48 dp (objetivo táctil, §6) · `alfaTinteCategoria` = 0,18 (tinte del color de categoría tras su emoji o ícono) · `iconoEnLinea` = 16 dp (ícono en línea con una cifra, §4) · `alfaAtenuado` = 0,45 (elemento visible que no cuenta, p. ej. fila duplicada en la previa del import) · `anchoMinimoTexto` = 120 dp (ancho que una `FilaConFinal` deja al texto antes de apilarse, §4) |
+| Medidas | `data class Medidas` (`ui/theme/Medidas.kt`) | `tactilMinimo` = 48 dp (objetivo táctil, §6) · `alfaTinteCategoria` = 0,18 (tinte del color de categoría tras su emoji o ícono) · `iconoEnLinea` = 16 dp (ícono en línea con una cifra, §4) · `alfaAtenuado` = 0,45 (elemento visible que no cuenta, p. ej. fila duplicada en la previa del import) · `anchoMinimoTexto` = 120 dp (ancho que una `FilaConFinal` deja al texto antes de apilarse, §4) · `cuadroFila` = 44 dp (cuadro del emoji o ícono de una fila de lista, `CuadroCategoria`, §4) |
 
 Roles de color:
 - `fondo`: lienzo de la pantalla. `superficie`: carcasa exterior de tarjetas, hojas modales, círculos de estado vacío.
@@ -208,9 +208,16 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
   ≥ 48 dp de alto; activo en `primario`/`sobrePrimario`, inactivo con `texto`; color animado con la curva propia;
   semántica de pestañas. Texto `etiqueta` 600 con relleno horizontal `espacios.xs`: si un modo no cabe, se encoge
   (`TextAutoSize.StepBased`) hasta 11 sp sin cambiar el alto; la elipsis es el último recurso.
-- **`Chip(texto, onClick = null, activo = false, enabled = true, sugerido = false)`** (E6): píldora de 36 dp de alto
+- **`Chip(texto, onClick = null, activo = false, enabled = true, sugerido = false, icono: Int? = null)`** (E6): píldora de 36 dp de alto
   visual (área táctil 48 dp si es tocable), texto `etiqueta` 600 con dígitos tabulares (`tnum`). Normal `borde`/`texto`; activo
-  `primario`/`sobrePrimario`; sugerido: tinte `primario` al 14 % + contorno `primario` de 1 dp + `texto`.
+  `primario`/`sobrePrimario`; sugerido: tinte `primario` al 14 % + contorno `primario` de 1 dp + `texto`. `icono`:
+  vector `ic_*` de 16 dp delante del texto, en el color del texto (chip de un evento sin categoría en Nuevo:
+  `ic_calendario`, nunca el emoji 📅).
+- **`CuadroCategoria(emoji, vector, fondo, tintaVector = texto, marcada = false)`** + `fondoDeCategoria(hex)`: el
+  cuadro de toda fila de lista (Movimientos, Esta semana, lista del día y «Todos los eventos» del Calendario,
+  categorías de «Este mes»): `medidas.cuadroFila` (44 dp), radio `control`, fondo con el color de la categoría al
+  `alfaTinteCategoria` (sin categoría, `borde`), emoji a 22 sp o el vector de 24 dp; `marcada` (fila seleccionada)
+  en `primario` con `ic_ok` en `sobrePrimario`. Decorativo para el lector de pantalla.
 - **`IndicadorEstado(texto, tipo: TipoBanner?)`**: estado no tocable (Permisos): píldora de 36 dp, texto `etiqueta`
   600 en `texto`; con `tipo`, tinte del 12 % del color del tipo sobre `superficieElevada` + su ícono (`ic_ok` /
   `ic_aviso` / `ic_error`, 16 dp, en ese color); sin `tipo`, neutro en `borde` y sin ícono. «Concedido» = `OK`,
@@ -227,7 +234,7 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
   Región viva educada (lo anuncia el lector de pantalla).
 - **`Vacio(icono: String, texto: String)`**: emoji de 32 sp en un círculo de 72 dp en `superficie` y la frase en
   `cuerpo` + `textoSecundario`, centrados. Toda lista vacía lo usa.
-- **Campos** (`CampoTexto(valor, onCambio, etiqueta, placeholder = "", teclado = KeyboardType.Text, singleLine = true, minLines = 1)`
+- **Campos** (`CampoTexto(valor, onCambio, etiqueta, placeholder = "", teclado = KeyboardType.Text, singleLine = true, minLines = 1, enabled = true)`
   — E6 —, `Selector<T>(etiqueta, opciones, seleccion, texto, onSeleccion, contentDescription: String? = null)` — E6 —,
   `CampoFecha(etiqueta, iso, onCambio)`): etiqueta ENCIMA en `etiqueta` + `textoSecundario` (nunca flotante), campo
   de ≥ 56 dp con relleno `borde`, radio `control`, sin línea inferior; foco = anillo de 2 dp en `primario`.
@@ -237,6 +244,9 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
   + campo forman UN objetivo continuo (≥ 80 dp de alto) dentro del margen; nunca un cuadrado de 48 dp desplazado
   que se salga del margen o se monte en el control de encima.
   - `CampoTexto(…, autoFoco = false)`: con `autoFoco = true` toma el foco al aparecer (nota desplegada de Nuevo).
+  - `CampoTexto(…, enabled = false)`: campo y etiqueta al 38 % (como los botones), sin foco ni texto, y deshabilitado
+    también para el lector de pantalla (el `TextField` lleva `enabled = false`; nunca una capa encima que tape los
+    toques). Ej.: el monto del editor de evento sin cuenta, con su ayuda según el estado.
   - Campos **editables** (`CampoTexto`): SIN `contentDescription` (TalkBack lee el valor que se escribe).
   - Campos **no editables**: `CampoFecha` lleva una descripción que EMPIEZA con la etiqueta
     («Fecha: jueves 15 de octubre de 2026»); `Selector` no lleva descripción salvo que dos selectores compartan
@@ -272,7 +282,8 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
   No se añade `material-icons-extended`. `ic_candado` (16 dp, `textoSecundario`) marca las cuentas de ahorro en Inicio.
   En el cuadro de las filas sin emoji de categoría (24 dp): `ic_transferir` (transferencia, 🔁 en la web),
   `ic_ajuste_saldo` (ajuste, 🎯), `ic_sin_categoria` (sin categoría, 📦; también en «Este mes») e `ic_grupo`
-  (grupo transaccional sin categoría, 🔁). En la meta de una fila con evento, `ic_calendario` en línea (1 em,
+  (grupo transaccional sin categoría, 🔁); en las filas de eventos sin categoría (Esta semana, Calendario),
+  `ic_calendario` en `textoSecundario` (📅 en la web). En la meta de una fila con evento, `ic_calendario` en línea (1 em,
   `textoSecundario`) delante del título (📅 en la web); el texto accesible dice «evento {título}».
 - **Ícono de la app**: adaptable (`mipmap-anydpi-v26/ic_launcher.xml`): «C» abierta con un visto en lima `#C5F05A`
   sobre `#0A0F1C` (Noche lima), con capa monocroma.

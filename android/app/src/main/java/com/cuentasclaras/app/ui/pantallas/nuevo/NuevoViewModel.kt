@@ -93,8 +93,8 @@ class NuevoViewModel(
         /** Dirección del evento: al guardar, el chip activo solo se asigna si coincide con el modo vigente. */
         val kind: CategoryKind,
         val vencida: Boolean,
-        /** Emoji de la categoría del evento, o «📅» si no existe. */
-        val icono: String,
+        /** Emoji de la categoría del evento; null si no existe (el chip pinta entonces `ic_calendario`). */
+        val icono: String?,
         /** Elegida: tocar una categoría guarda Y asigna; tocar el chip la desmarca. */
         val activo: Boolean,
         /** Propuesta tras una captura o un `?monto`: no está elegida, un toque guarda y asigna. */
@@ -223,7 +223,7 @@ class NuevoViewModel(
                 evento = evento,
                 kind = kind,
                 vencida = vencida,
-                icono = i.categorias.firstOrNull { it.id == evento.categoryId }?.icon ?: "📅",
+                icono = i.categorias.firstOrNull { it.id == evento.categoryId }?.icon,
                 activo = o == s.activo,
                 sugerido = o == s.sugerida && o != s.activo,
             )

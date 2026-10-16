@@ -45,7 +45,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -72,9 +71,11 @@ import com.cuentasclaras.app.domain.partsOf
 import com.cuentasclaras.app.ui.componentes.BotonChevron
 import com.cuentasclaras.app.ui.componentes.BotonPrincipal
 import com.cuentasclaras.app.ui.componentes.Chip
+import com.cuentasclaras.app.ui.componentes.CuadroCategoria
 import com.cuentasclaras.app.ui.componentes.FilaConFinal
 import com.cuentasclaras.app.ui.componentes.Vacio
 import com.cuentasclaras.app.ui.componentes.colorDeCategoria
+import com.cuentasclaras.app.ui.componentes.fondoDeCategoria
 import com.cuentasclaras.app.ui.nav.Rutas
 import com.cuentasclaras.app.ui.theme.CuentasTema
 import com.cuentasclaras.app.ui.vmCon
@@ -82,8 +83,6 @@ import com.cuentasclaras.app.ui.vmCon
 /** Medidas de la cuadrícula y de las filas (DESIGN.md §4 y §6): celdas táctiles holgadas, puntos de 6 dp. */
 private val ALTO_CELDA = 56.dp
 private val LADO_PUNTO = 6.dp
-private val CUADRO_ICONO = 44.dp
-private val EMOJI_FILA = 22.sp
 private val ICONO_CHEVRON = 24.dp
 private val TRAZO = 1.dp
 private val ANILLO_HOY = 2.dp
@@ -93,7 +92,6 @@ private val RELLENO_ESTADO_V = 2.dp
 private const val MAX_PUNTOS = 3
 private const val OPACIDAD_HECHA = 0.4f
 private const val TINTE_ESTADO = 0.14f
-private const val TINTE_CATEGORIA = 0.18f
 private const val OPACIDAD_FUERA_DE_MES = 0.4f
 
 /**
@@ -380,19 +378,14 @@ private fun FilaOcurrencia(
         o.evento.amountMinor?.let { formatMoney(it, monedaDe(o.evento.accountId)) } ?: ""
     }
     val cuenta = o.evento.accountId?.let { cuentas[it]?.name }
-    val tono = categoria?.let { colorDeCategoria(it.color, c.borde) } ?: c.borde
 
     Column(
         Modifier.fillMaxWidth().clip(CuentasTema.formas.control).background(c.superficie).padding(e.m),
         verticalArrangement = Arrangement.spacedBy(e.s),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(e.m)) {
-            Box(
-                Modifier.size(CUADRO_ICONO).clip(CuentasTema.formas.control).background(tono.copy(alpha = TINTE_CATEGORIA)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(categoria?.icon ?: "📅", fontSize = EMOJI_FILA, modifier = Modifier.clearAndSetSemantics { })
-            }
+            // Sin categoría, `ic_calendario` (el 📅 de la web es un ícono de interfaz: vector, DESIGN.md §8).
+            CuadroCategoria(categoria?.icon, R.drawable.ic_calendario, fondoDeCategoria(categoria?.color), tintaVector = c.textoSecundario)
             // El monto y el estado bajan juntos bajo el título cuando no caben a su lado (FilaConFinal).
             FilaConFinal(
                 texto = {
@@ -515,7 +508,8 @@ private fun FilaEvento(evento: CalEvent, categoria: Category?, enabled: Boolean,
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(e.m),
     ) {
-        Text(categoria?.icon ?: "📅", fontSize = EMOJI_FILA, modifier = Modifier.clearAndSetSemantics { })
+        // V17: el mismo cuadro tintado que la lista del día (antes, el emoji suelto sin cuadro).
+        CuadroCategoria(categoria?.icon, R.drawable.ic_calendario, fondoDeCategoria(categoria?.color), tintaVector = c.textoSecundario)
         Column(Modifier.weight(1f)) {
             Text(evento.titulo, style = CuentasTema.tipografia.cuerpo, color = c.texto, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(descripcionRecurrencia(evento), style = CuentasTema.tipografia.etiqueta, color = c.textoSecundario)

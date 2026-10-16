@@ -45,7 +45,8 @@ private const val OPACIDAD_DESHABILITADO = 0.38f
  * Campo de texto con la etiqueta ENCIMA (nunca flotante). Relleno de controles (`borde`), sin línea inferior;
  * al enfocar aparece un anillo de 2 dp en `primario`. El campo editable NO lleva `contentDescription` (TalkBack
  * lee su valor); lo nombra la etiqueta visible, que es un nodo propio y al tocarla enfoca el campo (así
- * `tocar "Etiqueta"` de la verificación por adb lo alcanza; [CampoConEtiqueta]).
+ * `tocar "Etiqueta"` de la verificación por adb lo alcanza; [CampoConEtiqueta]). Con `enabled = false` el campo y
+ * su etiqueta van al 38 %, no aceptan foco ni texto y el lector de pantalla lo anuncia como deshabilitado.
  */
 @Composable
 fun CampoTexto(
@@ -58,6 +59,7 @@ fun CampoTexto(
     minLines: Int = 1,
     modifier: Modifier = Modifier,
     autoFoco: Boolean = false,
+    enabled: Boolean = true,
 ) {
     val c = CuentasTema.colores
     val interaccion = remember { MutableInteractionSource() }
@@ -70,10 +72,11 @@ fun CampoTexto(
     val forma = CuentasTema.formas.control
     val foco = remember { FocusRequester() }
     if (autoFoco) LaunchedEffect(Unit) { foco.requestFocus() }
-    CampoConEtiqueta(etiqueta, modifier, alTocar = { foco.requestFocus() }) {
+    CampoConEtiqueta(etiqueta, modifier, habilitado = enabled, alTocar = { foco.requestFocus() }) {
         TextField(
             value = valor,
             onValueChange = onCambio,
+            enabled = enabled,
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = ALTO_CAMPO)
@@ -148,6 +151,7 @@ internal fun coloresCampo(): TextFieldColors {
         disabledIndicatorColor = Color.Transparent,
         focusedPlaceholderColor = c.textoSecundario,
         unfocusedPlaceholderColor = c.textoSecundario,
+        disabledPlaceholderColor = c.textoSecundario.copy(alpha = OPACIDAD_DESHABILITADO),
         focusedTrailingIconColor = c.textoSecundario,
         unfocusedTrailingIconColor = c.textoSecundario,
     )

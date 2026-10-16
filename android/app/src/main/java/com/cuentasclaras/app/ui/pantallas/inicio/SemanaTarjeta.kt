@@ -1,6 +1,5 @@
 package com.cuentasclaras.app.ui.pantallas.inicio
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -29,8 +28,8 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.cuentasclaras.app.R
 import com.cuentasclaras.app.domain.Account
 import com.cuentasclaras.app.domain.Category
 import com.cuentasclaras.app.domain.CategoryKind
@@ -47,18 +46,17 @@ import com.cuentasclaras.app.domain.kindDeEvento
 import com.cuentasclaras.app.domain.partsOf
 import com.cuentasclaras.app.domain.weekdayLunes0
 import com.cuentasclaras.app.ui.componentes.Chip
+import com.cuentasclaras.app.ui.componentes.CuadroCategoria
 import com.cuentasclaras.app.ui.componentes.FilaConFinal
 import com.cuentasclaras.app.ui.componentes.Tarjeta
 import com.cuentasclaras.app.ui.componentes.Vacio
-import com.cuentasclaras.app.ui.componentes.colorDeCategoria
+import com.cuentasclaras.app.ui.componentes.fondoDeCategoria
 import com.cuentasclaras.app.ui.nav.Rutas
 import com.cuentasclaras.app.ui.pantallas.calendario.EtiquetaEstado
 import com.cuentasclaras.app.ui.pantallas.calendario.Punto
 import com.cuentasclaras.app.ui.theme.CuentasTema
 
-/** Medidas iguales a las del Calendario (T29): cuadro del emoji de la fila, emoji y anillo de «hoy». */
-private val CUADRO_ICONO = 44.dp
-private val EMOJI_FILA = 22.sp
+/** Anillo de «hoy», igual que en el Calendario (T29). El cuadro de la fila es `CuadroCategoria`. */
 private val ANILLO_HOY = 2.dp
 private const val MAX_PUNTOS = 3
 private const val VISIBLES = 3
@@ -243,7 +241,6 @@ private fun FilaSemana(
         o.evento.amountMinor?.let { formatMoney(it, cuentas[o.evento.accountId]?.currency ?: Currency.USD) } ?: ""
     }
     val cuenta = o.evento.accountId?.let { cuentas[it]?.name }
-    val tono = categoria?.let { colorDeCategoria(it.color, c.borde) } ?: c.borde
     Row(
         Modifier
             .fillMaxWidth()
@@ -254,15 +251,8 @@ private fun FilaSemana(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(e.m),
     ) {
-        Box(
-            Modifier
-                .size(CUADRO_ICONO)
-                .clip(CuentasTema.formas.control)
-                .background(tono.copy(alpha = CuentasTema.medidas.alfaTinteCategoria)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(categoria?.icon ?: "📅", fontSize = EMOJI_FILA, modifier = Modifier.clearAndSetSemantics { })
-        }
+        // Sin categoría, `ic_calendario` (el 📅 de la web es un ícono de interfaz: vector, DESIGN.md §8).
+        CuadroCategoria(categoria?.icon, R.drawable.ic_calendario, fondoDeCategoria(categoria?.color), tintaVector = c.textoSecundario)
         // El monto y el estado bajan juntos bajo el título cuando no caben a su lado (FilaConFinal).
         FilaConFinal(
             texto = {

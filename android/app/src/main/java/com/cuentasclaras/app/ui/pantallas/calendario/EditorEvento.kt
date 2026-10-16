@@ -1,8 +1,6 @@
 package com.cuentasclaras.app.ui.pantallas.calendario
 
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -17,10 +15,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.semantics.disabled
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import com.cuentasclaras.app.domain.Account
 import com.cuentasclaras.app.domain.CategoryKind
@@ -46,8 +40,6 @@ private val TEXTO_REPETIR = mapOf(
     Repetir.QUINCENAL to "Quincenal (15 y último)",
     Repetir.YEARLY to "Cada año",
 )
-
-private const val OPACIDAD_DESHABILITADO = 0.38f
 
 /**
  * Editor de un evento del calendario (`EditorEvento.tsx`), en el orden de la web. El borrador vive en el ViewModel;
@@ -135,20 +127,19 @@ fun EditorEvento(
 
             val hayCuenta = b.cuentaId.isNotEmpty()
             Column {
-                // Sin cuenta el campo está deshabilitado: atenuado, sin aceptar toques ni texto.
-                Box(Modifier.alpha(if (hayCuenta) 1f else OPACIDAD_DESHABILITADO).semantics { if (!hayCuenta) disabled() }) {
-                    CampoTexto(
-                        valor = b.montoTxt,
-                        onCambio = { v -> if (hayCuenta) onCambio { it.copy(montoTxt = v) } },
-                        etiqueta = "Monto esperado en $simbolo (opcional)",
-                        placeholder = "0,00",
-                        teclado = KeyboardType.Decimal,
-                    )
-                    if (!hayCuenta) Box(Modifier.matchParentSize().pointerInput(Unit) { detectTapGestures { } })
-                }
+                // V18: sin cuenta el campo está deshabilitado de verdad (`enabled = false`: atenuado, sin foco ni
+                // texto, y TalkBack lo anuncia así); el rótulo no promete una moneda y la ayuda sigue al estado.
+                CampoTexto(
+                    valor = b.montoTxt,
+                    onCambio = { v -> if (hayCuenta) onCambio { it.copy(montoTxt = v) } },
+                    etiqueta = if (hayCuenta) "Monto esperado en $simbolo (opcional)" else "Monto esperado (opcional)",
+                    placeholder = "0,00",
+                    teclado = KeyboardType.Decimal,
+                    enabled = hayCuenta,
+                )
                 Spacer(Modifier.height(e.xs))
                 Text(
-                    "Sin cuenta no se puede fijar un monto. Déjalo vacío si el monto varía.",
+                    if (hayCuenta) "Déjalo vacío si el monto varía." else "Sin cuenta no se puede fijar un monto.",
                     style = CuentasTema.tipografia.etiqueta,
                     color = CuentasTema.colores.textoSecundario,
                 )

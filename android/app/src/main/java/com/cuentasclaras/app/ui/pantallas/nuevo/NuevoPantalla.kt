@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.cuentasclaras.app.R
 import com.cuentasclaras.app.domain.Account
 import com.cuentasclaras.app.domain.Currency
 import com.cuentasclaras.app.domain.fechaCorta
@@ -195,9 +196,12 @@ fun NuevoPantalla(nav: NavHostController) {
     }
 }
 
-/** Texto del chip de evento (`NuevoPage.tsx`): «💼 Quincena · 15 oct · vencida», con «✕» si está elegido. */
+/**
+ * Texto del chip de evento (`NuevoPage.tsx`): «💼 Quincena · 15 oct · vencida», con «✕» si está elegido. Sin
+ * categoría no hay emoji: el chip lleva `ic_calendario` (el 📅 de la web es un ícono de interfaz, DESIGN.md §8).
+ */
 private fun textoChipEvento(c: NuevoViewModel.ChipEvento): String =
-    "${c.icono} ${c.evento.titulo} · ${fechaCorta(c.o.date)}" +
+    (c.icono?.let { "$it " } ?: "") + "${c.evento.titulo} · ${fechaCorta(c.o.date)}" +
         (if (c.vencida) " · vencida" else "") +
         (if (c.activo) " ✕" else "")
 
@@ -222,6 +226,7 @@ private fun FilaChipsEvento(
             key(c.o.eventId, c.o.date) {
                 Chip(
                     texto = textoChipEvento(c),
+                    icono = if (c.icono == null) R.drawable.ic_calendario else null,
                     onClick = { onTocar(c) },
                     activo = c.activo,
                     enabled = enabled,

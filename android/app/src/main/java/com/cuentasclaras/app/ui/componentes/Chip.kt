@@ -1,5 +1,6 @@
 package com.cuentasclaras.app.ui.componentes
 
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -9,6 +10,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
@@ -18,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -32,7 +36,8 @@ internal val ALTO_CHIP = 36.dp
 /**
  * Chip en píldora. Normal: relleno de controles (`borde`) con `texto`. `activo`: `primario` con `sobrePrimario`.
  * `sugerido` (E6, T30): tinte suave de `primario` con contorno `primario`, para propuestas que el usuario confirma.
- * Sin `onClick` es una etiqueta estática.
+ * Sin `onClick` es una etiqueta estática. `icono`: vector `ic_*` de 16 dp delante del texto, en el color del texto
+ * (p. ej. `ic_calendario` en el chip de un evento sin categoría); decorativo, el texto ya nombra el chip.
  */
 @Composable
 fun Chip(
@@ -41,6 +46,7 @@ fun Chip(
     activo: Boolean = false,
     enabled: Boolean = true,
     sugerido: Boolean = false,
+    @DrawableRes icono: Int? = null,
     modifier: Modifier = Modifier,
 ) {
     val c = CuentasTema.colores
@@ -74,14 +80,19 @@ fun Chip(
             .padding(horizontal = 14.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            texto,
-            // Dígitos tabulares: hay chips con montos («presup. $50.00») y fechas.
-            style = CuentasTema.tipografia.etiqueta.copy(fontWeight = FontWeight.W600, fontFeatureSettings = "tnum"),
-            color = tinta,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(CuentasTema.espacios.xs)) {
+            if (icono != null) {
+                Icon(painterResource(icono), contentDescription = null, tint = tinta, modifier = Modifier.size(CuentasTema.medidas.iconoEnLinea))
+            }
+            Text(
+                texto,
+                // Dígitos tabulares: hay chips con montos («presup. $50.00») y fechas.
+                style = CuentasTema.tipografia.etiqueta.copy(fontWeight = FontWeight.W600, fontFeatureSettings = "tnum"),
+                color = tinta,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 

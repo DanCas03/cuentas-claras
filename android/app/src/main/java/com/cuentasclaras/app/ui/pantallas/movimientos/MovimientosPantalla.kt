@@ -59,7 +59,6 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -79,13 +78,14 @@ import com.cuentasclaras.app.ui.componentes.BotonPeligro
 import com.cuentasclaras.app.ui.componentes.BotonPrincipal
 import com.cuentasclaras.app.ui.componentes.BotonSecundario
 import com.cuentasclaras.app.ui.componentes.CampoTexto
+import com.cuentasclaras.app.ui.componentes.CuadroCategoria
 import com.cuentasclaras.app.ui.componentes.DialogoConfirmacion
 import com.cuentasclaras.app.ui.componentes.FilaConFinal
 import com.cuentasclaras.app.ui.componentes.Monto
 import com.cuentasclaras.app.ui.componentes.Selector
 import com.cuentasclaras.app.ui.componentes.Signo
 import com.cuentasclaras.app.ui.componentes.Vacio
-import com.cuentasclaras.app.ui.componentes.colorDeCategoria
+import com.cuentasclaras.app.ui.componentes.fondoDeCategoria
 import com.cuentasclaras.app.ui.theme.CuentasTema
 import com.cuentasclaras.app.ui.theme.Movimiento
 import com.cuentasclaras.app.ui.vmCon
@@ -93,13 +93,11 @@ import kotlin.math.abs
 
 /** Medidas de las filas (DESIGN.md §4 y §6): objetivo táctil holgado y cuadro del emoji. */
 private val ALTO_FILA = 64.dp
-private val CUADRO_ICONO = 44.dp
 private val ICONO_FLECHA = 16.dp
 private val ICONO_CHEVRON = 24.dp
 private val ICONO_FILA = 24.dp
 private val ICONO_QUITAR = 16.dp
 private val ALTO_CHIP_FILTRO = 36.dp
-private val EMOJI_FILA = 22.sp
 
 /**
  * Fila seleccionada: tinte `primario` al 14 % (el mismo del chip sugerido y de la paleta elegida en Ajustes) +
@@ -473,28 +471,6 @@ private fun FilaBase(
     }
 }
 
-/**
- * Cuadro del ícono de una fila: el emoji de la categoría (dato del usuario) o, si no hay, un vector `ic_*`
- * (DESIGN.md §8). Sin descripción: la fila entera ya se lee con su descripción (tipo de movimiento incluido).
- */
-@Composable
-private fun IconoFila(fondo: Color, emoji: String?, vector: Int, marcada: Boolean = false) {
-    val c = CuentasTema.colores
-    Box(
-        Modifier.size(CUADRO_ICONO).clip(CuentasTema.formas.control).background(if (marcada) c.primario else fondo),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (marcada) {
-            // Fila seleccionada: visto en `sobrePrimario` (la selección no depende solo del color).
-            Icon(painterResource(R.drawable.ic_ok), contentDescription = null, tint = c.sobrePrimario, modifier = Modifier.size(ICONO_FILA))
-        } else if (emoji != null) {
-            Text(emoji, fontSize = EMOJI_FILA)
-        } else {
-            Icon(painterResource(vector), contentDescription = null, tint = CuentasTema.colores.texto, modifier = Modifier.size(ICONO_FILA))
-        }
-    }
-}
-
 /** Clave del ícono en línea `ic_calendario` dentro de la meta. */
 private const val ICONO_EVENTO = "evento"
 
@@ -592,11 +568,9 @@ private fun FilaMovimiento(
         TxType.ADJUSTMENT -> R.drawable.ic_ajuste_saldo
         else -> R.drawable.ic_sin_categoria
     }
-    val fondoIcono = if (categoria != null && t.type != TxType.TRANSFER && t.type != TxType.ADJUSTMENT) {
-        colorDeCategoria(categoria.color, c.borde).copy(alpha = CuentasTema.medidas.alfaTinteCategoria)
-    } else {
-        c.borde
-    }
+    val fondoIcono = fondoDeCategoria(
+        if (t.type != TxType.TRANSFER && t.type != TxType.ADJUSTMENT) categoria?.color else null,
+    )
     // En modo selección la fila dice su estado y qué hace el toque; fuera de él, el toque edita.
     val estadoAccesible = when (enSeleccion) {
         EnSeleccion.FUERA -> null
@@ -620,7 +594,7 @@ private fun FilaMovimiento(
         seleccionada = enSeleccion == EnSeleccion.SELECCIONADA,
         atenuada = enSeleccion == EnSeleccion.NO_AGRUPABLE,
     ) {
-        IconoFila(fondoIcono, emoji, vector, marcada = enSeleccion == EnSeleccion.SELECCIONADA)
+        CuadroCategoria(emoji, vector, fondoIcono, marcada = enSeleccion == EnSeleccion.SELECCIONADA)
         FilaConFinal(
             texto = { TextoFila(descripcion, meta, evento?.titulo) },
             final = {
@@ -664,13 +638,9 @@ private fun FilaGrupo(g: ItemMov.Grupo, abierto: Boolean, cat: Catalogos, onClic
         estadoAccesible = if (abierto) "Expandido" else "Contraído",
         onClick = onClick,
     ) {
-        val fondoIcono = if (categoria != null) {
-            colorDeCategoria(categoria.color, c.borde).copy(alpha = CuentasTema.medidas.alfaTinteCategoria)
-        } else {
-            c.borde
-        }
+        val fondoIcono = fondoDeCategoria(categoria?.color)
         // Sin categoría, la web pinta 🔁: aquí `ic_grupo` (DESIGN.md §8).
-        IconoFila(fondoIcono, categoria?.icon, R.drawable.ic_grupo)
+        CuadroCategoria(categoria?.icon, R.drawable.ic_grupo, fondoIcono)
         FilaConFinal(
             texto = { TextoFila(nota, meta) },
             final = {
@@ -712,7 +682,8 @@ private fun MiembroDeGrupo(
     Row(
         Modifier.fillMaxWidth().padding(start = CuentasTema.espacios.l),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(CuentasTema.espacios.xs),
+        // V23: ≥ 8 dp entre la fila y la «✕» (DESIGN.md §6).
+        horizontalArrangement = Arrangement.spacedBy(CuentasTema.espacios.s),
     ) {
         FilaMovimiento(t, cat, enSeleccion = enSeleccion, onClick = onClick, onLongClick = null, modifier = Modifier.weight(1f))
         IconButton(onClick = onQuitar, enabled = !guardando) {
@@ -727,8 +698,8 @@ private fun MiembroDeGrupo(
 }
 
 /**
- * Acciones de un grupo expandido, debajo de sus miembros: «Añadir movimientos» (no mientras ya hay una selección),
- * «Editar grupo» y «Desagrupar» (pide confirmación). Ninguna es la acción principal de la pantalla.
+ * Acciones de un grupo expandido, debajo de sus miembros: «Añadir movimientos», «Editar grupo» y «Desagrupar» (pide
+ * confirmación); las tres se deshabilitan mientras hay una selección. Ninguna es la acción principal de la pantalla.
  */
 @Composable
 private fun AccionesDeGrupo(
@@ -751,8 +722,14 @@ private fun AccionesDeGrupo(
             modifier = Modifier.fillMaxWidth(),
         )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(e.s)) {
-            BotonSecundario("Editar grupo", onClick = onEditar, enabled = !guardando && hayGrupo, modifier = Modifier.weight(1f))
-            BotonPeligro("Desagrupar", onClick = onDesagrupar, enabled = !guardando, modifier = Modifier.weight(1f))
+            // V20: en modo selección se deshabilitan igual que «Añadir movimientos» (estado coherente).
+            BotonSecundario(
+                "Editar grupo",
+                onClick = onEditar,
+                enabled = !guardando && hayGrupo && !haySeleccion,
+                modifier = Modifier.weight(1f),
+            )
+            BotonPeligro("Desagrupar", onClick = onDesagrupar, enabled = !guardando && !haySeleccion, modifier = Modifier.weight(1f))
         }
     }
 }

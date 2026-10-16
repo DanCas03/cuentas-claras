@@ -186,7 +186,7 @@ private fun ResumenYAvisos(estado: ImportarViewModel.Estado) {
             GapStatus.SOLAPADO -> Banner("El archivo solapa con lo ya importado: los repetidos se omiten solos.", TipoBanner.OK)
             GapStatus.CONTINUO -> Banner("El archivo conecta exactamente con el último import. Sin huecos.", TipoBanner.OK)
             GapStatus.HUECO -> Banner(
-                "⚠ Hay movimientos NO exportados entre tu último import y este archivo (el saldo no encadena). " +
+                "Hay movimientos NO exportados entre tu último import y este archivo (el saldo no encadena). " +
                     "Exporta desde BNC un rango que cubra el hueco e importa de nuevo.",
                 TipoBanner.AVISO,
             )

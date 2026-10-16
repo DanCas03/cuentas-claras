@@ -31,7 +31,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
-import androidx.compose.ui.unit.sp
 import com.cuentasclaras.app.R
 import com.cuentasclaras.app.domain.Category
 import com.cuentasclaras.app.domain.Currency
@@ -45,6 +44,7 @@ import com.cuentasclaras.app.ui.componentes.Banner
 import com.cuentasclaras.app.ui.componentes.Barras
 import com.cuentasclaras.app.ui.componentes.BotonChevron
 import com.cuentasclaras.app.ui.componentes.Chip
+import com.cuentasclaras.app.ui.componentes.CuadroCategoria
 import com.cuentasclaras.app.ui.componentes.CurvaAcumulada
 import com.cuentasclaras.app.ui.componentes.Dona
 import com.cuentasclaras.app.ui.componentes.FilaConFinal
@@ -64,15 +64,6 @@ private val ICONO_LINEA = 16.dp
 
 /** Muestra de color de la leyenda de la comparativa. */
 private val MUESTRA_LEYENDA = 10.dp
-
-/** Cuadro del emoji de la categoría en las filas de la lista. */
-private val CUADRO_EMOJI = 40.dp
-
-/** Ícono vectorial de «Sin categoría» dentro de su cuadro (DESIGN.md §4: 24 dp). */
-private val ICONO_FILA = 24.dp
-
-/** Tamaño del emoji dentro de su cuadro. */
-private val EMOJI_FILA = 20.sp
 
 /** Umbral de aviso de un presupuesto (DESIGN.md §7: pasa del 80 %). */
 private const val UMBRAL_AVISO = 0.8
@@ -287,25 +278,13 @@ private fun FilaCategoria(
             .padding(vertical = e.xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            Modifier
-                .size(CUADRO_EMOJI)
-                .clip(CuentasTema.formas.control)
-                .background(color.copy(alpha = CuentasTema.medidas.alfaTinteCategoria)),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (cat != null) {
-                Text(cat.icon, fontSize = EMOJI_FILA, modifier = Modifier.clearAndSetSemantics { })
-            } else {
-                // «Sin categoría» (📦 en la web): ícono de interfaz, no dato del usuario; el nombre ya está al lado.
-                Icon(
-                    painterResource(R.drawable.ic_sin_categoria),
-                    contentDescription = null,
-                    tint = c.textoSecundario,
-                    modifier = Modifier.size(ICONO_FILA),
-                )
-            }
-        }
+        // El mismo cuadro que las demás listas (V17). «Sin categoría» (📦 en la web) es `ic_sin_categoria`.
+        CuadroCategoria(
+            cat?.icon,
+            R.drawable.ic_sin_categoria,
+            fondo = color.copy(alpha = CuentasTema.medidas.alfaTinteCategoria),
+            tintaVector = c.textoSecundario,
+        )
         // Nombre y barra a la izquierda; el monto y el % a la derecha, o debajo si no caben (FilaConFinal).
         FilaConFinal(
             texto = {
