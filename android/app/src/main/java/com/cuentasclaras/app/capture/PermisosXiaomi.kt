@@ -2,8 +2,10 @@ package com.cuentasclaras.app.capture
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.ComponentName
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -72,11 +74,25 @@ object PermisosXiaomi {
     private fun abrirDetallesApp(ctx: Context): Boolean =
         abrir(ctx, Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${ctx.packageName}")))
 
-    /** Cualquier fallo al abrir (actividad inexistente, SecurityException de MIUI…) es false, nunca un crash. */
+    /**
+     * Cualquier fallo al abrir (actividad inexistente, SecurityException de MIUI…) es false, nunca un crash.
+     *
+     * Desde una Activity se lanza sin `NEW_TASK`: así el ajuste entra en la tarea de la app y Atrás vuelve a ella.
+     * Con `NEW_TASK` se abría sobre la tarea que ya tuviera `com.android.settings` y Atrás llevaba a otra pantalla
+     * de Ajustes (Wi-Fi en el Xiaomi). `NEW_TASK` solo queda para un contexto sin Activity, que lo exige.
+     */
     private fun abrir(ctx: Context, intent: Intent): Boolean = try {
-        ctx.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        val actividad = ctx.actividad()
+        if (actividad != null) actividad.startActivity(intent) else ctx.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         true
     } catch (e: Exception) {
         false
+    }
+
+    /** La Activity detrás de `this` (Compose da la Activity, a veces envuelta en un `ContextWrapper`), o null. */
+    private tailrec fun Context.actividad(): Activity? = when (this) {
+        is Activity -> this
+        is ContextWrapper -> baseContext.actividad()
+        else -> null
     }
 }
