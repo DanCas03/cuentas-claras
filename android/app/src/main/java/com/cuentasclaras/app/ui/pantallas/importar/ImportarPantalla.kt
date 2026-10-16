@@ -70,8 +70,9 @@ import kotlin.math.abs
 fun ImportarPantalla(nav: NavHostController) {
     val vm = vmCon { c, _ -> ImportarViewModel(c.repo) }
     val estado by vm.estado.collectAsStateWithLifecycle()
+    // F1: los campos (texto pegado, patrón de regla) leen la UI síncrona, no `estado.ui`, que llega atrasada.
+    val u by vm.uiActual.collectAsStateWithLifecycle()
     val e = CuentasTema.espacios
-    val u = estado.ui
     val resolver = LocalContext.current.contentResolver
     val elegirArchivo = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) vm.cargarArchivo(resolver, uri)
@@ -102,7 +103,7 @@ fun ImportarPantalla(nav: NavHostController) {
                 )
             }
             FaseImport.PREVIA -> {
-                item(key = "resumen") { ResumenYAvisos(estado) }
+                item(key = "resumen") { ResumenYAvisos(u) }
                 itemsIndexed(u.drafts, key = { i, d -> "$i:${d.tx.importKey ?: d.tx.id}" }) { i, d ->
                     FilaDraft(
                         indice = i,
@@ -170,9 +171,8 @@ private fun Entrada(
 }
 
 @Composable
-private fun ResumenYAvisos(estado: ImportarViewModel.Estado) {
+private fun ResumenYAvisos(u: ImportarViewModel.Ui) {
     val e = CuentasTema.espacios
-    val u = estado.ui
     val resultado = u.resultado
     val cuenta = resultado?.meta?.let { " de la cuenta ${it.accountNumber.takeLast(4).padStart(8, '•')}" } ?: ""
     Column(verticalArrangement = Arrangement.spacedBy(e.s)) {

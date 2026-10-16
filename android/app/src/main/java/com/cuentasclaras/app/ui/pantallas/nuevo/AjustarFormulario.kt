@@ -22,6 +22,8 @@ import com.cuentasclaras.app.ui.theme.CuentasTema
 @Composable
 fun AjustarFormulario(vm: AjustarViewModel) {
     val estado by vm.estado.collectAsStateWithLifecycle()
+    // F1: el saldo real se lee del formulario síncrono, no de `estado.f`, que llega atrasado.
+    val f by vm.formularioActual.collectAsStateWithLifecycle()
 
     val c = CuentasTema.colores
     val cuenta = estado.cuenta
@@ -45,7 +47,7 @@ fun AjustarFormulario(vm: AjustarViewModel) {
             )
         }
         CampoTexto(
-            valor = estado.f.realTxt,
+            valor = f.realTxt,
             onCambio = { v -> vm.cambiar { it.copy(realTxt = v) } },
             etiqueta = "Saldo real actual",
             placeholder = "0,00",

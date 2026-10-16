@@ -32,8 +32,8 @@ import com.cuentasclaras.app.ui.theme.CuentasTema
 @Composable
 fun TransferirFormulario(vm: TransferirViewModel) {
     val estado by vm.estado.collectAsStateWithLifecycle()
-
-    val f = estado.f
+    // F1: los campos (monto, tasa, nota) leen el formulario síncrono, no `estado.f`, que llega atrasado.
+    val f by vm.formularioActual.collectAsStateWithLifecycle()
     Column(Modifier, verticalArrangement = Arrangement.spacedBy(CuentasTema.espacios.m)) {
         Selector(
             etiqueta = "Desde",

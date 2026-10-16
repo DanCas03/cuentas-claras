@@ -108,21 +108,26 @@ fun BarraInferior(nav: NavHostController) {
 }
 
 /**
- * Patrón estándar de pestañas: una sola copia por destino, con su estado guardado y restaurado. Con
- * `restaurar = false` (Movimientos, E25) la pestaña abre limpia: no restaura la copia con filtros de un
- * drill-down y tampoco usa `launchSingleTop`, que reutilizaría esa entrada con sus argumentos anteriores.
+ * Navegación de la barra inferior. Describe lo que hace de verdad; el comportamiento está aceptado tal cual
+ * (V5 aparcado por el ruling «Final: parked — BarraInferior.kt:130… se acepta»).
  *
- * Ciclo de vida: `popBackStack` solo limpia el `ViewModelStore` de una entrada si NO se guarda su estado, y
- * Movimientos nunca se restaura. Por eso, antes de navegar se sacan explícitamente todas las entradas de
- * Movimientos sin guardar (`popBackStack(..., saveState = false)`, API pública; devuelve false si no hay).
- * El `popUpTo` conserva siempre `saveState = true`, así las demás pestañas se guardan y restauran como en el
- * patrón estándar (incluida una pestaña que estuviera bajo un drill-down de Movimientos).
- *
- * Retocar una pestaña que ya está en la pila (M2; solo las que restauran: Inicio, Importar, Ajustes): se vuelve a
- * su raíz con `popBackStack(ruta, inclusive = false)`, sin guardar lo de encima, y no se navega. Si se navegara,
- * `popUpTo(start) { saveState = true }` guardaría la pila de encima asociada a la propia pestaña (Inicio, el
- * destino inicial, la recibe cuando aún no tenía estado guardado) y `restoreState` la volvería a poner: Inicio →
- * «ver todas» Deudas → «Inicio» dejaba Deudas. Estando ya en su raíz no se hace nada.
+ * 1. Tocar una pestaña que restaura (Inicio, Importar, Ajustes) y que YA está en la pila (M2): se vuelve a su raíz
+ *    con `popBackStack(ruta, inclusive = false)`, que saca todo lo de encima SIN `saveState`, y no se navega;
+ *    estando ya en su raíz no se hace nada. Inicio es el destino inicial y siempre está en la pila, así que tocar
+ *    «Inicio» desde cualquier otra pestaña entra por aquí: la pestaña de la que se sale (Importar, Ajustes,
+ *    Movimientos, Deudas, Calendario…) se saca sin guardar su estado, su `ViewModel` se limpia y, al volver a ella,
+ *    abre limpia (Importar pierde el texto pegado y la vista previa). Si se navegara en su lugar,
+ *    `popUpTo(start) { saveState = true }` guardaría la pila de encima asociada a la propia Inicio y
+ *    `restoreState` la volvería a poner: Inicio → «ver todas» Deudas → «Inicio» dejaba Deudas.
+ * 2. Tocar una pestaña que NO está en la pila (p. ej. Ajustes estando en Importar): antes se sacan todas las
+ *    entradas de Movimientos sin guardar (`popBackStack(..., saveState = false)`: `popBackStack` solo limpia el
+ *    `ViewModelStore` de una entrada si no se guarda su estado, y Movimientos nunca se restaura) y luego se navega
+ *    con `popUpTo(start) { saveState = true }` + `restoreState`: la pestaña de la que se sale guarda su estado y la
+ *    de destino recupera el suyo, si lo tenía. Así Ajustes → Permisos → Importar → Ajustes vuelve a Permisos, y
+ *    Importar → Ajustes → Importar conserva lo pegado; solo el paso por «Inicio» (punto 1) lo descarta.
+ * 3. Movimientos (`restaurar = false`, E25) abre siempre limpio: no restaura la copia con filtros de un drill-down
+ *    ni usa `launchSingleTop`, que reutilizaría esa entrada con sus argumentos anteriores. Tocar «Movs» estando en
+ *    Movimientos sin filtros no hace nada.
  */
 private fun irAPestana(nav: NavHostController, p: Pestana) {
     val actual = nav.currentBackStackEntry

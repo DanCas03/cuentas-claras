@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -39,6 +40,13 @@ class AjustarViewModel(private val repo: CuentasRepo) : ViewModel() {
 
     private val form = MutableStateFlow(Formulario())
     private val ocupacion = Ocupacion({ form.value.guardando }) { g -> form.update { it.copy(guardando = g) } }
+
+    /**
+     * El formulario tal como lo edita el usuario, sin pasar por [estado]. Los `TextField` leen de aquí: [estado] se
+     * deriva con `combine` + `stateIn` y llega con uno o más saltos de corrutina de retraso, y un campo que recibe un
+     * valor atrasado entre dos pulsaciones pierde y reordena caracteres (F1, el mismo síntoma que D1).
+     */
+    val formularioActual: StateFlow<Formulario> = form.asStateFlow()
     private val _salir = Channel<Unit>(Channel.BUFFERED)
     val salir: Flow<Unit> = _salir.receiveAsFlow()
 

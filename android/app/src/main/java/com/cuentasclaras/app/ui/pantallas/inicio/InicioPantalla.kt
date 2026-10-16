@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,6 +34,7 @@ import androidx.navigation.NavHostController
 import com.cuentasclaras.app.CuentasApp
 import com.cuentasclaras.app.R
 import com.cuentasclaras.app.domain.fechaLarga
+import com.cuentasclaras.app.ui.LocalPrimerContenidoListo
 import com.cuentasclaras.app.ui.componentes.Banner
 import com.cuentasclaras.app.ui.componentes.Chip
 import com.cuentasclaras.app.ui.componentes.TipoBanner
@@ -47,11 +49,14 @@ fun InicioPantalla(nav: NavHostController) {
     val estado by vm.estado.collectAsStateWithLifecycle()
     // I1: al volver a la app (quizá al día siguiente, con el proceso vivo) se toma de nuevo la fecha de hoy.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { vm.refrescarHoy() }
-    // Mientras no hay datos no se pinta nada: sin parpadeos de cifras en cero.
+    // Mientras no hay datos no se pinta nada: sin parpadeos de cifras en cero. En el arranque en frío ese hueco no
+    // llega a verse: MainActivity retiene la ventana de arranque hasta el aviso de abajo (V25).
     if (!estado.cargado) {
         Box(Modifier.fillMaxSize())
         return
     }
+    val avisarListo = LocalPrimerContenidoListo.current
+    SideEffect { avisarListo() }
     val e = CuentasTema.espacios
     // El acceso a notificaciones se puede revocar fuera de la app: se vuelve a comprobar al volver a primer plano.
     val listener = (LocalContext.current.applicationContext as CuentasApp).container.estadoListener

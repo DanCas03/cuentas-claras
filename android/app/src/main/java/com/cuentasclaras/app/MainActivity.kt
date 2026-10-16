@@ -2,7 +2,10 @@ package com.cuentasclaras.app
 
 import android.content.Intent
 import android.os.Bundle
+import android.os.SystemClock
 import android.util.Log
+import android.view.View
+import android.view.ViewTreeObserver
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -14,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -22,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.cuentasclaras.app.backup.ValidacionRespaldo
 import com.cuentasclaras.app.backup.leerRespaldo
@@ -30,6 +35,7 @@ import com.cuentasclaras.app.data.seedIfEmpty
 import com.cuentasclaras.app.domain.todayIso
 import com.cuentasclaras.app.rates.proveedoresPorDefecto
 import com.cuentasclaras.app.rates.refreshRatesOncePerDay
+import com.cuentasclaras.app.ui.LocalPrimerContenidoListo
 import com.cuentasclaras.app.ui.componentes.AvisosRaiz
 import com.cuentasclaras.app.ui.componentes.LocalAvisos
 import com.cuentasclaras.app.ui.componentes.rememberAnfitrionAvisos
@@ -48,16 +54,29 @@ import java.io.File
 
 private enum class Arranque { CARGANDO, LISTO, ERROR }
 
+/**
+ * Tope de la retención de la ventana de arranque (V25): si la primera pantalla no avisa (p. ej. la base tarda mucho
+ * en sembrarse la primera vez), se dibuja igual y no se queda la ventana de arranque congelada.
+ */
+private const val TOPE_VENTANA_ARRANQUE_MS = 2_000L
+
 class MainActivity : ComponentActivity() {
     /** Captura pedida por el toque en la notificación propia; la consume `RaizApp`. */
     val capturaPedida = MutableStateFlow<String?>(null)
 
+    /** V25: la primera pantalla ya pinta contenido real (ver [LocalPrimerContenidoListo]). */
+    @Volatile
+    private var primerContenidoListo = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        retenerVentanaDeArranque()
         if (savedInstanceState == null) leerCaptura(intent)
         val container = (application as CuentasApp).container
         setContent {
+            // Recordada: un `staticCompositionLocalOf` con una lambda nueva en cada recomposición recompondría todo.
+            val avisarListo = remember { { primerContenidoListo = true } }
             CuentasTema {
                 var arranque by remember { mutableStateOf(Arranque.CARGANDO) }
                 LaunchedEffect(Unit) {
@@ -87,8 +106,13 @@ class MainActivity : ComponentActivity() {
                 }
                 when (arranque) {
                     Arranque.CARGANDO -> Unit
-                    Arranque.ERROR -> PantallaErrorInicio()
-                    Arranque.LISTO -> RaizApp(capturaPedida)
+                    Arranque.ERROR -> {
+                        SideEffect { avisarListo() }
+                        PantallaErrorInicio()
+                    }
+                    Arranque.LISTO -> CompositionLocalProvider(LocalPrimerContenidoListo provides avisarListo) {
+                        RaizApp(capturaPedida)
+                    }
                 }
             }
         }
@@ -112,6 +136,27 @@ class MainActivity : ComponentActivity() {
                 Log.w("CuentasClaras", "No se pudo re-enlazar el listener", e)
             }
         }
+    }
+
+    /**
+     * V25 (T20, punto 5): sin dependencias nuevas. Mientras la primera pantalla no tenga su contenido, el primer
+     * dibujado del contenido se cancela y sigue a la vista la ventana de arranque (`@color/fondo_arranque`; la
+     * splash del sistema en API 31+). Es el patrón de la plataforma para alargar la ventana de arranque
+     * (`OnPreDrawListener` sobre `android.R.id.content`): la composición y la medida siguen corriendo, solo se
+     * retiene el dibujado. Con tope [TOPE_VENTANA_ARRANQUE_MS].
+     */
+    private fun retenerVentanaDeArranque() {
+        val contenido = findViewById<View>(android.R.id.content)
+        val desde = SystemClock.uptimeMillis()
+        contenido.viewTreeObserver.addOnPreDrawListener(
+            object : ViewTreeObserver.OnPreDrawListener {
+                override fun onPreDraw(): Boolean {
+                    if (!primerContenidoListo && SystemClock.uptimeMillis() - desde < TOPE_VENTANA_ARRANQUE_MS) return false
+                    contenido.viewTreeObserver.removeOnPreDrawListener(this)
+                    return true
+                }
+            },
+        )
     }
 
     private fun leerCaptura(intent: Intent?) {
@@ -151,6 +196,12 @@ private fun RaizApp(capturaPedida: MutableStateFlow<String?>) {
     val nav = rememberNavController()
     // D2: una sola cola de avisos; la pinta la raíz o, si hay una hoja o un diálogo abiertos, el de más arriba.
     val avisos = rememberAnfitrionAvisos()
+    // V25: Inicio avisa cuando tiene su primera instantánea; si la app abre en otro destino (pila restaurada tras
+    // matar el proceso, o Nuevo desde una notificación), ese destino no espera a Inicio.
+    val avisarListo = LocalPrimerContenidoListo.current
+    val entrada by nav.currentBackStackEntryAsState()
+    val ruta = entrada?.destination?.route
+    if (ruta != null && ruta != Rutas.INICIO) SideEffect { avisarListo() }
     LaunchedEffect(Unit) {
         capturaPedida.filterNotNull().collect { id ->
             nav.navigate(Rutas.nuevo(capturaId = id)) { launchSingleTop = true }

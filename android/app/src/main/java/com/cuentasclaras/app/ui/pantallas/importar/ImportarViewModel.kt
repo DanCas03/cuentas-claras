@@ -37,6 +37,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -101,6 +102,14 @@ class ImportarViewModel(private val repo: CuentasRepo) : ViewModel() {
 
     private val ui = MutableStateFlow(Ui())
     private val ocupacion = Ocupacion({ ui.value.guardando }) { g -> ui.update { it.copy(guardando = g) } }
+
+    /**
+     * La UI tal como la edita el usuario, sin pasar por [estado]. El texto pegado y los patrones de regla se leen de
+     * aquí: [estado] se deriva con `combine` + `stateIn` y llega con uno o más saltos de corrutina de retraso, y un
+     * `TextField` que recibe un valor atrasado entre dos pulsaciones pierde y reordena caracteres (F1, el mismo
+     * síntoma que D1).
+     */
+    val uiActual: StateFlow<Ui> = ui.asStateFlow()
 
     // Saldos con las transacciones CRUDAS (restricción 7): nunca txsEfectivas().
     val estado: StateFlow<Estado> = combine(
