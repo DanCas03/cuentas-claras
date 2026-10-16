@@ -11,6 +11,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.cuentasclaras.app.ui.componentes.Proximamente
 import com.cuentasclaras.app.ui.pantallas.ajustes.AjustesPantalla
+import com.cuentasclaras.app.ui.pantallas.deudas.DeudasPantalla
+import com.cuentasclaras.app.ui.pantallas.importar.ImportarPantalla
 import com.cuentasclaras.app.ui.pantallas.inicio.InicioPantalla
 import com.cuentasclaras.app.ui.pantallas.movimientos.MovimientosPantalla
 import com.cuentasclaras.app.ui.pantallas.nuevo.NuevoPantalla
@@ -39,8 +41,8 @@ fun CuentasNavHost(nav: NavHostController, modifier: Modifier = Modifier) {
         composable(Rutas.NUEVO, arguments = argumentos(Rutas.ARGS_NUEVO)) { NuevoPantalla(nav) }
         composable(Rutas.MOVIMIENTOS, arguments = argumentos(Rutas.ARGS_MOVIMIENTOS)) { MovimientosPantalla(nav) }
         composable(Rutas.AJUSTES) { AjustesPantalla(nav) }
-        composable(Rutas.IMPORTAR) { Proximamente("El import del TXT del BNC llega en la fase 4") }
-        composable(Rutas.DEUDAS) { Proximamente("Deudas llega en la fase 5") }
+        composable(Rutas.IMPORTAR) { ImportarPantalla(nav) }
+        composable(Rutas.DEUDAS) { DeudasPantalla(nav) }
         composable(Rutas.CALENDARIO, arguments = argumentos(Rutas.ARGS_CALENDARIO)) { Proximamente("El calendario llega en la fase 6") }
         composable(Rutas.PERMISOS) { Proximamente("Permisos de captura llega en la fase 3") }
     }
