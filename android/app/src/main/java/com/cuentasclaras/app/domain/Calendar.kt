@@ -31,11 +31,13 @@ val RECURRENCIA_QUINCENAL: Recurrence = Recurrence.Monthly(listOf(15, 31))
 fun esQuincenal(r: Recurrence): Boolean = r is Recurrence.Monthly && r.days == listOf(15, 31)
 
 /**
- * Separadores de días: el `\s` de JS incluye los espacios Unicode (NBSP, U+202F, U+FEFF...) y el `\s` de Java/ICU
- * solo los ASCII. Se listan explícitamente con `\uXXXX`, que entienden por igual el regex de Java (tests en JVM) y
- * el ICU de Android; `(?U)` NO sirve porque ICU rechaza esa bandera en línea.
+ * Separadores de dias: el `\s` de JS incluye los espacios Unicode (NBSP, U+202F, U+FEFF...) y el de Java/ICU solo
+ * los ASCII. El fuente se mantiene ASCII: los caracteres se construyen por codigo numerico en tiempo de ejecucion
+ * y la clase es una enumeracion normal (sin banderas en linea: ICU rechaza `(?U)`), valida en Java y en ICU.
  */
-private val SEPARADOR_DIAS = Regex("""[\s   -     　﻿,;]+""")
+private val ESPACIOS_EXTRA = listOf(0x00A0, 0x1680, 0x2028, 0x2029, 0x202F, 0x205F, 0x3000, 0xFEFF)
+    .joinToString("") { it.toChar().toString() }
+private val SEPARADOR_DIAS = Regex("[\\s" + ESPACIOS_EXTRA + 0x2000.toChar() + "-" + 0x200A.toChar() + ",;]+")
 private val DIA_TEXTO = Regex("""^\d{1,2}$""")
 
 /** '15, 31' → [15, 31]. Ordena y deduplica. Lanza si está vacío o hay algo fuera de 1..31. */
