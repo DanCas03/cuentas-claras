@@ -1,5 +1,12 @@
 package com.cuentasclaras.app.ui.componentes
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -15,13 +22,25 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -32,7 +51,18 @@ import com.cuentasclaras.app.domain.Currency
 import com.cuentasclaras.app.domain.formatMoney
 import com.cuentasclaras.app.ui.theme.CuentasTema
 import com.cuentasclaras.app.ui.theme.EstiloTarjeta
+import com.cuentasclaras.app.ui.theme.Movimiento
 import kotlin.math.abs
+
+/** Grosor del contorno giratorio de Aurora. */
+private val GROSOR_FILO_AURORA = 1.5.dp
+
+/** Un giro completo del contorno de Aurora. */
+private const val GIRO_FILO_MS = 8_000
+
+/** Retardo entre tarjetas en la entrada en cascada de Aurora, y tope de tarjetas escalonadas. */
+private const val RETARDO_CASCADA_MS = 60
+private const val MAX_CASCADA = 8
 
 /** Signo visual de un monto: nunca solo color (DESIGN.md §4). */
 enum class Signo { NINGUNO, POSITIVO, NEGATIVO }
@@ -44,7 +74,9 @@ enum class Signo { NINGUNO, POSITIVO, NEGATIVO }
  * - `PLANA` (Tinta): `superficie` plana con el radio del diseño y un filete de 1 dp en `borde` solo abajo.
  * - `CONTORNO` (Isla): `superficieElevada` plana con contorno de 1 dp degradado (`texto` 10 % → 0) y relleno
  *   `m + xs`; sin carcasa.
- * - `AURORA`: Task 7 del plan 2026-10-17; mientras tanto se pinta como `BISEL`.
+ * - `AURORA`: `superficieElevada` con un contorno de 1,5 dp en degradado de barrido (`primario`, `ingreso`,
+ *   `aviso`) que gira en bucle, y entrada en cascada (alfa + traslación, 60 ms por tarjeta). Excepción declarada
+ *   a DESIGN.md §5/§8.
  * El título (hasta 3 líneas) y la acción comparten fila mientras al título le quede `medidas.anchoMinimoTexto`;
  * si no, la acción baja.
  */
@@ -84,7 +116,62 @@ fun Tarjeta(
             CabeceraTarjeta(titulo, accion)
             contenido()
         }
-        EstiloTarjeta.BISEL, EstiloTarjeta.AURORA -> {
+        EstiloTarjeta.AURORA -> {
+            val entrada = remember { Animatable(0f) }
+            val indice = LocalContadorCascada.current?.let { remember { it.siguiente() } } ?: 0
+            LaunchedEffect(Unit) {
+                entrada.animateTo(
+                    1f,
+                    tween(Movimiento.LARGO * 3 / 2, delayMillis = RETARDO_CASCADA_MS * minOf(indice, MAX_CASCADA), easing = Movimiento.suave),
+                )
+            }
+            val giro = rememberInfiniteTransition(label = "filoAurora")
+            // Un giro continuo no puede acelerar ni frenar: es el único uso permitido de LinearEasing (solo Aurora).
+            val angulo by giro.animateFloat(
+                0f, 360f, infiniteRepeatable(tween(GIRO_FILO_MS, easing = LinearEasing), RepeatMode.Restart), label = "anguloFilo",
+            )
+            val colores = listOf(c.primario, c.ingreso, c.aviso, c.primario)
+            val desplazamiento = e.m
+            Column(
+                modifier
+                    .fillMaxWidth()
+                    .graphicsLayer {
+                        alpha = entrada.value
+                        translationY = desplazamiento.toPx() * (1f - entrada.value)
+                    }
+                    .clip(f.tarjeta)
+                    .background(c.superficieElevada)
+                    .drawBehind {
+                        val grosor = GROSOR_FILO_AURORA.toPx()
+                        val radio = CornerRadius(f.radioTarjeta.toPx())
+                        val anillo = Path().apply {
+                            fillType = PathFillType.EvenOdd
+                            addRoundRect(RoundRect(Rect(Offset.Zero, size), radio))
+                            addRoundRect(
+                                RoundRect(
+                                    Rect(Offset(grosor, grosor), Size(size.width - grosor * 2, size.height - grosor * 2)),
+                                    CornerRadius(radio.x - grosor),
+                                ),
+                            )
+                        }
+                        clipPath(anillo) {
+                            rotate(angulo) {
+                                val lado = maxOf(size.width, size.height) * 1.5f
+                                drawRect(
+                                    Brush.sweepGradient(colores, center),
+                                    topLeft = Offset(center.x - lado / 2, center.y - lado / 2),
+                                    size = Size(lado, lado),
+                                )
+                            }
+                        }
+                    }
+                    .padding(e.m + e.xs),
+            ) {
+                CabeceraTarjeta(titulo, accion)
+                contenido()
+            }
+        }
+        EstiloTarjeta.BISEL -> {
             val nucleo = RoundedCornerShape(f.radioTarjeta - f.biselTarjeta)
             Box(
                 modifier

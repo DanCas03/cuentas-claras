@@ -8,7 +8,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Row
@@ -25,10 +31,17 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
@@ -56,6 +69,7 @@ private val GROSOR_DIVISOR = 1.dp
 private val ANCHO_INDICADOR = 56.dp
 private val ALTO_INDICADOR = 32.dp
 private val GROSOR_SUBRAYADO = 2.dp
+private const val RESPIRACION_HALO_MS = 2_400
 
 /** `restaurar = false`: la pestaña siempre abre limpia (Movs sin filtros, E25), sin estado guardado. */
 private class Pestana(
@@ -82,7 +96,8 @@ private val PESTANAS_DERECHA = listOf(
  * - `SUBRAYADO` (Tinta): misma franja; pestaña activa con subrayado de 2 dp en `primario` bajo el ícono.
  * - `FLOTANTE` (Isla): píldora despegada del borde (margen `m` a los lados y `s` abajo) sin divisor; el «+» va
  *   dentro de la píldora y no sobresale.
- * - `AURORA`: Task 7 del plan; mientras tanto se pinta como `PILDORA`.
+ * - `AURORA`: como `PILDORA`, pero la píldora activa es una sola que se desliza entre pestañas y el «+» lleva
+ *   un halo que respira en bucle. Excepción declarada a DESIGN.md §5.
  * El «+» sobresale `SOBRESALE_MAS` hacia arriba; esa franja forma parte de la barra (transparente) para que el
  * disco entero reciba toques y el contenido no quede tapado. `etiquetas = false` deja solo los íconos (el nombre
  * pasa al `contentDescription`). Se oculta en `nuevo`, que usa todo el alto.
@@ -96,13 +111,38 @@ fun BarraInferior(nav: NavHostController, etiquetas: Boolean = true) {
     val d = CuentasTema.diseno
     val e = CuentasTema.espacios
     val irANuevo = { nav.navigate(Rutas.nuevo("gasto")) { launchSingleTop = true } }
+    // Aurora: cada pestaña informa dónde quedó su ícono (en coordenadas de la ventana) y una única píldora se
+    // desliza hasta la activa.
+    val posiciones = remember { mutableStateMapOf<String, Rect>() }
+    var origenBarra by remember { mutableStateOf(Offset.Zero) }
     val pestanas: @Composable RowScope.() -> Unit = {
         PESTANAS_IZQUIERDA.forEach { p ->
-            ItemPestana(p, activa = jerarquia?.any { it.route == p.ruta } == true, etiquetas, d.barra) { irAPestana(nav, p) }
+            ItemPestana(p, activa = jerarquia?.any { it.route == p.ruta } == true, etiquetas, d.barra, { posiciones[p.ruta] = it }) { irAPestana(nav, p) }
         }
         Spacer(Modifier.weight(1f))
         PESTANAS_DERECHA.forEach { p ->
-            ItemPestana(p, activa = jerarquia?.any { it.route == p.ruta } == true, etiquetas, d.barra) { irAPestana(nav, p) }
+            ItemPestana(p, activa = jerarquia?.any { it.route == p.ruta } == true, etiquetas, d.barra, { posiciones[p.ruta] = it }) { irAPestana(nav, p) }
+        }
+    }
+    val pildoraDeslizante: @Composable BoxScope.() -> Unit = {
+        if (d.barra == EstiloBarra.AURORA) {
+            val activa = (PESTANAS_IZQUIERDA + PESTANAS_DERECHA).firstOrNull { p -> jerarquia?.any { it.route == p.ruta } == true }
+            val destino = activa?.let { posiciones[it.ruta] }
+            if (destino != null) {
+                val x by animateFloatAsState(destino.left - origenBarra.x, Movimiento.resorte(d.movimiento), label = "xPildora")
+                val y by animateFloatAsState(destino.top - origenBarra.y, Movimiento.resorte(d.movimiento), label = "yPildora")
+                Box(
+                    Modifier
+                        .graphicsLayer {
+                            translationX = x
+                            translationY = y
+                        }
+                        .width(ANCHO_INDICADOR)
+                        .height(ALTO_INDICADOR)
+                        .clip(CuentasTema.formas.pildora)
+                        .background(c.primario),
+                )
+            }
         }
     }
 
@@ -128,10 +168,36 @@ fun BarraInferior(nav: NavHostController, etiquetas: Boolean = true) {
                 .navigationBarsPadding(),
         ) {
             Box(Modifier.fillMaxWidth().height(GROSOR_DIVISOR).background(c.borde))
-            Row(Modifier.fillMaxWidth().height(ALTO_BARRA), verticalAlignment = Alignment.CenterVertically, content = pestanas)
+            Box(Modifier.fillMaxWidth().onGloballyPositioned { origenBarra = it.boundsInWindow().topLeft }) {
+                pildoraDeslizante()
+                Row(Modifier.fillMaxWidth().height(ALTO_BARRA), verticalAlignment = Alignment.CenterVertically, content = pestanas)
+            }
         }
+        if (d.barra == EstiloBarra.AURORA) HaloNuevo(Modifier.align(Alignment.TopCenter))
         BotonNuevo(Modifier.align(Alignment.TopCenter), d.botonMas, irANuevo)
     }
+}
+
+/** Halo que respira tras el «+» (solo Aurora): escala 1 → 1,25 y alfa 0,35 → 0 en bucle. */
+@Composable
+private fun HaloNuevo(modifier: Modifier) {
+    val c = CuentasTema.colores
+    val respiracion = rememberInfiniteTransition(label = "halo")
+    val fase by respiracion.animateFloat(
+        0f, 1f, infiniteRepeatable(tween(RESPIRACION_HALO_MS, easing = Movimiento.suave), RepeatMode.Restart), label = "faseHalo",
+    )
+    Box(
+        modifier
+            .size(DISCO_MAS)
+            .graphicsLayer {
+                val escala = 1f + 0.25f * fase
+                scaleX = escala
+                scaleY = escala
+                alpha = 0.35f * (1f - fase)
+            }
+            .clip(CircleShape)
+            .background(c.primario),
+    )
 }
 
 /**
@@ -183,6 +249,7 @@ private fun RowScope.ItemPestana(
     activa: Boolean,
     etiquetas: Boolean,
     estilo: EstiloBarra,
+    onPosicionIcono: (Rect) -> Unit,
     onClick: () -> Unit,
 ) {
     val c = CuentasTema.colores
@@ -192,8 +259,9 @@ private fun RowScope.ItemPestana(
     )
     // Píldora activa en `primario` sólido con el ícono en `sobrePrimario` (V9): ≥ 4,99:1 frente a la barra
     // (`superficieElevada`) en todas las paletas; el tinte al 14 % se quedaba en 1,2-1,45:1 y no se veía.
+    // En Aurora la píldora la pinta la barra (una sola, deslizante): aquí queda transparente.
     val indicador by animateColorAsState(
-        if (activa) c.primario else c.primario.copy(alpha = 0f),
+        if (activa && estilo != EstiloBarra.AURORA) c.primario else c.primario.copy(alpha = 0f),
         Movimiento.transicion(Movimiento.MEDIO, nivel), label = "indicadorPestana",
     )
     val conPildora = estilo != EstiloBarra.SUBRAYADO
@@ -212,7 +280,12 @@ private fun RowScope.ItemPestana(
     ) {
         if (conPildora) {
             Box(
-                Modifier.width(ANCHO_INDICADOR).height(ALTO_INDICADOR).clip(CuentasTema.formas.pildora).background(indicador),
+                Modifier
+                    .width(ANCHO_INDICADOR)
+                    .height(ALTO_INDICADOR)
+                    .onGloballyPositioned { onPosicionIcono(it.boundsInWindow()) }
+                    .clip(CuentasTema.formas.pildora)
+                    .background(indicador),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(painterResource(pestana.icono), contentDescription = null, tint = tintaIcono, modifier = Modifier.size(ICONO_PESTANA))

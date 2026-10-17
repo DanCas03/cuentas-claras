@@ -101,8 +101,34 @@ val DISENO_ISLA = Diseno(
     escalaPresion = 0.96f,
 )
 
+private val FORMAS_AURORA = Formas(
+    tarjeta = RoundedCornerShape(28.dp),
+    control = RoundedCornerShape(16.dp),
+    pildora = RoundedCornerShape(percent = 50),
+    radioTarjeta = 28.dp,
+    biselTarjeta = 0.dp,
+    hoja = 32.dp,
+)
+
+/**
+ * El extravagante: luces de la paleta que se mueven de fondo, filos que giran, píldora deslizante, «+» que
+ * respira, cascada de entrada y resortes rebotones. Excepción declarada a DESIGN.md §5/§8.
+ */
+val DISENO_AURORA = Diseno(
+    id = "aurora",
+    nombre = "Aurora",
+    descripcion = "Luces de la paleta que se mueven de fondo, filos que giran y un «+» que respira.",
+    formas = FORMAS_AURORA,
+    tarjeta = EstiloTarjeta.AURORA,
+    barra = EstiloBarra.AURORA,
+    botonMas = FormaMas.DISCO,
+    fondo = EstiloFondo.AURORA,
+    movimiento = NivelMovimiento.EXPRESIVO,
+    escalaPresion = 0.90f,
+)
+
 /** Catálogo cerrado de diseños. */
-val DISENOS: List<Diseno> = listOf(DISENO_LIBRETA, DISENO_TINTA, DISENO_ISLA)
+val DISENOS: List<Diseno> = listOf(DISENO_LIBRETA, DISENO_TINTA, DISENO_ISLA, DISENO_AURORA)
 
 /** El diseño con ese id, o Libreta si el id no existe (versión vieja, respaldo). */
 fun disenoPorId(id: String?): Diseno = DISENOS.firstOrNull { it.id == id } ?: DISENOS.first { it.id == ID_DISENO_POR_DEFECTO }
