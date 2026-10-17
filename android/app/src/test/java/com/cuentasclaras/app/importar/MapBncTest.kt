@@ -96,6 +96,17 @@ class MapBncTest {
         assertEquals(listOf(true, true), dos.map { it.duplicate })
     }
 
+    @Test fun `una captura con la referencia truncada marca la fila si conserva al menos seis digitos y el monto coincide`() {
+        val fila = rows.first { it.referencia == "100000004" && it.amountMinor == -120000L }.copy(referencia = "123456789012")
+        fun mapa(ref: String, monto: Long) = mapBncRows(listOf(fila), "acc-bnc", emptySet(), reglas, categorias,
+            listOf(ReferenciaCapturada(ref, monto, TipoCaptura.GASTO))).single()
+        val ocho = mapa("56789012", 120000)
+        assertEquals(true, ocho.duplicate)
+        assertEquals(MOTIVO_POR_CAPTURA, ocho.motivoDuplicado)
+        assertEquals(false, mapa("89012", 120000).duplicate)
+        assertEquals(false, mapa("56789012", 120001).duplicate)
+    }
+
     @Test fun `referenciaImportada saca la referencia normalizada del importKey aunque la hora lleve dos puntos`() {
         val importada = Transaction(
             "t1", TxType.INCOME, "acc-bnc", 150000, "2026-07-02", time = "16:20:30.900", source = TxSource.BNC,

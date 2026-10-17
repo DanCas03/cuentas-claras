@@ -12,6 +12,7 @@ import com.cuentasclaras.app.domain.TxType
 import com.cuentasclaras.app.domain.instanteIso
 import com.cuentasclaras.app.domain.nuevoId
 import com.cuentasclaras.app.importar.bnc.normalizarReferencia
+import com.cuentasclaras.app.importar.bnc.refsCasan
 import com.cuentasclaras.app.importar.bnc.referenciaImportada
 import kotlinx.coroutines.flow.Flow
 import java.security.MessageDigest
@@ -91,7 +92,7 @@ class CapturaRepo(private val db: CuentasDb, private val alResolver: (capturaId:
 
     /**
      * true si ya hay un movimiento importado del TXT del BNC que parece ser esta captura: misma referencia
-     * normalizada (no vacía), mismo |monto| y mismo sentido. Es el duplicado inverso de D8/E24 (la captura quedó
+     * (normalizada no vacía, o la de la captura como sufijo de la del TXT: refsCasan), mismo |monto| y mismo sentido. Es el duplicado inverso de D8/E24 (la captura quedó
      * pendiente y el TXT ya trajo el movimiento); solo sirve para avisar, no bloquea el registro.
      */
     suspend fun pareceImportada(c: CapturaEntity): Boolean {
@@ -102,6 +103,6 @@ class CapturaRepo(private val db: CuentasDb, private val alResolver: (capturaId:
             TipoCaptura.GASTO -> TxType.EXPENSE
         }
         if (ref.isEmpty()) return false
-        return db.transactions().importadasBnc(tipo.name, monto).any { referenciaImportada(it.toDomain()) == ref }
+        return db.transactions().importadasBnc(tipo.name, monto).any { referenciaImportada(it.toDomain())?.let { r -> refsCasan(ref, r) } == true }
     }
 }

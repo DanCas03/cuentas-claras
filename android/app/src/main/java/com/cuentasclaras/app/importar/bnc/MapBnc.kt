@@ -21,6 +21,25 @@ const val MOTIVO_POR_CAPTURA = "ya registrada por captura"
 fun normalizarReferencia(ref: String): String = ref.trim().trimStart('0')
 
 /**
+ * Mínimo de dígitos (ya sin ceros a la izquierda) que debe tener una referencia de captura más corta que la del TXT
+ * para casar por sufijo: la Ref de la notificación podría llegar truncada, pero con menos dígitos un final común
+ * sería casualidad y marcaría como duplicada una fila ajena.
+ */
+const val MIN_DIGITOS_SUFIJO_REFERENCIA = 6
+
+/**
+ * true si la referencia de una captura corresponde a la de una fila del TXT: iguales normalizadas, o la de la
+ * captura es más corta, tiene al menos [MIN_DIGITOS_SUFIJO_REFERENCIA] dígitos y la del TXT termina en ella.
+ */
+fun refsCasan(refCaptura: String, refTxt: String): Boolean {
+    val captura = normalizarReferencia(refCaptura)
+    val txt = normalizarReferencia(refTxt)
+    if (captura.isEmpty() || txt.isEmpty()) return false
+    if (captura == txt) return true
+    return captura.length < txt.length && captura.length >= MIN_DIGITOS_SUFIJO_REFERENCIA && txt.endsWith(captura)
+}
+
+/**
  * Referencia normalizada de un movimiento importado del TXT, sacada de su `importKey` (`bncImportKey`:
  * `bnc:fecha:ref:hora:monto`); null si la clave no tiene esa forma. La fecha (`yyyy-mm-dd`) y el monto no llevan
  * «:», así que se cortan por el primero y el último; la hora sí los lleva, así que se quita la del propio
@@ -62,12 +81,8 @@ fun mapBncRows(
     val idPagoMovil = categories.firstOrNull { it.id == "cat-pago-movil-recibido" }?.id
     // D8 + E24: referencia normalizada + monto absoluto + sentido. Cada captura marca como mucho una fila
     // (multiset que se consume, en el orden de las filas): un reverso con el sentido opuesto no coincide.
-    val disponibles = mutableMapOf<Triple<String, Long, TipoCaptura>, Int>()
-    for (c in capturadas) {
-        val ref = normalizarReferencia(c.referencia)
-        if (ref.isEmpty()) continue
-        disponibles.merge(Triple(ref, c.montoMinor, c.tipo), 1, Int::plus)
-    }
+    // La referencia casa exacta o por sufijo (refsCasan); a igualdad de lo demás se consume antes la exacta.
+    val disponibles = capturadas.filter { normalizarReferencia(it.referencia).isNotEmpty() }.toMutableList()
 
     return rows.filter { it.amountMinor != 0L }.map { r ->
         val texto = "${r.tipOperacion} ${r.descripcion}"
@@ -81,10 +96,14 @@ fun mapBncRows(
         val importKey = bncImportKey(r)
         val refNorm = normalizarReferencia(r.referencia)
         val porImportKey = importKey in existingKeys
-        val claveCaptura = Triple(refNorm, abs(r.amountMinor), if (esIngreso) TipoCaptura.INGRESO else TipoCaptura.GASTO)
+        val tipoFila = if (esIngreso) TipoCaptura.INGRESO else TipoCaptura.GASTO
         // Una fila ya duplicada por importKey no consume captura: la captura queda para otra fila real.
-        val porCaptura = !porImportKey && refNorm.isNotEmpty() && (disponibles[claveCaptura] ?: 0) > 0
-        if (porCaptura) disponibles.merge(claveCaptura, -1, Int::plus)
+        val candidatas = if (porImportKey || refNorm.isEmpty()) emptyList() else disponibles.filter {
+            it.montoMinor == abs(r.amountMinor) && it.tipo == tipoFila && refsCasan(it.referencia, r.referencia)
+        }
+        val elegida = candidatas.firstOrNull { normalizarReferencia(it.referencia) == refNorm } ?: candidatas.firstOrNull()
+        val porCaptura = elegida != null
+        if (elegida != null) disponibles.remove(elegida)
         BncDraft(
             tx = Transaction(
                 id = nuevoId(),
