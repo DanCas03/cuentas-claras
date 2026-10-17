@@ -49,6 +49,7 @@ private val DIAS_ROTULADOS = listOf(1, 8, 15, 22)
 fun CurvaAcumulada(
     puntos: List<PuntoDiario>,
     formato: (Long) -> String,
+    descripcion: String = "Gráfica de gasto acumulado del mes",
     modifier: Modifier = Modifier,
 ) {
     val c = CuentasTema.colores
@@ -56,8 +57,9 @@ fun CurvaAcumulada(
     val estiloEje = CuentasTema.tipografia.etiqueta.copy(color = c.textoSecundario, fontFeatureSettings = "tnum")
     val maximo = puntos.maxOfOrNull { it.acumuladoMinor } ?: 0L
     val ultimoDia = puntos.maxOfOrNull { it.day } ?: 0
-    val descripcion = buildString {
-        append("Gráfica de gasto acumulado del mes. ")
+    val descripcionCompleta = buildString {
+        append(descripcion)
+        append(". ")
         puntos.filter { it.day % 7 == 0 && it.day != ultimoDia }.forEach { p ->
             append("Día ")
             append(p.day)

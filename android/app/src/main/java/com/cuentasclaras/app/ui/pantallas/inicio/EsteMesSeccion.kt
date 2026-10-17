@@ -2,6 +2,8 @@ package com.cuentasclaras.app.ui.pantallas.inicio
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -105,15 +107,31 @@ private fun TarjetaEsteMes(
     val t = CuentasTema.tipografia
     val e = CuentasTema.espacios
     var expandido by rememberSaveable { mutableStateOf(false) }
+    // Pestaña de gráficas (spec 2026-10-17 §4): Gastos por defecto; con Ingresos se ven la dona y el acumulado de ingresos.
+    var flujo by rememberSaveable { mutableStateOf(FlujoMes.GASTOS) }
     val categoria = { id: String? -> estado.categorias.firstOrNull { it.id == id } }
+    val segmentoDe = { id: String?, valor: Long ->
+        val cat = categoria(id)
+        SegmentoDona(
+            etiqueta = cat?.name ?: "Sin categoría",
+            valor = valor,
+            color = cat?.let { colorDeCategoria(it.color, c.textoSecundario) } ?: c.textoSecundario,
+        )
+    }
     val balance = resumen.incomeMinor - resumen.expenseMinor
 
     Tarjeta {
         NavegadorMes(estado.mes, estado.mesActual, estado.primerMes, onMes)
         Column(Modifier.padding(top = e.s), verticalArrangement = Arrangement.spacedBy(e.m)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(e.m)) {
-                Flujo("Ingresos", R.drawable.ic_entra, c.ingreso, resumen.incomeMinor, estado.viewCurrency, Signo.POSITIVO, Modifier.weight(1f))
-                Flujo("Gastos", R.drawable.ic_sale, c.gasto, resumen.expenseMinor, estado.viewCurrency, Signo.NEGATIVO, Modifier.weight(1f))
+            Row(Modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.spacedBy(e.m)) {
+                Flujo(
+                    "Ingresos", R.drawable.ic_entra, c.ingreso, resumen.incomeMinor, estado.viewCurrency, Signo.POSITIVO,
+                    activo = flujo == FlujoMes.INGRESOS, onClick = { flujo = FlujoMes.INGRESOS }, modifier = Modifier.weight(1f),
+                )
+                Flujo(
+                    "Gastos", R.drawable.ic_sale, c.gasto, resumen.expenseMinor, estado.viewCurrency, Signo.NEGATIVO,
+                    activo = flujo == FlujoMes.GASTOS, onClick = { flujo = FlujoMes.GASTOS }, modifier = Modifier.weight(1f),
+                )
             }
             if (resumen.incomeMinor > 0L) {
                 val pct = Math.round(resumen.expenseMinor * 100.0 / resumen.incomeMinor)
@@ -142,23 +160,27 @@ private fun TarjetaEsteMes(
             if (resumen.omitidasSinTasa > 0) {
                 Banner("${resumen.omitidasSinTasa} movimiento(s) sin tasa quedaron fuera del resumen.", TipoBanner.AVISO)
             }
-            if (resumen.expenseMinor <= 0L) {
-                Vacio("🧾", if (estado.mes == estado.mesActual) "Sin gastos este mes" else "Sin gastos en ${nombreMes(estado.mes)}")
-            } else {
-                Rotulo("Gasto por categoría")
-                Dona(
-                    resumen.byCategory.map { b ->
-                        val cat = categoria(b.categoryId)
-                        SegmentoDona(
-                            etiqueta = cat?.name ?: "Sin categoría",
-                            valor = b.expenseMinor,
-                            color = cat?.let { colorDeCategoria(it.color, c.textoSecundario) } ?: c.textoSecundario,
-                        )
-                    },
-                    formato = dinero,
-                )
-                Rotulo("Gasto acumulado")
-                CurvaAcumulada(resumen.dailyCumulative, formato = dinero)
+            when (flujo) {
+                FlujoMes.GASTOS -> if (resumen.expenseMinor <= 0L) {
+                    Vacio("🧾", if (estado.mes == estado.mesActual) "Sin gastos este mes" else "Sin gastos en ${nombreMes(estado.mes)}")
+                } else {
+                    Rotulo("Gasto por categoría")
+                    Dona(resumen.byCategory.map { b -> segmentoDe(b.categoryId, b.expenseMinor) }, formato = dinero)
+                    Rotulo("Gasto acumulado")
+                    CurvaAcumulada(resumen.dailyCumulative, formato = dinero)
+                }
+                FlujoMes.INGRESOS -> if (resumen.incomeMinor <= 0L) {
+                    Vacio("💰", if (estado.mes == estado.mesActual) "Sin ingresos este mes" else "Sin ingresos en ${nombreMes(estado.mes)}")
+                } else {
+                    Rotulo("Ingreso por categoría")
+                    Dona(
+                        resumen.incomeByCategory.map { b -> segmentoDe(b.categoryId, b.incomeMinor) },
+                        formato = dinero,
+                        descripcion = "Gráfica de dona de ingresos por categoría",
+                    )
+                    Rotulo("Ingreso acumulado")
+                    CurvaAcumulada(resumen.dailyCumulativeIncome, formato = dinero, descripcion = "Gráfica de ingreso acumulado del mes")
+                }
             }
             Chip(
                 if (expandido) "Ocultar" else "Ver todas las categorías",
@@ -212,7 +234,13 @@ private fun NavegadorMes(mes: String, mesActual: String, primerMes: String, onMe
     }
 }
 
-/** Una columna de «Este mes»: flecha + rótulo y el monto con signo (el color nunca es la única señal). */
+/** Qué gráficas muestra «Este mes». */
+private enum class FlujoMes { GASTOS, INGRESOS }
+
+/**
+ * Una columna de «Este mes»: flecha + rótulo y el monto con signo (el color nunca es la única señal). Es una
+ * pestaña (`Role.Tab`): la activa lleva tinte `primario` al 14 % y decide qué gráficas se ven debajo.
+ */
 @Composable
 private fun Flujo(
     rotulo: String,
@@ -221,9 +249,21 @@ private fun Flujo(
     minor: Long,
     moneda: Currency,
     signo: Signo,
+    activo: Boolean,
+    onClick: () -> Unit,
     modifier: Modifier,
 ) {
-    Column(modifier.semantics(mergeDescendants = true) { }) {
+    val c = CuentasTema.colores
+    val e = CuentasTema.espacios
+    Column(
+        modifier
+            .clip(CuentasTema.formas.control)
+            .background(if (activo) c.primario.copy(alpha = 0.14f) else Color.Transparent)
+            .selectable(selected = activo, role = Role.Tab, onClick = onClick)
+            .heightIn(min = CuentasTema.medidas.tactilMinimo)
+            .padding(e.s)
+            .semantics(mergeDescendants = true) { },
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(painterResource(icono), contentDescription = null, tint = color, modifier = Modifier.size(ICONO_LINEA))
             Text(

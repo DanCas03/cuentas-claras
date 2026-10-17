@@ -75,6 +75,7 @@ private val PUNTO_LEYENDA = 10.dp
 fun Dona(
     segmentos: List<SegmentoDona>,
     formato: (Long) -> String,
+    descripcion: String = "Gráfica de dona de gastos por categoría",
     modifier: Modifier = Modifier,
 ) {
     val c = CuentasTema.colores
@@ -83,8 +84,9 @@ fun Dona(
     val visibles = remember(segmentos, c.textoSecundario) { agruparOtras(segmentos.filter { it.valor > 0 }, c.textoSecundario) }
     val total = visibles.sumOf { it.valor }
     if (total <= 0L) return
-    val descripcion = buildString {
-        append("Gráfica de dona de gastos por categoría. Total ")
+    val descripcionCompleta = buildString {
+        append(descripcion)
+        append(". Total ")
         append(formato(total))
         append(". ")
         visibles.forEach { s ->
@@ -100,7 +102,7 @@ fun Dona(
     Column(
         modifier
             .fillMaxWidth()
-            .clearAndSetSemantics { contentDescription = descripcion },
+            .clearAndSetSemantics { contentDescription = descripcionCompleta },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(e.m),
     ) {
