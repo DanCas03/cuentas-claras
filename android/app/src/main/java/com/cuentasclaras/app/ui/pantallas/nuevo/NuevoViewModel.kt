@@ -15,6 +15,7 @@ import com.cuentasclaras.app.domain.CalEvent
 import com.cuentasclaras.app.domain.Category
 import com.cuentasclaras.app.domain.CategoryKind
 import com.cuentasclaras.app.domain.CtxSugerencia
+import com.cuentasclaras.app.domain.Currency
 import com.cuentasclaras.app.domain.EstadoOcurrencia
 import com.cuentasclaras.app.domain.Ocurrencia
 import com.cuentasclaras.app.domain.TxParaSugerir
@@ -86,6 +87,12 @@ class NuevoViewModel(
         val cuentaBncNoActiva: Boolean = false,
         /** La captura cargada no se reconoció (D6): su banner es un aviso, no un «Correcto». */
         val capturaSinReconocer: Boolean = false,
+        /**
+         * Moneda del monto de la captura reconocida (null = sin captura con monto). Sin cuenta elegida la cifra se
+         * pinta en ella, y si la cuenta elegida usa otra moneda Nuevo avisa: el número se conserva (ruling vigente),
+         * pero se guardará en la moneda de la cuenta (D1).
+         */
+        val monedaCaptura: Currency? = null,
     )
 
     /** Chip de una ocurrencia del calendario a la que se puede asignar el movimiento (T30). */
@@ -301,6 +308,7 @@ class NuevoViewModel(
                 fechaCaptura = null,
                 cuentaBncNoActiva = false,
                 capturaSinReconocer = false,
+                monedaCaptura = null,
             )
         }
         // La elección de evento era de la captura anterior.
@@ -342,6 +350,8 @@ class NuevoViewModel(
                                 cuentaBncNoActiva = !bncActiva,
                                 pareceImportada = importada,
                                 fechaCaptura = fechaLocalDeInstante(c.recibidaIso),
+                                // Las notificaciones del BNC traen montos en Bs (como las escribe `Notificador`).
+                                monedaCaptura = Currency.VES,
                             )
                         }
                         // Sugerencia tras la captura (NuevoPage.tsx): se ofrece, no se activa.

@@ -119,6 +119,17 @@ fun NuevoPantalla(nav: NavHostController) {
             if (f.cuentaBncNoActiva && estado.cuenta == null) {
                 Banner(texto = "La cuenta BNC está archivada o no existe: elige la cuenta.", tipo = TipoBanner.AVISO)
             }
+            // D1: el número se conserva al pasar a una cuenta en otra moneda (ruling vigente), pero se avisa; el aviso
+            // se va al volver a una cuenta en la moneda de la captura.
+            val monedaCaptura = f.monedaCaptura
+            val cuentaElegida = estado.cuenta
+            if (monedaCaptura != null && cuentaElegida != null && cuentaElegida.currency != monedaCaptura) {
+                Banner(
+                    texto = "La notificación era en ${simbolo(monedaCaptura)}; este monto se guardará en " +
+                        "${simbolo(cuentaElegida.currency)}. Revísalo.",
+                    tipo = TipoBanner.AVISO,
+                )
+            }
         }
         Segmentado(
             opciones = listOf("Gasto", "Ingreso", "Transferir", "Ajustar"),
@@ -164,8 +175,10 @@ fun NuevoPantalla(nav: NavHostController) {
                         autoFoco = true,
                     )
                 }
-                val cifra = if (minor != null && minor > 0 && cuenta != null) {
-                    formatMoney(if (f.modo == Modo.GASTO) -minor else minor, cuenta.currency)
+                // D1: sin cuenta elegida (BNC archivada), la cifra de una captura se pinta en su moneda de origen.
+                val monedaCifra = cuenta?.currency ?: f.monedaCaptura
+                val cifra = if (minor != null && minor > 0 && monedaCifra != null) {
+                    formatMoney(if (f.modo == Modo.GASTO) -minor else minor, monedaCifra)
                 } else {
                     null
                 }
