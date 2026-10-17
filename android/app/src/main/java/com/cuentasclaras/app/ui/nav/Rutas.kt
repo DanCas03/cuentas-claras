@@ -12,6 +12,7 @@ object Rutas {
     const val DEUDAS = "deudas"
     const val CALENDARIO = "calendario?dia={dia}&nuevo={nuevo}"
     const val PERMISOS = "permisos"
+    const val APARIENCIA = "apariencia"
 
     val ARGS_NUEVO = listOf("tipo", "monto", "cuenta", "nota", "eventId", "eventDate", "capturaId")
     val ARGS_MOVIMIENTOS = listOf("categoria", "mes", "cuenta")

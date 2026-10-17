@@ -29,7 +29,6 @@ import com.cuentasclaras.app.ui.componentes.CampoTexto
 import com.cuentasclaras.app.ui.componentes.Chip
 import com.cuentasclaras.app.ui.componentes.HojaModal
 import com.cuentasclaras.app.ui.componentes.Selector
-import com.cuentasclaras.app.ui.componentes.Tarjeta
 import com.cuentasclaras.app.ui.theme.CuentasTema
 
 private val MONEDAS = listOf(Currency.USD, Currency.VES)
@@ -62,7 +61,8 @@ fun CuentasSeccion(
     val e = CuentasTema.espacios
     var editando by remember { mutableStateOf<Account?>(null) }
 
-    Tarjeta(titulo = "Cuentas") {
+    // Sin Tarjeta propia: la pinta la SeccionPlegable de Ajustes (spec 2026-10-17 §3).
+    Column {
         Column(verticalArrangement = Arrangement.spacedBy(e.s)) {
             cuentas.forEach { cuenta ->
                 FilaConAccion(

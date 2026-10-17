@@ -1,4 +1,4 @@
-package com.cuentasclaras.app.ui.pantallas.ajustes
+package com.cuentasclaras.app.ui.pantallas.apariencia
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -11,7 +11,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 
 /**
- * Modo y paletas elegidos (E20, E22). `null` mientras DataStore no ha respondido.
+ * Modo, paletas, fuente, diseño, nombres en la barra e ícono elegidos (E20, E22, spec 2026-10-17). `null` mientras
+ * DataStore no ha respondido.
  * E30: cada cambio es una escritura idempotente de una sola preferencia; sus controles no se deshabilitan con
  * `guardando`, pero un fallo avisa (helper `escribir` sin ocupación).
  */

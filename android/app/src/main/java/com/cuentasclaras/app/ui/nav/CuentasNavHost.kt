@@ -10,6 +10,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.cuentasclaras.app.ui.pantallas.ajustes.AjustesPantalla
+import com.cuentasclaras.app.ui.pantallas.apariencia.AparienciaPantalla
 import com.cuentasclaras.app.ui.pantallas.calendario.CalendarioPantalla
 import com.cuentasclaras.app.ui.pantallas.deudas.DeudasPantalla
 import com.cuentasclaras.app.ui.pantallas.importar.ImportarPantalla
@@ -46,5 +47,6 @@ fun CuentasNavHost(nav: NavHostController, modifier: Modifier = Modifier) {
         composable(Rutas.DEUDAS) { DeudasPantalla(nav) }
         composable(Rutas.CALENDARIO, arguments = argumentos(Rutas.ARGS_CALENDARIO)) { CalendarioPantalla(nav) }
         composable(Rutas.PERMISOS) { PermisosPantalla(nav) }
+        composable(Rutas.APARIENCIA) { AparienciaPantalla(nav) }
     }
 }

@@ -43,7 +43,6 @@ import com.cuentasclaras.app.ui.componentes.CampoTexto
 import com.cuentasclaras.app.ui.componentes.Chip
 import com.cuentasclaras.app.ui.componentes.HojaModal
 import com.cuentasclaras.app.ui.componentes.Selector
-import com.cuentasclaras.app.ui.componentes.Tarjeta
 import com.cuentasclaras.app.ui.componentes.TipoBanner
 import com.cuentasclaras.app.ui.componentes.colorDeCategoria
 import com.cuentasclaras.app.ui.theme.CuentasTema
@@ -90,7 +89,8 @@ fun CategoriasSeccion(
     val e = CuentasTema.espacios
     var editando by remember { mutableStateOf<Category?>(null) }
 
-    Tarjeta(titulo = "Categorías") {
+    // Sin Tarjeta propia: la pinta la SeccionPlegable de Ajustes (spec 2026-10-17 §3).
+    Column {
         Column(verticalArrangement = Arrangement.spacedBy(e.s)) {
             categorias.forEach { categoria ->
                 FilaConAccion(

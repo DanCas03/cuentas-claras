@@ -35,7 +35,6 @@ import com.cuentasclaras.app.ui.componentes.CampoTexto
 import com.cuentasclaras.app.ui.componentes.Chip
 import com.cuentasclaras.app.ui.componentes.FilaConFinal
 import com.cuentasclaras.app.ui.componentes.Selector
-import com.cuentasclaras.app.ui.componentes.Tarjeta
 import com.cuentasclaras.app.ui.componentes.Vacio
 import com.cuentasclaras.app.ui.theme.CuentasTema
 
@@ -76,7 +75,8 @@ fun TasasSeccion(
     var fuenteManual by remember { mutableStateOf(RateSource.BINANCE) }
     var valorTxt by remember { mutableStateOf("") }
 
-    Tarjeta(titulo = "Tasas de cambio") {
+    // Sin Tarjeta propia: la pinta la SeccionPlegable de Ajustes (spec 2026-10-17 §3).
+    Column {
         Column(verticalArrangement = Arrangement.spacedBy(e.m)) {
             Text(
                 buildAnnotatedString {

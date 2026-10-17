@@ -30,7 +30,6 @@ import com.cuentasclaras.app.ui.componentes.AvisosDeCapa
 import com.cuentasclaras.app.ui.componentes.BotonPeligro
 import com.cuentasclaras.app.ui.componentes.BotonSecundario
 import com.cuentasclaras.app.ui.componentes.DialogoConfirmacion
-import com.cuentasclaras.app.ui.componentes.Tarjeta
 import com.cuentasclaras.app.ui.theme.CuentasTema
 import com.cuentasclaras.app.ui.vmCon
 
@@ -60,7 +59,8 @@ fun RespaldoSeccion() {
         if (uri != null) vm.elegirArchivo(contexto.contentResolver, uri)
     }
 
-    Tarjeta(titulo = "Respaldo") {
+    // Sin Tarjeta propia: la pinta la SeccionPlegable de Ajustes (spec 2026-10-17 §3).
+    Column {
         Column(verticalArrangement = Arrangement.spacedBy(e.m)) {
             Text(
                 "Exporta tu respaldo y guárdalo en Google Drive desde el selector de archivos.",
