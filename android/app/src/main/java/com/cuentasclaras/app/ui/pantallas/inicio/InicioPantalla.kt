@@ -81,7 +81,9 @@ fun InicioPantalla(nav: NavHostController) {
         } else if (enPausa) {
             item(key = "captura-en-pausa") {
                 Banner(
-                    texto = "La captura está en pausa: activa Autoinicio",
+                    // Fiel al código: activar Autoinicio no re-enlaza al momento; el re-enlace llega en un onResume
+                    // pasado el freno (≤ 10 min desde el último), o antes si el sistema re-enlaza solo.
+                    texto = "Captura en pausa. Activa Autoinicio; se reanuda al volver a la app en unos minutos.",
                     tipo = TipoBanner.AVISO,
                     accion = { Chip("Arreglar", onClick = { nav.navigate(Rutas.PERMISOS) }) },
                 )
