@@ -22,6 +22,10 @@ class AparienciaViewModel(private val repo: AparienciaRepo) : ViewModel() {
     fun cambiarModo(modo: ModoTema) = escribir(null, MENSAJE_ERROR) { repo.cambiarModo(modo) }
     fun cambiarPaletaOscura(id: String) = escribir(null, MENSAJE_ERROR) { repo.cambiarPaletaOscura(id) }
     fun cambiarPaletaClara(id: String) = escribir(null, MENSAJE_ERROR) { repo.cambiarPaletaClara(id) }
+    fun cambiarFuente(id: String) = escribir(null, MENSAJE_ERROR) { repo.cambiarFuente(id) }
+    fun cambiarDiseno(id: String) = escribir(null, MENSAJE_ERROR) { repo.cambiarDiseno(id) }
+    fun cambiarEtiquetasBarra(mostrar: Boolean) = escribir(null, MENSAJE_ERROR) { repo.cambiarEtiquetasBarra(mostrar) }
+    fun cambiarIcono(id: String) = escribir(null, MENSAJE_ERROR) { repo.cambiarIcono(id) }
 
     private companion object {
         const val MENSAJE_ERROR = "No se pudo guardar la apariencia"
