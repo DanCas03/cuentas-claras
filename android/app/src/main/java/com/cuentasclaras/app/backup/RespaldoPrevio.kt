@@ -30,11 +30,14 @@ private suspend fun guardarRespaldoPrevio(db: CuentasDb, dir: File, ahora: Local
     }
 }
 
-/** Respaldo de seguridad de `filesDir/respaldos/`: fecha `yyyy-mm-dd` y hora `HH:mm` locales en que se guardó. */
+/**
+ * Respaldo de seguridad de `filesDir/respaldos/`: fecha `yyyy-mm-dd` y hora `HH:mm:ss` locales en que se guardó. Con
+ * los segundos, dos respaldos del mismo minuto se distinguen en la lista y para el lector de pantalla.
+ */
 data class RespaldoSeguridad(val archivo: File, val fecha: String, val hora: String)
 
-/** Sello `<fecha>-<HHmm>` del nombre (`FORMATO_PREVIO`): el resto (segundos y milisegundos) no se muestra. */
-private val SELLO_PREVIO = Regex("^(\\d{4}-\\d{2}-\\d{2})-(\\d{2})(\\d{2})\\d*$")
+/** Sello `<fecha>-<HHmmss>` del nombre (`FORMATO_PREVIO`): los milisegundos no se muestran. */
+private val SELLO_PREVIO = Regex("^(\\d{4}-\\d{2}-\\d{2})-(\\d{2})(\\d{2})(\\d{2})\\d*$")
 
 /**
  * Los respaldos de seguridad de `dir` (I3), del más reciente al más antiguo y como mucho 5. La fecha y la hora salen
@@ -47,8 +50,8 @@ suspend fun listarRespaldosPrevios(dir: File): List<RespaldoSeguridad> = withCon
         .map { f ->
             val sello = SELLO_PREVIO.matchEntire(f.name.removePrefix(PREFIJO_PREVIO).removeSuffix(".json"))
             if (sello != null) {
-                val (fecha, hh, mm) = sello.destructured
-                RespaldoSeguridad(f, fecha, "$hh:$mm")
+                val (fecha, hh, mm, ss) = sello.destructured
+                RespaldoSeguridad(f, fecha, "$hh:$mm:$ss")
             } else {
                 val momento = LocalDateTime.ofInstant(Instant.ofEpochMilli(f.lastModified()), ZoneId.systemDefault())
                 RespaldoSeguridad(f, momento.toLocalDate().toString(), momento.format(FORMATO_HORA))
@@ -56,7 +59,7 @@ suspend fun listarRespaldosPrevios(dir: File): List<RespaldoSeguridad> = withCon
         }
 }
 
-private val FORMATO_HORA = DateTimeFormatter.ofPattern("HH:mm")
+private val FORMATO_HORA = DateTimeFormatter.ofPattern("HH:mm:ss")
 
 /** Única vía para reemplazar los datos con un respaldo: primero el previo en `dirRespaldos` (D16) y, solo si
  *  se escribió, `importBackup`. Si el previo falla, lanza y no se importa nada. */

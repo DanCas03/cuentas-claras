@@ -34,7 +34,7 @@ import com.cuentasclaras.app.ui.componentes.Tarjeta
 import com.cuentasclaras.app.ui.theme.CuentasTema
 import com.cuentasclaras.app.ui.vmCon
 
-/** «16 oct 2026 · 15:30»: cuándo se guardó un respaldo de seguridad. */
+/** «16 oct 2026 · 15:30:12»: cuándo se guardó un respaldo de seguridad (con segundos, D3). */
 private fun momentoLegible(r: RespaldoSeguridad): String = "${fechaCorta(r.fecha)} ${r.fecha.take(4)} · ${r.hora}"
 
 /**
