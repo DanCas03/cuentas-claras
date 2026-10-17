@@ -308,7 +308,8 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
 - **`DialogoConfirmacion(titulo, texto, textoConfirmar, onConfirmar, onCancelar, textoCancelar = "Conservar", peligro = true, habilitado = true)`**:
   único `AlertDialog` de confirmación (eliminar, desagrupar, cerrar deuda): `superficie`, título en `subtitulo`, texto en
   `cuerpo`/`textoSecundario`, forma `tarjeta`; confirmar con `BotonPeligro` (o `BotonPrincipal` si `peligro = false`) y
-  cancelar con `BotonSecundario`. `habilitado = !guardando` bloquea ambos botones durante la escritura.
+  cancelar con `BotonSecundario`. `habilitado = !guardando` bloquea ambos botones durante la escritura. Con
+  `texto` vacío no pinta la línea de texto (el título basta: eliminar un evento sin movimientos asignados).
 - **Barra inferior con «+»**: ver §1. Íconos `ic_inicio`, `ic_movimientos`, `ic_importar`, `ic_calendario`, `ic_ajustes` (24 dp)
   y `ic_mas` (28 dp) dentro del disco.
 - **Íconos**: vector drawables propios en `res/drawable/ic_*.xml` (trazos de Material Icons, Apache 2.0) con

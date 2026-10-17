@@ -28,7 +28,8 @@ fun DialogoConfirmacion(
         title = { Text(titulo, style = CuentasTema.tipografia.subtitulo) },
         text = {
             Column {
-                Text(texto, style = CuentasTema.tipografia.cuerpo, color = c.textoSecundario)
+                // Texto vacío = el título basta y no se pinta una línea vacía (eliminar un evento sin movimientos).
+                if (texto.isNotEmpty()) Text(texto, style = CuentasTema.tipografia.cuerpo, color = c.textoSecundario)
                 // D2: el diálogo es otra ventana y atenúa el aviso raíz; mientras está abierto, lo pinta él.
                 AvisosDeCapa()
             }

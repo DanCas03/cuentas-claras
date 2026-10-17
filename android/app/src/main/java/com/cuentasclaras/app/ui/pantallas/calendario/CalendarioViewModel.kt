@@ -44,6 +44,9 @@ import kotlinx.coroutines.flow.update
 
 enum class Repetir { ONCE, WEEKLY, MONTHLY, QUINCENAL, YEARLY }
 
+/** Concordancia de número (N6, D2): `uno` si `n` es 1, si no `varios`. Diálogo y aviso de eliminar evento. */
+internal fun segunCantidad(n: Int, uno: String, varios: String): String = if (n == 1) uno else varios
+
 /** Estado del editor de evento (equivale a los useState de EditorEvento.tsx). */
 data class BorradorEvento(
     val original: CalEvent?,
@@ -200,12 +203,21 @@ class CalendarioViewModel(private val repo: CuentasRepo, args: SavedStateHandle)
         }
     }
 
-    /** La UI confirma ANTES: «¿Eliminar «titulo»? N movimientos quedarán sin evento (conservan su categoría).» */
+    /**
+     * La UI confirma ANTES: «¿Eliminar «titulo»? N movimientos quedarán sin evento (conservan su categoría).». El aviso
+     * concuerda en número (D2): «Evento eliminado · 1 movimiento desasignado».
+     */
     fun eliminarEvento(id: String, alEliminar: () -> Unit) {
         var n = 0
         escribir(ocupacion, "No se pudo eliminar", alTerminar = {
             alEliminar()
-            Avisos.avisar(if (n > 0) "Evento eliminado · $n movimientos desasignados" else "Evento eliminado")
+            Avisos.avisar(
+                if (n > 0) {
+                    "Evento eliminado · " + segunCantidad(n, "1 movimiento desasignado", "$n movimientos desasignados")
+                } else {
+                    "Evento eliminado"
+                },
+            )
         }) { n = eliminarEventoOp(repo.db, id) }
     }
 
