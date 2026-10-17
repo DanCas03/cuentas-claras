@@ -194,7 +194,12 @@ fun EditorEvento(
     if (confirmando && b.original != null) {
         DialogoConfirmacion(
             titulo = "¿Eliminar «${b.original.titulo}»?",
-            texto = "$movimientosAsignados movimientos quedarán sin evento (conservan su categoría).",
+            // N6: concordancia en singular («1 movimiento quedará…»).
+            texto = if (movimientosAsignados == 1) {
+                "1 movimiento quedará sin evento (conserva su categoría)."
+            } else {
+                "$movimientosAsignados movimientos quedarán sin evento (conservan su categoría)."
+            },
             textoConfirmar = "Sí, eliminar",
             habilitado = !guardando,
             onConfirmar = {
