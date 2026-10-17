@@ -10,35 +10,24 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -73,9 +62,9 @@ import com.cuentasclaras.app.ui.componentes.Signo
 import com.cuentasclaras.app.ui.componentes.Tarjeta
 import com.cuentasclaras.app.ui.componentes.TipoBanner
 import com.cuentasclaras.app.ui.componentes.Vacio
+import com.cuentasclaras.app.ui.componentes.visibleSobreElTeclado
 import com.cuentasclaras.app.ui.theme.CuentasTema
 import com.cuentasclaras.app.ui.vmCon
-import kotlinx.coroutines.flow.collectLatest
 import kotlin.math.abs
 
 /** Espacio no separable (U+00A0), por código y sin el carácter literal: «Bs» y la cifra no se separan (M5). */
@@ -340,30 +329,15 @@ private fun FilaDraft(
     }
 }
 
-/**
- * I1: con el campo enfocado, se trae a la vista cada vez que cambia el borde del teclado (el IME entra animado y la
- * lista se encoge con `imePadding()` después del foco). Mismo patrón que la nota de Transferir (D3); el último valor,
- * con el teclado ya abierto, termina su desplazamiento y los intermedios se cancelan.
- */
+/** I1: con el campo enfocado, se mantiene sobre el teclado mientras la lista se encoge con `imePadding()`. */
 @Composable
 private fun CampoPatron(valor: String, onCambio: (String) -> Unit) {
-    val solicitante = remember { BringIntoViewRequester() }
-    var enfocado by remember { mutableStateOf(false) }
-    val ime = WindowInsets.ime
-    val densidad = LocalDensity.current
-    LaunchedEffect(enfocado) {
-        if (enfocado) {
-            snapshotFlow { ime.getBottom(densidad) }.collectLatest { solicitante.bringIntoView() }
-        }
-    }
     CampoTexto(
         valor = valor,
         onCambio = onCambio,
         etiqueta = "Patrón",
         placeholder = "texto que identifica este comercio",
-        modifier = Modifier
-            .bringIntoViewRequester(solicitante)
-            .onFocusChanged { enfocado = it.hasFocus },
+        modifier = Modifier.visibleSobreElTeclado(),
     )
 }
 
