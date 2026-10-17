@@ -36,6 +36,7 @@ import com.cuentasclaras.app.domain.Currency
 import com.cuentasclaras.app.domain.Debt
 import com.cuentasclaras.app.domain.DebtDirection
 import com.cuentasclaras.app.domain.DebtStatus
+import com.cuentasclaras.app.domain.fechaLocalDeInstante
 import com.cuentasclaras.app.ui.Avisos
 import com.cuentasclaras.app.ui.componentes.BotonPrincipal
 import com.cuentasclaras.app.ui.componentes.BotonSecundario
@@ -54,6 +55,14 @@ import com.cuentasclaras.app.ui.vmCon
 private val ICONO_ACCION = 24.dp
 
 private val PESTANAS = listOf(DebtDirection.POR_PAGAR, DebtDirection.POR_COBRAR)
+
+/**
+ * N2: día LOCAL en que se registró la deuda, solo para mostrarlo. `createdIso` es un instante UTC: con sus 10
+ * primeros caracteres, una deuda de las 21:00 en Venezuela salía con el día siguiente. Lo guardado no cambia. Si el
+ * instante no se puede leer (respaldo raro), se muestra como antes.
+ */
+private fun diaDeRegistro(deuda: Debt): String =
+    runCatching { fechaLocalDeInstante(deuda.createdIso) }.getOrDefault(deuda.createdIso.take(10))
 
 /** Qué deuda se está editando en la hoja: la existente, o una nueva con dirección y cuenta iniciales. */
 private data class Edicion(val original: Debt?, val direccion: DebtDirection, val cuentaId: String)
@@ -134,7 +143,7 @@ fun DeudasPantalla(nav: NavHostController) {
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Text(
-                        "${nombreCuenta(deuda.accountId)} · registrada el ${deuda.createdIso.take(10)}",
+                        "${nombreCuenta(deuda.accountId)} · registrada el ${diaDeRegistro(deuda)}",
                         style = t.etiqueta,
                         color = c.textoSecundario,
                     )
