@@ -64,6 +64,8 @@ Archivos en `android/app/src/test/java/com/cuentasclaras/app/`:
 - `importar/ParseBncTxtTest` y `MapBncTest`: parser del TXT y su mapeo a movimientos.
 - `backup/RespaldoTest`: exportar, validar e importar el respaldo.
 - `data/OpsTodoONadaTest` (Robolectric, con `DbDePrueba`): las operaciones que deben ser todo o nada.
+- `data/AparienciaRepoTest`, `data/IconoAppTest` y `ui/theme/FuentesTest` (Robolectric): las preferencias de
+  apariencia y sus valores por defecto, el alias del ícono habilitado, y que cada fuente del catálogo existe y construye la tipografía.
 
 ## Estructura de paquetes
 
@@ -114,9 +116,18 @@ duplica. La confirmación se guarda de forma todo o nada.
 ## Diseño
 
 `android/DESIGN.md` es la única fuente visual: tokens, radios, densidad, componentes y reglas de movimiento.
-El color sale de un catálogo cerrado de paletas (`PALETAS` en `ui/theme/Color.kt`) conmutables desde
-Ajustes > Apariencia: modo Sistema, Claro u Oscuro, más una paleta oscura y otra clara a elección. Por defecto,
-`noche_lima` (oscura) y `noche_claro` (clara). No se usan colores dinámicos ni paletas fuera del catálogo.
+Desde Ajustes > Apariencia (pantalla propia) se eligen:
+
+- **Modo** (Sistema, Claro u Oscuro) y una **paleta** oscura y otra clara del catálogo cerrado `PALETAS`
+  (`ui/theme/Color.kt`). Por defecto `noche_lima` y `noche_claro`. Sin colores dinámicos ni paletas fuera del catálogo.
+- **Fuente**, del catálogo `FUENTES` (`ui/theme/Fuentes.kt`): seis variables OFL en `assets/fuentes/`
+  (Bricolage Grotesque por defecto, Inter, Manrope, Space Grotesk, DM Sans, Fraunces).
+- **Diseño**, del catálogo `DISENOS` (`ui/theme/Diseno.kt`): Libreta (por defecto), Tinta, Isla y Aurora. Cambian
+  formas, tarjetas, barra inferior, fondo y movimiento; solo los componentes base leen `CuentasTema.diseno`.
+- **Nombres en la barra** (íconos solos si se apaga) e **ícono de la app** (Visto, Monedas o Libreta), coloreado con la
+  paleta oscura elegida mediante `activity-alias` generados por `scripts/generar-iconos-app.py`.
+
+Todo se guarda en el DataStore `apariencia` (`data/AparienciaRepo.kt`), fuera de Room y del respaldo.
 
 ## Privacidad
 

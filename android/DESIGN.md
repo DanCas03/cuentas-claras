@@ -59,7 +59,7 @@ Se leen SIEMPRE desde `CuentasTema` (`CuentasTema.colores`, `.tipografia`, `.for
 |---|---|---|
 | Colores | `data class Colores` | `fondo`, `superficie`, `superficieElevada`, `borde`, `primario`, `sobrePrimario`, `ingreso`, `gasto`, `aviso`, `error`, `texto`, `textoSecundario` |
 | Tipografía | `data class Tipografia` | `titulo`, `subtitulo`, `cuerpo`, `etiqueta`, `cifraGrande`, `cifra` |
-| Formas | `data class Formas` | `tarjeta` = 20 dp · `control` = 12 dp · `pildora` = 50 % |
+| Formas | `data class Formas` (salen de `CuentasTema.diseno.formas`, §2.3) | `tarjeta`, `control`, `pildora` (`CornerBasedShape`) · `radioTarjeta` · `biselTarjeta` · `hoja`. Libreta: tarjeta 20 dp (bisel 4) · control 12 dp · píldora 50 % · hoja 28 dp |
 | Espacios | `data class Espacios` | `xs` 4 · `s` 8 · `m` 16 · `l` 24 · `xl` 32 dp |
 | Medidas | `data class Medidas` (`ui/theme/Medidas.kt`) | `tactilMinimo` = 48 dp (objetivo táctil, §6) · `alfaTinteCategoria` = 0,18 (tinte del color de categoría tras su emoji o ícono) · `iconoEnLinea` = 16 dp (ícono en línea con una cifra, §4) · `alfaAtenuado` = 0,45 (elemento visible que no cuenta, p. ej. fila duplicada en la previa del import) · `anchoMinimoTexto` = 120 dp (ancho que una `FilaConFinal` deja al texto antes de apilarse, §4) · `cuadroFila` = 44 dp (cuadro del emoji o ícono de una fila de lista, `CuadroCategoria`, §4) |
 
@@ -145,22 +145,60 @@ pone texto `primario` sobre relleno de controles**; un chip o segmento activo us
   con modo manual opuesto al del sistema hay un destello breve, aceptado.
 - Inicio (T13, E21): botón sol/luna en la cabecera, `contentDescription` «Cambiar a modo claro» / «Cambiar a modo
   oscuro» (íconos `ic_sol` / `ic_luna`); fija el modo manual opuesto al que se ve.
-- Ajustes (T16, E22): sección «Apariencia» con Modo (`Segmentado`: Sistema / Claro / Oscuro), «Paleta oscura» y
-  «Paleta clara» (lista de `PALETAS_OSCURAS` / `PALETAS_CLARAS` con muestra de `fondo`, `superficieElevada` y
-  `primario` de cada una).
+- Apariencia (T16, E22; pantalla propia desde el spec 2026-10-17, ruta `apariencia`, fila «Apariencia ›» al
+  principio de Ajustes): Modo (`Segmentado`: Sistema / Claro / Oscuro), «Paleta oscura» y «Paleta clara» (lista de
+  `PALETAS_OSCURAS` / `PALETAS_CLARAS` con muestra de `fondo`, `superficieElevada` y `primario` de cada una),
+  Fuente (§3), Diseño (§2.3), Barra («Nombres en la barra») e Ícono de la app (§4).
+- `Apariencia(modo, idPaletaOscura, idPaletaClara, idFuente, idDiseno, etiquetasBarra, idIcono)`; un id que ya no
+  existe en su catálogo cae al valor por defecto (`fuentePorId`, `disenoPorId`, `iconoPorId`).
+
+### 2.3 Diseños (spec 2026-10-17 §6)
+
+Catálogo cerrado `DISENOS` (`ui/theme/Diseno.kt`): `Diseno(id, nombre, descripcion, formas, tarjeta, barra,
+botonMas, fondo, movimiento, escalaPresion)`. `CuentasTema.diseno` lo leen **solo** los componentes base
+(`Tarjeta`, botones, `Chip`, `Segmentado`, `HojaModal`, `SeccionPlegable`, `BarraInferior`, `FondoDiseno` en
+`RaizApp`); las pantallas nunca. Un diseño no cambia la fuente ni la paleta.
+
+| id | Nombre | Tarjeta | Barra | «+» | Fondo | Movimiento |
+|---|---|---|---|---|---|---|
+| `libreta` ★ | Libreta | `BISEL` (doble bisel 20/16 dp) | `PILDORA` | `DISCO` | `LISO` | contenido, presión 0,97 |
+| `tinta` | Tinta (hecho sin skills) | `PLANA`: `superficie` plana, radio 8 dp, filete de 1 dp en `borde` solo abajo | `SUBRAYADO`: subrayado de 2 dp en `primario` bajo el ícono activo | `CUADRADO` (radio 8 dp) | `LISO` | contenido, 0,98 |
+| `isla` | Isla (hecho con skills) | `CONTORNO`: `superficieElevada`, radio 24 dp, contorno de 1 dp `texto` 10 % → 0, relleno 20 dp | `FLOTANTE`: píldora despegada (margen 16 dp y 8 dp abajo), sin divisor; el «+» va dentro | `GOTA` | `LISO` | contenido, 0,96 |
+| `aurora` | Aurora | `AURORA`: contorno de 1,5 dp en degradado de barrido que gira en bucle (8 s) + entrada en cascada (60 ms por tarjeta) | `AURORA`: una píldora que se desliza entre pestañas + halo del «+» que respira (2,4 s) | `DISCO` | `AURORA`: tres manchas radiales (`primario`, `ingreso`, `aviso` al 18 %, blur 48 dp en API ≥ 31) que derivan en bucle (24 s) | expresivo (resorte 0,45, duraciones ×1,5), 0,90 |
+
+- `Movimiento.resorte(nivel)` y `Movimiento.transicion(duracion, nivel)` toman `diseno.movimiento`.
+- **Aurora es la única excepción** a las prohibiciones de §5 y §8 (bucles, brillos, > 300 ms, `LinearEasing` solo
+  en su giro continuo). Las manchas van detrás del contenido al 18 %, así el contraste del texto no cambia.
+- Lo que las skills `high-end-visual-design` y `ui-ux-pro-max` aportaron a Isla (y lo que se descartó):
+  `docs/research/2026-10-17-diseno-con-skills.md`. En cinco líneas: barra flotante tipo isla; contornos
+  translúcidos en vez de bordes grises; radios amplios y más aire; presión física con resorte; estado activo con
+  indicador y no solo color.
 
 ## 3. Tipografía
 
-**Bricolage Grotesque** (variable `opsz,wdth,wght`; Ateliertriay, SIL Open Font License 1.1 sin Reserved Font
-Name; licencia en `app/src/main/assets/fuentes/OFL.txt`, origen `github.com/google/fonts/tree/main/ofl/bricolagegrotesque`).
-Grotesca con ejes ópticos: sobria en texto, con carácter en tamaños grandes.
+**Bricolage Grotesque** por defecto (variable `opsz,wdth,wght`; Ateliertriay, SIL Open Font License 1.1 sin
+Reserved Font Name; licencia en `app/src/main/assets/fuentes/OFL.txt`, origen
+`github.com/google/fonts/tree/main/ofl/bricolagegrotesque`). Grotesca con ejes ópticos: sobria en texto, con
+carácter en tamaños grandes. Desde el spec 2026-10-17 la fuente se elige en Apariencia entre el catálogo cerrado
+`FUENTES` (`ui/theme/Fuentes.kt`), todas variables y OFL (licencias `assets/fuentes/OFL-<id>.txt`):
+
+| id | Fuente | Archivo | `opsz` texto / display |
+|---|---|---|---|
+| `bricolage` ★ | Bricolage Grotesque | `bricolage_grotesque_variable.ttf` | 14 / 40 |
+| `inter` | Inter | `inter_variable.ttf` | 14 / 32 |
+| `manrope` | Manrope | `manrope_variable.ttf` | — (solo `wght`) |
+| `space_grotesk` | Space Grotesk | `space_grotesk_variable.ttf` | — (solo `wght`) |
+| `dm_sans` | DM Sans | `dm_sans_variable.ttf` | 14 / 40 |
+| `fraunces` | Fraunces (serif) | `fraunces_variable.ttf` | 14 / 72 |
 
 - **Carga (E23):** desde `assets/fuentes/bricolage_grotesque_variable.ttf` con
   `Font(path, assetManager, weight, variationSettings = FontVariation.Settings(FontVariation.weight(p), FontVariation.Setting("opsz", x)))`.
   `Font(R.font…, variationSettings)` **no sirve**: en el Xiaomi de Daniel (Android 16) ignora la variación y pinta
   la instancia por defecto (wght 800, opsz 96). Verificado en el teléfono.
-- **Dos familias:** texto (`opsz` 14; pesos 400/500/600/700) y display (`opsz` 40; pesos 500/600/700).
-- Ninguna otra fuente entra en el APK.
+- **Dos familias por fuente:** texto (pesos 400/500/600/700) y display (pesos 500/600/700), con el `opsz` de la
+  tabla cuando la fuente tiene el eje (`tipografiaCuentas(assets, fuente)`). Tamaños, pesos e interlíneas no
+  cambian por fuente.
+- Ninguna fuente fuera del catálogo entra en el APK.
 
 | Estilo | Familia | sp | Peso | Interlínea | Extra |
 |---|---|---|---|---|---|
@@ -181,11 +219,16 @@ Grotesca con ejes ópticos: sobria en texto, con carácter en tamaños grandes.
 
 Firmas exactas; usar siempre estos componentes en lugar de los de Material directamente.
 
-- **`Tarjeta(modifier, titulo: String? = null, accion: (@Composable () -> Unit)? = null, contenido)`**: doble bisel.
-  Carcasa `superficie`, radio 20 dp, bisel de 4 dp; núcleo `superficieElevada`, radio 16 dp (concéntrico), relleno
+- **`Tarjeta(modifier, titulo: String? = null, accion: (@Composable () -> Unit)? = null, contenido)`**: su aspecto lo
+  decide `diseno.tarjeta` (§2.3). En Libreta, doble bisel:
+  carcasa `superficie`, radio 20 dp, bisel de 4 dp; núcleo `superficieElevada`, radio 16 dp (concéntrico), relleno
   16 dp, filo superior con degradado `texto` al 6 % → transparente. Título en `subtitulo` (encabezado accesible),
   acción a la derecha; el título llega a 3 líneas y, si junto a la acción le quedan menos de
   `medidas.anchoMinimoTexto`, la acción baja bajo él (mismo criterio que `FilaConFinal`). Sin sombras.
+- **`SeccionPlegable(titulo, abierta, onAlternar, contenido)`** (spec 2026-10-17 §3): `Tarjeta` cuya cabecera entera
+  es el objetivo (≥ 48 dp, botón, `stateDescription` «desplegada» / «plegada») con `ic_expandir` que gira 180°; el
+  contenido entra con alfa + traslación (`LARGO`) y cerrada no se compone. Las secciones de Ajustes (Cuentas,
+  Categorías, Tasas, Reglas, Respaldo, Permisos) van en ella, todas cerradas al entrar, y ya no pintan `Tarjeta` propia.
 - **`FilaConFinal(texto, final, modifier, separacion = espacios.m)`**: patrón único de «fila con algo a la derecha»
   (monto, estado, acción) en todas las listas: Movimientos, Esta semana, Calendario, vista previa de Importar,
   categorías y presupuestos de Inicio, Deudas, histórico de tasas. El final se mide primero con su ancho natural;
@@ -310,8 +353,9 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
   `cuerpo`/`textoSecundario`, forma `tarjeta`; confirmar con `BotonPeligro` (o `BotonPrincipal` si `peligro = false`) y
   cancelar con `BotonSecundario`. `habilitado = !guardando` bloquea ambos botones durante la escritura. Con
   `texto` vacío no pinta la línea de texto (el título basta: eliminar un evento sin movimientos asignados).
-- **Barra inferior con «+»**: ver §1. Íconos `ic_inicio`, `ic_movimientos`, `ic_importar`, `ic_calendario`, `ic_ajustes` (24 dp)
-  y `ic_mas` (28 dp) dentro del disco.
+- **Barra inferior con «+»**: ver §1 (Libreta) y §2.3 (variantes por diseño: `BarraInferior(nav, etiquetas)`; con
+  `etiquetas = false` solo íconos y el nombre pasa al `contentDescription`). Íconos `ic_inicio`, `ic_movimientos`,
+  `ic_importar`, `ic_calendario`, `ic_ajustes` (24 dp) y `ic_mas` (28 dp) dentro del disco.
 - **Íconos**: vector drawables propios en `res/drawable/ic_*.xml` (trazos de Material Icons, Apache 2.0) con
   `painterResource` y `tint` del tema. Tamaños: 16 (en línea con cifras), 20 (campos), 24 (navegación y acciones).
   No se añade `material-icons-extended`. `ic_candado` (16 dp, `textoSecundario`) marca las cuentas de ahorro en Inicio.
@@ -320,19 +364,23 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
   (grupo transaccional sin categoría, 🔁); en las filas de eventos sin categoría (Esta semana, Calendario),
   `ic_calendario` en `textoSecundario` (📅 en la web). En la meta de una fila con evento, `ic_calendario` en línea (1 em,
   `textoSecundario`) delante del título (📅 en la web); el texto accesible dice «evento {título}».
-- **Ícono de la app**: adaptable (`mipmap-anydpi-v26/ic_launcher.xml`): «C» abierta con un visto en lima `#C5F05A`
-  sobre `#0A0F1C` (Noche lima), con capa monocroma.
+- **Ícono de la app** (spec 2026-10-17 §7): tres formas elegibles en Apariencia («Visto» = la «C» abierta con un
+  visto, «Monedas», «Libreta»), cada una pintada con el `fondo` y el `primario` de la **paleta oscura** elegida. Un
+  `activity-alias` por forma × paleta (18; solo uno habilitado, `IconoAppRepo.aplicar`), con capa monocroma por
+  forma. Los genera `scripts/generar-iconos-app.py` (fuente de verdad de las formas); `ic_launcher.xml` queda como
+  ícono genérico de `<application>`. Por defecto Visto × Noche lima.
 
 ## 5. Movimiento (`ui/theme/Movimiento.kt`)
 
-- Curva propia `Movimiento.suave = CubicBezierEasing(0.32f, 0.72f, 0f, 1f)`; **prohibido `LinearEasing`**.
+- Curva propia `Movimiento.suave = CubicBezierEasing(0.32f, 0.72f, 0f, 1f)`; **prohibido `LinearEasing`** (salvo el
+  giro continuo del contorno de Aurora, §2.3).
 - Duraciones: `CORTO` 150 ms (foco, anillos), `MEDIO` 220 ms (colores de selección, chips), `LARGO` 300 ms
   (entradas de contenido). La salida dura ~2/3 de la entrada.
 - `Movimiento.resorte()` = `spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow)` para presiones
   (botones a escala 0,97) y cambios de estado físicos.
 - `Movimiento.transicion(duracion)` = `tween` con la curva propia, para colores y opacidad.
 - Solo se animan `graphicsLayer` (escala, alfa, traslación) y colores; nunca alto o ancho. Nada en bucle
-  infinito. Las animaciones nunca bloquean la entrada.
+  infinito (salvo el diseño Aurora, §2.3). Las animaciones nunca bloquean la entrada.
 
 ## 6. Reglas de forma (soft-skill §2 y §4 traducidas a Compose)
 
@@ -377,9 +425,10 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
 - `kotlin.math.round` (redondea al par): solo `Math.round` / `roundToLong`.
 - Colores dinámicos (`dynamicLightColorScheme` / `dynamicDarkColorScheme`) y cualquier paleta fuera de `PALETAS`.
 - `MaterialTheme` directo en pantallas: siempre `CuentasTema`; no leer `MaterialTheme.colorScheme` en código propio.
-- `Font(R.font…)` para la fuente de la app (ver E23) y cualquier fuente distinta de Bricolage Grotesque.
+- `Font(R.font…)` para la fuente de la app (ver E23) y cualquier fuente fuera del catálogo `FUENTES` (§3).
 - Layouts distintos para pantallas equivalentes: todas las listas, hojas y formularios se ven igual.
-- `LinearEasing`, animaciones de más de 300 ms en la interfaz, sombras negras, gradientes de texto, brillos neón.
+- `LinearEasing`, animaciones de más de 300 ms en la interfaz, sombras negras, gradientes de texto, brillos neón
+  (salvo el diseño Aurora, §2.3, que es la excepción declarada).
 - Emojis como íconos de interfaz (navegación, acciones): solo vectores `ic_*`. Los emojis son dato del usuario
   (categorías) o el ícono de `Vacio`.
 - Color como única señal de ingreso/gasto/estado: siempre signo y/o ícono.
