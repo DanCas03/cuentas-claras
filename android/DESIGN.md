@@ -35,6 +35,11 @@ los radios y la densidad son comunes a toda la app; **el color sale de paletas**
   como disco de 56 dp en `primario` con el ícono en `sobrePrimario`. El disco sobresale 14 dp: esa franja de 14 dp
   es parte de la barra (transparente) para que el disco entero reciba toques y el contenido no quede tapado. Se
   reserva el alto con `navigationBarsPadding()`. Se oculta en `nuevo`.
+- **Insets y teclado:** la raíz (`RaizApp`) aplica el relleno del `Scaffold` (barras del sistema y barra inferior) y
+  lo marca como consumido (`consumeWindowInsets`). Una pantalla con campos solo añade `imePadding()` a su contenedor
+  desplazable: así suma lo que el teclado sobrepasa a la barra inferior, nunca el relleno doble (Nuevo e Importar).
+  Un campo que puede quedar bajo el teclado (la nota de Transferir, el «Patrón» de Importar) se trae a la vista con
+  `BringIntoViewRequester` cada vez que cambia el borde del IME mientras está enfocado.
 - **Excepción: Nuevo (`ui/pantallas/nuevo/`)** prioriza el grid de categorías (restricción 6, ≤ 3 toques: las 4 filas
   de gasto deben verse sin desplazar en ~808 dp útiles, 411×891 dp con navegación de 3 botones). Por eso Nuevo no
   tiene cabecera ni rótulo sobre el grid; usa márgenes verticales `espacios.s` y separación `espacios.s` entre

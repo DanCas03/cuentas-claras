@@ -10,25 +10,38 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -62,7 +75,18 @@ import com.cuentasclaras.app.ui.componentes.TipoBanner
 import com.cuentasclaras.app.ui.componentes.Vacio
 import com.cuentasclaras.app.ui.theme.CuentasTema
 import com.cuentasclaras.app.ui.vmCon
+import kotlinx.coroutines.flow.collectLatest
 import kotlin.math.abs
+
+/** Espacio no separable (U+00A0), por código y sin el carácter literal: «Bs» y la cifra no se separan (M5). */
+private val ESPACIO_DURO = 0xA0.toChar()
+
+/**
+ * `formatMoney` para el texto de un banner: el espacio entre «Bs» y la cifra pasa a no separable, para que un salto
+ * de línea no deje «Bs» al final de una línea y la cifra en la siguiente. `formatMoney` no cambia (lo usan los
+ * campos, los respaldos y los tests); en dólares no hay espacio y el texto queda igual.
+ */
+private fun dineroEnTexto(minor: Long, currency: Currency): String = formatMoney(minor, currency).replaceFirst(' ', ESPACIO_DURO)
 
 /** Importar: TXT del BNC (archivo por SAF o texto pegado), vista previa editable y confirmación. */
 @Suppress("UNUSED_PARAMETER")
@@ -78,8 +102,10 @@ fun ImportarPantalla(nav: NavHostController) {
         if (uri != null) vm.cargarArchivo(resolver, uri)
     }
 
+    // I1: `imePadding()` encoge la lista sobre el teclado (la raíz ya consumió la barra inferior: sin relleno doble),
+    // así el «Patrón» de las últimas filas puede subir por encima del borde del IME.
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().imePadding(),
         contentPadding = PaddingValues(horizontal = e.m, vertical = e.m),
         verticalArrangement = Arrangement.spacedBy(e.m),
     ) {
@@ -176,8 +202,9 @@ private fun ResumenYAvisos(u: ImportarViewModel.Ui) {
     val resultado = u.resultado
     val cuenta = resultado?.meta?.let { " de la cuenta ${it.accountNumber.takeLast(4).padStart(8, '•')}" } ?: ""
     Column(verticalArrangement = Arrangement.spacedBy(e.s)) {
+        val n = u.drafts.size
         Text(
-            "${u.drafts.size} movimientos en el archivo$cuenta.",
+            "$n ${if (n == 1) "movimiento" else "movimientos"} en el archivo$cuenta.",
             style = CuentasTema.tipografia.subtitulo,
             color = CuentasTema.colores.texto,
         )
@@ -305,12 +332,7 @@ private fun FilaDraft(
                         onCambio = { v -> onCambio { it.copy(crearRegla = v) } },
                     )
                     if (d.crearRegla) {
-                        CampoTexto(
-                            valor = d.patron,
-                            onCambio = { v -> onCambio { it.copy(patron = v) } },
-                            etiqueta = "Patrón",
-                            placeholder = "texto que identifica este comercio",
-                        )
+                        CampoPatron(valor = d.patron, onCambio = { v -> onCambio { it.copy(patron = v) } })
                     }
                 }
             }
@@ -318,7 +340,38 @@ private fun FilaDraft(
     }
 }
 
-/** Casilla con etiqueta opcional; toda la fila es el objetivo táctil (≥ 48 dp). */
+/**
+ * I1: con el campo enfocado, se trae a la vista cada vez que cambia el borde del teclado (el IME entra animado y la
+ * lista se encoge con `imePadding()` después del foco). Mismo patrón que la nota de Transferir (D3); el último valor,
+ * con el teclado ya abierto, termina su desplazamiento y los intermedios se cancelan.
+ */
+@Composable
+private fun CampoPatron(valor: String, onCambio: (String) -> Unit) {
+    val solicitante = remember { BringIntoViewRequester() }
+    var enfocado by remember { mutableStateOf(false) }
+    val ime = WindowInsets.ime
+    val densidad = LocalDensity.current
+    LaunchedEffect(enfocado) {
+        if (enfocado) {
+            snapshotFlow { ime.getBottom(densidad) }.collectLatest { solicitante.bringIntoView() }
+        }
+    }
+    CampoTexto(
+        valor = valor,
+        onCambio = onCambio,
+        etiqueta = "Patrón",
+        placeholder = "texto que identifica este comercio",
+        modifier = Modifier
+            .bringIntoViewRequester(solicitante)
+            .onFocusChanged { enfocado = it.hasFocus },
+    )
+}
+
+/**
+ * Casilla con etiqueta opcional; toda la fila es el objetivo táctil (≥ 48 dp). La semántica es la de una casilla
+ * (rol, estado marcado y descripción) en el nodo de la fila; el texto visible no se suma al nodo, así «Crear regla
+ * fila N» se anuncia igual que «Incluir fila N».
+ */
 @Composable
 private fun Casilla(
     texto: String?,
@@ -348,7 +401,9 @@ private fun Casilla(
                 disabledUncheckedColor = c.textoSecundario,
             ),
         )
-        if (texto != null) Text(texto, style = CuentasTema.tipografia.cuerpo, color = c.texto)
+        if (texto != null) {
+            Text(texto, style = CuentasTema.tipografia.cuerpo, color = c.texto, modifier = Modifier.clearAndSetSemantics { })
+        }
     }
 }
 
@@ -356,8 +411,8 @@ private fun Casilla(
 private fun Hecho(estado: ImportarViewModel.Estado, onCrearAjuste: () -> Unit, onOtro: () -> Unit) {
     val e = CuentasTema.espacios
     val u = estado.ui
-    val saldoTxt = u.saldoTxt?.let { formatMoney(it, Currency.VES) } ?: ""
-    val saldoApp = formatMoney(estado.saldoApp, Currency.VES)
+    val saldoTxt = u.saldoTxt?.let { dineroEnTexto(it, Currency.VES) } ?: ""
+    val saldoApp = dineroEnTexto(estado.saldoApp, Currency.VES)
     Column(verticalArrangement = Arrangement.spacedBy(e.m)) {
         Banner("Import terminado. Saldo según la app: $saldoApp.", TipoBanner.OK)
         if (estado.rawMismatch && estado.hayTxsPosteriores) {

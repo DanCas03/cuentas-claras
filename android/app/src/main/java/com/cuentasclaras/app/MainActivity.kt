@@ -10,6 +10,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -213,7 +214,9 @@ private fun RaizApp(capturaPedida: MutableStateFlow<String?>) {
             bottomBar = { BarraInferior(nav) },
             snackbarHost = { AvisosRaiz(avisos) },
         ) { relleno ->
-            CuentasNavHost(nav, Modifier.padding(relleno))
+            // El relleno (barras del sistema y barra inferior) se marca como consumido: un `imePadding()` de una
+            // pantalla solo añade lo que el teclado sobrepasa a la barra inferior, sin relleno doble (I1).
+            CuentasNavHost(nav, Modifier.padding(relleno).consumeWindowInsets(relleno))
         }
     }
 }
