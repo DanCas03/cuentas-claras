@@ -63,7 +63,7 @@ private val TEXTO_MODOS = listOf("Sistema", "Claro", "Oscuro")
  */
 @Composable
 fun AparienciaPantalla(nav: NavHostController) {
-    val vm = vmCon { c, _ -> AparienciaViewModel(c.apariencia) }
+    val vm = vmCon { c, _ -> AparienciaViewModel(c.apariencia, c.iconoApp) }
     val apariencia by vm.apariencia.collectAsStateWithLifecycle()
     val actual: Apariencia = apariencia ?: return
     val e = CuentasTema.espacios
@@ -113,6 +113,11 @@ fun AparienciaPantalla(nav: NavHostController) {
         item(key = "barra") {
             Tarjeta(titulo = "Barra") {
                 FilaInterruptor("Nombres en la barra", actual.etiquetasBarra, vm::cambiarEtiquetasBarra)
+            }
+        }
+        item(key = "icono") {
+            Tarjeta(titulo = "Ícono de la app") {
+                GrupoIconos(paletaPorId(actual.idPaletaOscura, oscura = true), actual.idIcono, vm::cambiarIcono)
             }
         }
     }

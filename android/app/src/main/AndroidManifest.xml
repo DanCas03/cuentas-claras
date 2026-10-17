@@ -13,16 +13,248 @@
         android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.CuentasClaras">
+        <!-- El lanzador es uno de los activity-alias de abajo (forma × paleta oscura, spec 2026-10-17 §7); la
+             app habilita uno y deshabilita los demás (IconoAppRepo). Los genera scripts/generar-iconos-app.py. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
-            android:windowSoftInputMode="adjustResize">
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity-alias
+            android:name=".Lanzador_check_grafito_menta"
+            android:targetActivity=".MainActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_check_grafito_menta"
+            android:roundIcon="@mipmap/ic_launcher_check_grafito_menta"
+            android:label="${etiquetaApp}">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity-alias>
+        <activity-alias
+            android:name=".Lanzador_check_grafito_lima"
+            android:targetActivity=".MainActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_check_grafito_lima"
+            android:roundIcon="@mipmap/ic_launcher_check_grafito_lima"
+            android:label="${etiquetaApp}">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".Lanzador_check_noche_lima"
+            android:targetActivity=".MainActivity"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_check_noche_lima"
+            android:roundIcon="@mipmap/ic_launcher_check_noche_lima"
+            android:label="${etiquetaApp}">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".Lanzador_check_como_antes"
+            android:targetActivity=".MainActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_check_como_antes"
+            android:roundIcon="@mipmap/ic_launcher_check_como_antes"
+            android:label="${etiquetaApp}">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".Lanzador_check_cacao"
+            android:targetActivity=".MainActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_check_cacao"
+            android:roundIcon="@mipmap/ic_launcher_check_cacao"
+            android:label="${etiquetaApp}">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".Lanzador_check_pizarra_cobalto"
+            android:targetActivity=".MainActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_check_pizarra_cobalto"
+            android:roundIcon="@mipmap/ic_launcher_check_pizarra_cobalto"
+            android:label="${etiquetaApp}">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".Lanzador_moneda_grafito_menta"
+            android:targetActivity=".MainActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_moneda_grafito_menta"
+            android:roundIcon="@mipmap/ic_launcher_moneda_grafito_menta"
+            android:label="${etiquetaApp}">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".Lanzador_moneda_grafito_lima"
+            android:targetActivity=".MainActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_moneda_grafito_lima"
+            android:roundIcon="@mipmap/ic_launcher_moneda_grafito_lima"
+            android:label="${etiquetaApp}">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".Lanzador_moneda_noche_lima"
+            android:targetActivity=".MainActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_moneda_noche_lima"
+            android:roundIcon="@mipmap/ic_launcher_moneda_noche_lima"
+            android:label="${etiquetaApp}">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".Lanzador_moneda_como_antes"
+            android:targetActivity=".MainActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_moneda_como_antes"
+            android:roundIcon="@mipmap/ic_launcher_moneda_como_antes"
+            android:label="${etiquetaApp}">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".Lanzador_moneda_cacao"
+            android:targetActivity=".MainActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_moneda_cacao"
+            android:roundIcon="@mipmap/ic_launcher_moneda_cacao"
+            android:label="${etiquetaApp}">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".Lanzador_moneda_pizarra_cobalto"
+            android:targetActivity=".MainActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_moneda_pizarra_cobalto"
+            android:roundIcon="@mipmap/ic_launcher_moneda_pizarra_cobalto"
+            android:label="${etiquetaApp}">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".Lanzador_libreta_grafito_menta"
+            android:targetActivity=".MainActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_libreta_grafito_menta"
+            android:roundIcon="@mipmap/ic_launcher_libreta_grafito_menta"
+            android:label="${etiquetaApp}">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".Lanzador_libreta_grafito_lima"
+            android:targetActivity=".MainActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_libreta_grafito_lima"
+            android:roundIcon="@mipmap/ic_launcher_libreta_grafito_lima"
+            android:label="${etiquetaApp}">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".Lanzador_libreta_noche_lima"
+            android:targetActivity=".MainActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_libreta_noche_lima"
+            android:roundIcon="@mipmap/ic_launcher_libreta_noche_lima"
+            android:label="${etiquetaApp}">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".Lanzador_libreta_como_antes"
+            android:targetActivity=".MainActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_libreta_como_antes"
+            android:roundIcon="@mipmap/ic_launcher_libreta_como_antes"
+            android:label="${etiquetaApp}">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".Lanzador_libreta_cacao"
+            android:targetActivity=".MainActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_libreta_cacao"
+            android:roundIcon="@mipmap/ic_launcher_libreta_cacao"
+            android:label="${etiquetaApp}">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".Lanzador_libreta_pizarra_cobalto"
+            android:targetActivity=".MainActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_libreta_pizarra_cobalto"
+            android:roundIcon="@mipmap/ic_launcher_libreta_pizarra_cobalto"
+            android:label="${etiquetaApp}">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <service
             android:name=".capture.BncNotificationListener"

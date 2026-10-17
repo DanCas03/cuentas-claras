@@ -3,6 +3,7 @@ package com.cuentasclaras.app
 import android.app.Application
 import android.content.Context
 import com.cuentasclaras.app.data.AparienciaRepo
+import com.cuentasclaras.app.data.IconoAppRepo
 import com.cuentasclaras.app.capture.CapturaRepo
 import com.cuentasclaras.app.capture.EstadoListener
 import com.cuentasclaras.app.capture.Notificador
@@ -23,6 +24,8 @@ class AppContainer(context: Context) {
     val http: OkHttpClient = crearHttp()
     /** Modo y paletas elegidos (E20), en DataStore Preferences. */
     val apariencia: AparienciaRepo = AparienciaRepo(context.almacenApariencia)
+    /** Ícono del lanzador por forma × paleta oscura (spec 2026-10-17 §7). */
+    val iconoApp: IconoAppRepo = IconoAppRepo(context)
     /** Capturas de notificaciones del BNC (T18/T19). Al registrar o descartar una, se quita su notificación. */
     val capturas: CapturaRepo = CapturaRepo(db) { capturaId -> Notificador.cancelar(context, capturaId) }
     val estadoListener: EstadoListener = EstadoListener(context)

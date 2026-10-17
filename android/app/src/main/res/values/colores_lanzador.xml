@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generado por scripts/generar-iconos-app.py; no editar a mano. -->
+<resources>
+    <color name="lanzador_fondo_grafito_menta">#FF0F110F</color>
+    <color name="lanzador_fondo_grafito_lima">#FF0F110F</color>
+    <color name="lanzador_fondo_noche_lima">#FF0A0F1C</color>
+    <color name="lanzador_fondo_como_antes">#FF0A0F1C</color>
+    <color name="lanzador_fondo_cacao">#FF1B1411</color>
+    <color name="lanzador_fondo_pizarra_cobalto">#FF0E1117</color>
+</resources>
