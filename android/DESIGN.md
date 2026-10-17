@@ -276,6 +276,12 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
 - **`HojaModal(titulo, onCerrar, contenido)`**: `ModalBottomSheet` siempre expandida, `superficie`, radio superior
   28 dp, asa en `borde`, título en `titulo` + botón «Cerrar» (`ic_cerrar`), contenido desplazable con
   `imePadding()` y márgenes de 16 dp. Para editar. Las confirmaciones destructivas van en `DialogoConfirmacion` (abajo).
+  Mientras está abierta pinta ella los avisos (`AvisosDeCapa`) **arriba**, sobre el título: nunca tapan ni absorben
+  los toques de las acciones del pie («Guardar», «Cancelar», «Eliminar»). Al cerrarse suelta el foco de la pantalla
+  de debajo: ningún campo de esa pantalla toma el foco ni abre el teclado al volver.
+- **Avisos** (`Avisos.avisar`, D15): uno a la vez y el más reciente sustituye al visible (como `Toast.tsx`), así un
+  aviso de validación ya resuelto no vuelve a pintarse tras guardar. En `DialogoConfirmacion` el aviso va en el flujo,
+  bajo el texto y sobre los botones, sin taparlos.
 - **`Teclado(onTecla, compacto = false)`**: 4 × 3 (`1 2 3 / 4 5 6 / 7 8 9 / , 0 ⌫`), teclas de 56 dp de alto separadas 8 dp
   (248 dp en total; `compacto = true`, solo Nuevo: teclas de 52 dp, 232 dp en total, nunca menos de 48 dp), fondo `superficieElevada`, radio `control`, dígitos en `cifra` a 24 sp, «⌫» con `ic_borrar`.
   `contentDescription` «coma» y «borrar». Vibración corta de tecla.

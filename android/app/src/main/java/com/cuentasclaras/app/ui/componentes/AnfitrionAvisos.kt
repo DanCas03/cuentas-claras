@@ -11,6 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import com.cuentasclaras.app.ui.Avisos
+import kotlinx.coroutines.flow.collectLatest
 
 /**
  * Dónde se pintan los avisos de [Avisos] (D15). Hay UNA sola cola (`estado`, alimentada por un único colector de
@@ -22,6 +23,10 @@ import com.cuentasclaras.app.ui.Avisos
  * reciente (la de más arriba) pinta el aviso con el MISMO `SnackbarHostState`, y la raíz solo lo pinta cuando no
  * hay ninguna capa. Así el aviso se ve una sola vez y, si la hoja se cierra con un aviso en pantalla, la raíz lo
  * sigue pintando (el `SnackbarHostState` conserva el aviso en curso y su temporizador vuelve a empezar).
+ *
+ * Un aviso nuevo sustituye al que está en pantalla, como el `Toast.tsx` de la web (M3): antes esperaba en cola a que
+ * el anterior terminara, y al guardar una hoja con «Monto inválido» todavía visible, la raíz volvía a pintar ese aviso
+ * obsoleto durante otros 4 s antes de «Actualizado ✓».
  */
 @Stable
 class AnfitrionAvisos internal constructor(internal val estado: SnackbarHostState) {
@@ -42,11 +47,14 @@ class AnfitrionAvisos internal constructor(internal val estado: SnackbarHostStat
 /** Anfitrión de avisos de la app; null fuera de `RaizApp` (vistas previas): las capas no pintan nada. */
 val LocalAvisos = staticCompositionLocalOf<AnfitrionAvisos?> { null }
 
-/** Crea el anfitrión de la raíz y arranca el ÚNICO colector de `Avisos.mensajes`. */
+/**
+ * Crea el anfitrión de la raíz y arranca el ÚNICO colector de `Avisos.mensajes`. `collectLatest` cancela el
+ * `showSnackbar` en curso al llegar otro aviso, y cancelarlo descarta el aviso visible: siempre se ve el último.
+ */
 @Composable
 fun rememberAnfitrionAvisos(): AnfitrionAvisos {
     val anfitrion = remember { AnfitrionAvisos(SnackbarHostState()) }
-    LaunchedEffect(anfitrion) { Avisos.mensajes.collect { anfitrion.estado.showSnackbar(it) } }
+    LaunchedEffect(anfitrion) { Avisos.mensajes.collectLatest { anfitrion.estado.showSnackbar(it) } }
     return anfitrion
 }
 
