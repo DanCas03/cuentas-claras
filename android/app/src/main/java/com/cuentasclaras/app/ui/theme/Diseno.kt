@@ -75,8 +75,34 @@ val DISENO_TINTA = Diseno(
     escalaPresion = 0.98f,
 )
 
+private val FORMAS_ISLA = Formas(
+    tarjeta = RoundedCornerShape(24.dp),
+    control = RoundedCornerShape(14.dp),
+    pildora = RoundedCornerShape(percent = 50),
+    radioTarjeta = 24.dp,
+    biselTarjeta = 0.dp,
+    hoja = 28.dp,
+)
+
+/**
+ * Hecho tras invocar las skills `high-end-visual-design` y `ui-ux-pro-max` (ver
+ * `docs/research/2026-10-17-diseno-con-skills.md`): barra flotante tipo isla, contornos translúcidos, radios amplios.
+ */
+val DISENO_ISLA = Diseno(
+    id = "isla",
+    nombre = "Isla",
+    descripcion = "Barra flotante despegada del borde, tarjetas con contorno translúcido y radios amplios.",
+    formas = FORMAS_ISLA,
+    tarjeta = EstiloTarjeta.CONTORNO,
+    barra = EstiloBarra.FLOTANTE,
+    botonMas = FormaMas.GOTA,
+    fondo = EstiloFondo.LISO,
+    movimiento = NivelMovimiento.CONTENIDO,
+    escalaPresion = 0.96f,
+)
+
 /** Catálogo cerrado de diseños. */
-val DISENOS: List<Diseno> = listOf(DISENO_LIBRETA, DISENO_TINTA)
+val DISENOS: List<Diseno> = listOf(DISENO_LIBRETA, DISENO_TINTA, DISENO_ISLA)
 
 /** El diseño con ese id, o Libreta si el id no existe (versión vieja, respaldo). */
 fun disenoPorId(id: String?): Diseno = DISENOS.firstOrNull { it.id == id } ?: DISENOS.first { it.id == ID_DISENO_POR_DEFECTO }

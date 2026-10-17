@@ -42,7 +42,9 @@ enum class Signo { NINGUNO, POSITIVO, NEGATIVO }
  * - `BISEL` (Libreta): carcasa exterior en `superficie` y núcleo concéntrico en `superficieElevada` con un filo
  *   superior apenas iluminado. Sin bordes grises de 1 px ni sombras duras.
  * - `PLANA` (Tinta): `superficie` plana con el radio del diseño y un filete de 1 dp en `borde` solo abajo.
- * - `CONTORNO` y `AURORA`: ver Tasks 6 y 7 del plan 2026-10-17; mientras tanto se pintan como `BISEL`.
+ * - `CONTORNO` (Isla): `superficieElevada` plana con contorno de 1 dp degradado (`texto` 10 % → 0) y relleno
+ *   `m + xs`; sin carcasa.
+ * - `AURORA`: Task 7 del plan 2026-10-17; mientras tanto se pinta como `BISEL`.
  * El título (hasta 3 líneas) y la acción comparten fila mientras al título le quede `medidas.anchoMinimoTexto`;
  * si no, la acción baja.
  */
@@ -71,7 +73,18 @@ fun Tarjeta(
             CabeceraTarjeta(titulo, accion)
             contenido()
         }
-        EstiloTarjeta.BISEL, EstiloTarjeta.CONTORNO, EstiloTarjeta.AURORA -> {
+        EstiloTarjeta.CONTORNO -> Column(
+            modifier
+                .fillMaxWidth()
+                .clip(f.tarjeta)
+                .background(c.superficieElevada)
+                .border(1.dp, Brush.verticalGradient(listOf(c.texto.copy(alpha = 0.10f), Color.Transparent)), f.tarjeta)
+                .padding(e.m + e.xs),
+        ) {
+            CabeceraTarjeta(titulo, accion)
+            contenido()
+        }
+        EstiloTarjeta.BISEL, EstiloTarjeta.AURORA -> {
             val nucleo = RoundedCornerShape(f.radioTarjeta - f.biselTarjeta)
             Box(
                 modifier

@@ -80,7 +80,9 @@ private val PESTANAS_DERECHA = listOf(
  * `CuentasTema.diseno.barra` (spec 2026-10-17 §6):
  * - `PILDORA` (Libreta): franja en `superficieElevada` con divisor de 1 dp; pestaña activa con píldora `primario`.
  * - `SUBRAYADO` (Tinta): misma franja; pestaña activa con subrayado de 2 dp en `primario` bajo el ícono.
- * - `FLOTANTE` y `AURORA`: Tasks 6 y 7 del plan; mientras tanto se pintan como `PILDORA`.
+ * - `FLOTANTE` (Isla): píldora despegada del borde (margen `m` a los lados y `s` abajo) sin divisor; el «+» va
+ *   dentro de la píldora y no sobresale.
+ * - `AURORA`: Task 7 del plan; mientras tanto se pinta como `PILDORA`.
  * El «+» sobresale `SOBRESALE_MAS` hacia arriba; esa franja forma parte de la barra (transparente) para que el
  * disco entero reciba toques y el contenido no quede tapado. `etiquetas = false` deja solo los íconos (el nombre
  * pasa al `contentDescription`). Se oculta en `nuevo`, que usa todo el alto.
@@ -92,6 +94,30 @@ fun BarraInferior(nav: NavHostController, etiquetas: Boolean = true) {
     if (jerarquia?.any { it.route == Rutas.NUEVO } == true) return
     val c = CuentasTema.colores
     val d = CuentasTema.diseno
+    val e = CuentasTema.espacios
+    val irANuevo = { nav.navigate(Rutas.nuevo("gasto")) { launchSingleTop = true } }
+    val pestanas: @Composable RowScope.() -> Unit = {
+        PESTANAS_IZQUIERDA.forEach { p ->
+            ItemPestana(p, activa = jerarquia?.any { it.route == p.ruta } == true, etiquetas, d.barra) { irAPestana(nav, p) }
+        }
+        Spacer(Modifier.weight(1f))
+        PESTANAS_DERECHA.forEach { p ->
+            ItemPestana(p, activa = jerarquia?.any { it.route == p.ruta } == true, etiquetas, d.barra) { irAPestana(nav, p) }
+        }
+    }
+
+    if (d.barra == EstiloBarra.FLOTANTE) {
+        // Isla: la barra es una píldora despegada; el «+» vive dentro y no sobresale.
+        Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(start = e.m, end = e.m, bottom = e.s)) {
+            Row(
+                Modifier.fillMaxWidth().clip(CuentasTema.formas.pildora).background(c.superficieElevada).height(ALTO_BARRA),
+                verticalAlignment = Alignment.CenterVertically,
+                content = pestanas,
+            )
+            BotonNuevo(Modifier.align(Alignment.Center), d.botonMas, irANuevo)
+        }
+        return
+    }
 
     Box(Modifier.fillMaxWidth()) {
         Column(
@@ -102,19 +128,9 @@ fun BarraInferior(nav: NavHostController, etiquetas: Boolean = true) {
                 .navigationBarsPadding(),
         ) {
             Box(Modifier.fillMaxWidth().height(GROSOR_DIVISOR).background(c.borde))
-            Row(Modifier.fillMaxWidth().height(ALTO_BARRA), verticalAlignment = Alignment.CenterVertically) {
-                PESTANAS_IZQUIERDA.forEach { p ->
-                    ItemPestana(p, activa = jerarquia?.any { it.route == p.ruta } == true, etiquetas, d.barra) { irAPestana(nav, p) }
-                }
-                Spacer(Modifier.weight(1f))
-                PESTANAS_DERECHA.forEach { p ->
-                    ItemPestana(p, activa = jerarquia?.any { it.route == p.ruta } == true, etiquetas, d.barra) { irAPestana(nav, p) }
-                }
-            }
+            Row(Modifier.fillMaxWidth().height(ALTO_BARRA), verticalAlignment = Alignment.CenterVertically, content = pestanas)
         }
-        BotonNuevo(Modifier.align(Alignment.TopCenter), d.botonMas) {
-            nav.navigate(Rutas.nuevo("gasto")) { launchSingleTop = true }
-        }
+        BotonNuevo(Modifier.align(Alignment.TopCenter), d.botonMas, irANuevo)
     }
 }
 
