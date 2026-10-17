@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -74,10 +75,11 @@ fun Chip(
             .background(fondo)
             .border(1.dp, contorno, pildora)
             .then(
-                if (onClick != null) {
-                    Modifier.clickable(enabled = enabled, role = Role.Button, onClick = onClick)
-                } else {
-                    Modifier
+                when {
+                    onClick != null -> Modifier.clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+                    // Con cifra, nota y cifra son dos textos: se leen como UNO («nota · Bs 12,50»), como antes.
+                    cifra != null -> Modifier.semantics(mergeDescendants = true) { }
+                    else -> Modifier
                 },
             )
             .padding(horizontal = 14.dp),
@@ -92,17 +94,18 @@ fun Chip(
             if (cifra == null) {
                 Text(texto, style = estilo, color = tinta, maxLines = 1, overflow = TextOverflow.Ellipsis)
             } else {
-                // El texto lleva peso sin rellenar: la Row mide antes la cifra y le da al texto solo lo que sobra.
-                // El hueco tras «·» es el `espacios.xs` de la Row.
+                // El texto lleva peso sin rellenar: la Row mide antes «· cifra» y le da al texto solo lo que sobra.
+                // El «·» va con la cifra: si la nota se corta («pago del gimnas…»), el separador sigue ahí. El hueco
+                // antes de «·» es el `espacios.xs` de la Row.
                 Text(
-                    "$texto ·",
+                    texto,
                     style = estilo,
                     color = tinta,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false),
                 )
-                Text(cifra, style = estilo, color = tinta, maxLines = 1, softWrap = false)
+                Text("· $cifra", style = estilo, color = tinta, maxLines = 1, softWrap = false)
             }
         }
     }

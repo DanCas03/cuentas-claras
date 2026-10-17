@@ -224,7 +224,8 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
   `primario`/`sobrePrimario`; sugerido: tinte `primario` al 14 % + contorno `primario` de 1 dp + `texto`. `icono`:
   vector `ic_*` de 16 dp delante del texto, en el color del texto (chip de un evento sin categoría en Nuevo:
   `ic_calendario`, nunca el emoji 📅). `cifra`: monto ya formateado que sigue al texto tras «·» («nota · Bs 12,50»);
-  se mide primero y nunca se corta, y si falta ancho es el texto el que acaba en «…». Un chip con su acción
+  «· cifra» se mide primero y nunca se corta, y si falta ancho es el texto el que acaba en «…» («pago del gimn… ·
+  Bs 12,50»). Un chip estático con cifra fusiona su semántica: se anuncia como un solo texto. Un chip con su acción
   (movimiento + «quitar» en la lista del día del Calendario) va en un `FlowRow`, nunca en una `Row`: la acción baja a
   la línea siguiente antes que quedarse sin ancho, y conserva su objetivo de 48 dp.
 - **`CuadroCategoria(emoji, vector, fondo, tintaVector = texto, marcada = false)`** + `fondoDeCategoria(hex)`: el
