@@ -281,7 +281,11 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
   `contentDescription` «coma» y «borrar». Vibración corta de tecla.
 - **`CategoriaGrid(categorias, enabled, onElegir)`**: 4 columnas sin scroll propio; cada celda: cuadro de 48 dp
   con el emoji de la categoría (24 sp) sobre el color de la categoría al 18 % (`medidas.alfaTinteCategoria`), nombre en `etiqueta` de 1 a 2 líneas
-  (relleno vertical de celda `espacios.xs`: 78 dp con nombre de una línea, 96 dp con dos).
+  (relleno vertical de celda `espacios.xs`, sin relleno horizontal: el nombre usa todo el ancho de la celda; 78 dp
+  con nombre de una línea, 96 dp con dos). **Una palabra nunca se
+  parte** («Supermer/cado»): el nombre se mide antes de pintarlo (`TextMeasurer`) y se encoge en pasos de 0,5 sp, de
+  13 a 11 sp, hasta que cabe en 2 líneas cortando solo entre palabras (o tras «-» / «/»); la interlínea sigue en 18 sp,
+  así el alto de la fila no cambia. Si ni a 11 sp cabe sin partir una palabra, va en una línea con «…» al final.
   `enabled = false` al 38 % mientras se guarda. El color de la categoría es dato del usuario:
   `colorDeCategoria(hex, respaldo)`.
 - **`DialogoConfirmacion(titulo, texto, textoConfirmar, onConfirmar, onCancelar, textoCancelar = "Conservar", peligro = true, habilitado = true)`**:
