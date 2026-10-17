@@ -39,7 +39,9 @@ import com.cuentasclaras.app.rates.refreshRatesOncePerDay
 import com.cuentasclaras.app.ui.LocalPrimerContenidoListo
 import com.cuentasclaras.app.ui.componentes.AvisosRaiz
 import com.cuentasclaras.app.ui.componentes.LocalAvisos
+import com.cuentasclaras.app.ui.componentes.LocalGuardiaFoco
 import com.cuentasclaras.app.ui.componentes.rememberAnfitrionAvisos
+import com.cuentasclaras.app.ui.componentes.rememberGuardiaFoco
 import com.cuentasclaras.app.ui.nav.BarraInferior
 import com.cuentasclaras.app.capture.Notificador
 import com.cuentasclaras.app.ui.nav.CuentasNavHost
@@ -197,6 +199,8 @@ private fun RaizApp(capturaPedida: MutableStateFlow<String?>) {
     val nav = rememberNavController()
     // D2: una sola cola de avisos; la pinta la raíz o, si hay una hoja o un diálogo abiertos, el de más arriba.
     val avisos = rememberAnfitrionAvisos()
+    // M3: al cerrarse una hoja, ningún campo de la pantalla de debajo se queda con el foco ni abre el teclado.
+    val guardiaFoco = rememberGuardiaFoco()
     // V25: Inicio avisa cuando tiene su primera instantánea; si la app abre en otro destino (pila restaurada tras
     // matar el proceso, o Nuevo desde una notificación), ese destino no espera a Inicio.
     val avisarListo = LocalPrimerContenidoListo.current
@@ -209,7 +213,7 @@ private fun RaizApp(capturaPedida: MutableStateFlow<String?>) {
             capturaPedida.value = null
         }
     }
-    CompositionLocalProvider(LocalAvisos provides avisos) {
+    CompositionLocalProvider(LocalAvisos provides avisos, LocalGuardiaFoco provides guardiaFoco) {
         Scaffold(
             bottomBar = { BarraInferior(nav) },
             snackbarHost = { AvisosRaiz(avisos) },

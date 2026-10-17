@@ -277,9 +277,12 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
 - **`HojaModal(titulo, onCerrar, contenido)`**: `ModalBottomSheet` siempre expandida, `superficie`, radio superior
   28 dp, asa en `borde`, título en `titulo` + botón «Cerrar» (`ic_cerrar`), contenido desplazable con
   `imePadding()` y márgenes de 16 dp. Para editar. Las confirmaciones destructivas van en `DialogoConfirmacion` (abajo).
-  Mientras está abierta pinta ella los avisos (`AvisosDeCapa`) **arriba**, sobre el título: nunca tapan ni absorben
-  los toques de las acciones del pie («Guardar», «Cancelar», «Eliminar»). Al cerrarse suelta el foco de la pantalla
-  de debajo: ningún campo de esa pantalla toma el foco ni abre el teclado al volver.
+  El título y «Cerrar» quedan fijos arriba y solo el contenido se desplaza. Mientras está abierta pinta ella los
+  avisos (`AvisosDeCapa`) **en el flujo, entre el título y el contenido**: el aviso empuja el contenido en vez de
+  taparlo, no tapa el título, ni un campo, ni las acciones del pie, y se ve sin desplazar aunque la hoja esté
+  desplazada o el teclado abierto. Al cerrarse suelta el foco de la pantalla de debajo y arma la `GuardiaFoco` de la
+  raíz (`ui/componentes/GuardiaFoco.kt`), que lo vuelve a soltar y cierra el teclado la primera vez que esa ventana
+  recupera el foco: ningún campo de esa pantalla queda enfocado ni abre el teclado al volver.
 - **Avisos** (`Avisos.avisar`, D15): uno a la vez y el más reciente sustituye al visible (como `Toast.tsx`), así un
   aviso de validación ya resuelto no vuelve a pintarse tras guardar. En `DialogoConfirmacion` el aviso va en el flujo,
   bajo el texto y sobre los botones, sin taparlos.
