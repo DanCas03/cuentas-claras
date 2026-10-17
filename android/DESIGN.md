@@ -37,8 +37,9 @@ los radios y la densidad son comunes a toda la app; **el color sale de paletas**
   reserva el alto con `navigationBarsPadding()`. Se oculta en `nuevo`.
 - **Insets y teclado:** la raíz (`RaizApp`) aplica el relleno del `Scaffold` (barras del sistema y barra inferior) y
   lo marca como consumido (`consumeWindowInsets`). Una pantalla con campos solo añade `imePadding()` a su contenedor
-  desplazable: así suma lo que el teclado sobrepasa a la barra inferior, nunca el relleno doble (Nuevo e Importar).
-  Un campo que puede quedar bajo el teclado (la nota y el botón de Transferir, el «Patrón» de Importar) lleva
+  desplazable: así suma lo que el teclado sobrepasa a la barra inferior, nunca el relleno doble (Nuevo, Importar y
+  Permisos). Un campo que puede quedar bajo el teclado (la nota y el botón de Transferir, el «Patrón» de Importar,
+  «Probar captura» y su botón en Permisos) lleva
   `Modifier.visibleSobreElTeclado()` (`ui/componentes/SobreElTeclado.kt`): mientras él o un campo suyo tiene el foco,
   se trae a la vista cada vez que cambia el borde del IME. Nunca se copia ese bloque a mano.
 - **Excepción: Nuevo (`ui/pantallas/nuevo/`)** prioriza el grid de categorías (restricción 6, ≤ 3 toques: las 4 filas

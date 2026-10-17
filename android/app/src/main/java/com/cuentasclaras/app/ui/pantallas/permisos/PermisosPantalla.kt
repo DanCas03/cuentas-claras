@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -45,6 +46,7 @@ import com.cuentasclaras.app.ui.componentes.CampoTexto
 import com.cuentasclaras.app.ui.componentes.IndicadorEstado
 import com.cuentasclaras.app.ui.componentes.Tarjeta
 import com.cuentasclaras.app.ui.componentes.TipoBanner
+import com.cuentasclaras.app.ui.componentes.visibleSobreElTeclado
 import com.cuentasclaras.app.ui.theme.CuentasTema
 
 /** Lo que se sabe de un ajuste del sistema. */
@@ -108,7 +110,7 @@ fun PermisosPantalla(nav: NavHostController) {
     }
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().imePadding(),
         contentPadding = PaddingValues(horizontal = e.m, vertical = e.m),
         verticalArrangement = Arrangement.spacedBy(e.m),
     ) {
@@ -212,24 +214,28 @@ fun PermisosPantalla(nav: NavHostController) {
         item(key = "probar") {
             Tarjeta(titulo = "Probar captura") {
                 Column(verticalArrangement = Arrangement.spacedBy(e.s)) {
-                    CampoTexto(
-                        valor = textoPrueba,
-                        onCambio = { textoPrueba = it; prueba = null },
-                        etiqueta = "Pega aquí una notificación del BNC",
-                        singleLine = false,
-                        minLines = 3,
-                    )
-                    BotonPrincipal(
-                        "Probar",
-                        onClick = {
-                            foco.clearFocus()
-                            prueba = parseNotificacionBnc(textoPrueba)?.let {
-                                val tipo = if (it.tipo == TipoCaptura.INGRESO) "Ingreso" else "Gasto"
-                                Prueba.Reconocida("Reconocida: $tipo · ${formatMoney(it.montoMinor, Currency.VES)} · ${it.nota}")
-                            } ?: Prueba.NoReconocida
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                    // N1: con el campo enfocado, el campo y «Probar» se mantienen juntos sobre el teclado (la lista se
+                    // encoge con `imePadding()`; la raíz ya consumió la barra inferior).
+                    Column(Modifier.visibleSobreElTeclado(), verticalArrangement = Arrangement.spacedBy(e.s)) {
+                        CampoTexto(
+                            valor = textoPrueba,
+                            onCambio = { textoPrueba = it; prueba = null },
+                            etiqueta = "Pega aquí una notificación del BNC",
+                            singleLine = false,
+                            minLines = 3,
+                        )
+                        BotonPrincipal(
+                            "Probar",
+                            onClick = {
+                                foco.clearFocus()
+                                prueba = parseNotificacionBnc(textoPrueba)?.let {
+                                    val tipo = if (it.tipo == TipoCaptura.INGRESO) "Ingreso" else "Gasto"
+                                    Prueba.Reconocida("Reconocida: $tipo · ${formatMoney(it.montoMinor, Currency.VES)} · ${it.nota}")
+                                } ?: Prueba.NoReconocida
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                     when (val p = prueba) {
                         null -> Unit
                         Prueba.NoReconocida -> Banner("No reconocida", TipoBanner.ERROR)
