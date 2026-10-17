@@ -32,6 +32,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -40,6 +42,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import com.cuentasclaras.app.R
 import com.cuentasclaras.app.ui.theme.CuentasTema
+import com.cuentasclaras.app.ui.theme.EstiloBarra
+import com.cuentasclaras.app.ui.theme.FormaMas
 import com.cuentasclaras.app.ui.theme.Movimiento
 
 /** Medidas de la barra (DESIGN.md §1 y §6). */
@@ -51,6 +55,7 @@ private val ICONO_MAS = 28.dp
 private val GROSOR_DIVISOR = 1.dp
 private val ANCHO_INDICADOR = 56.dp
 private val ALTO_INDICADOR = 32.dp
+private val GROSOR_SUBRAYADO = 2.dp
 
 /** `restaurar = false`: la pestaña siempre abre limpia (Movs sin filtros, E25), sin estado guardado. */
 private class Pestana(
@@ -71,16 +76,22 @@ private val PESTANAS_DERECHA = listOf(
 )
 
 /**
- * Barra inferior: Inicio, Movs, «+» central (acción principal), Importar, Ajustes. El «+» sobresale
- * `SOBRESALE_MAS` hacia arriba; esa franja forma parte de la barra (transparente) para que el disco entero
- * reciba toques y el contenido no quede tapado. Se oculta en `nuevo`, que usa todo el alto.
+ * Barra inferior: Inicio, Movs, «+» central (acción principal), Importar, Ajustes. Su aspecto lo decide
+ * `CuentasTema.diseno.barra` (spec 2026-10-17 §6):
+ * - `PILDORA` (Libreta): franja en `superficieElevada` con divisor de 1 dp; pestaña activa con píldora `primario`.
+ * - `SUBRAYADO` (Tinta): misma franja; pestaña activa con subrayado de 2 dp en `primario` bajo el ícono.
+ * - `FLOTANTE` y `AURORA`: Tasks 6 y 7 del plan; mientras tanto se pintan como `PILDORA`.
+ * El «+» sobresale `SOBRESALE_MAS` hacia arriba; esa franja forma parte de la barra (transparente) para que el
+ * disco entero reciba toques y el contenido no quede tapado. `etiquetas = false` deja solo los íconos (el nombre
+ * pasa al `contentDescription`). Se oculta en `nuevo`, que usa todo el alto.
  */
 @Composable
-fun BarraInferior(nav: NavHostController) {
+fun BarraInferior(nav: NavHostController, etiquetas: Boolean = true) {
     val entrada by nav.currentBackStackEntryAsState()
     val jerarquia = entrada?.destination?.hierarchy
     if (jerarquia?.any { it.route == Rutas.NUEVO } == true) return
     val c = CuentasTema.colores
+    val d = CuentasTema.diseno
 
     Box(Modifier.fillMaxWidth()) {
         Column(
@@ -93,15 +104,15 @@ fun BarraInferior(nav: NavHostController) {
             Box(Modifier.fillMaxWidth().height(GROSOR_DIVISOR).background(c.borde))
             Row(Modifier.fillMaxWidth().height(ALTO_BARRA), verticalAlignment = Alignment.CenterVertically) {
                 PESTANAS_IZQUIERDA.forEach { p ->
-                    ItemPestana(p, activa = jerarquia?.any { it.route == p.ruta } == true) { irAPestana(nav, p) }
+                    ItemPestana(p, activa = jerarquia?.any { it.route == p.ruta } == true, etiquetas, d.barra) { irAPestana(nav, p) }
                 }
                 Spacer(Modifier.weight(1f))
                 PESTANAS_DERECHA.forEach { p ->
-                    ItemPestana(p, activa = jerarquia?.any { it.route == p.ruta } == true) { irAPestana(nav, p) }
+                    ItemPestana(p, activa = jerarquia?.any { it.route == p.ruta } == true, etiquetas, d.barra) { irAPestana(nav, p) }
                 }
             }
         }
-        BotonNuevo(Modifier.align(Alignment.TopCenter)) {
+        BotonNuevo(Modifier.align(Alignment.TopCenter), d.botonMas) {
             nav.navigate(Rutas.nuevo("gasto")) { launchSingleTop = true }
         }
     }
@@ -151,50 +162,74 @@ private fun irAPestana(nav: NavHostController, p: Pestana) {
 }
 
 @Composable
-private fun RowScope.ItemPestana(pestana: Pestana, activa: Boolean, onClick: () -> Unit) {
+private fun RowScope.ItemPestana(
+    pestana: Pestana,
+    activa: Boolean,
+    etiquetas: Boolean,
+    estilo: EstiloBarra,
+    onClick: () -> Unit,
+) {
     val c = CuentasTema.colores
+    val nivel = CuentasTema.diseno.movimiento
     val tinta by animateColorAsState(
-        if (activa) c.primario else c.textoSecundario, Movimiento.transicion(Movimiento.MEDIO), label = "tintaPestana",
+        if (activa) c.primario else c.textoSecundario, Movimiento.transicion(Movimiento.MEDIO, nivel), label = "tintaPestana",
     )
     // Píldora activa en `primario` sólido con el ícono en `sobrePrimario` (V9): ≥ 4,99:1 frente a la barra
     // (`superficieElevada`) en todas las paletas; el tinte al 14 % se quedaba en 1,2-1,45:1 y no se veía.
     val indicador by animateColorAsState(
         if (activa) c.primario else c.primario.copy(alpha = 0f),
-        Movimiento.transicion(Movimiento.MEDIO), label = "indicadorPestana",
+        Movimiento.transicion(Movimiento.MEDIO, nivel), label = "indicadorPestana",
     )
+    val conPildora = estilo != EstiloBarra.SUBRAYADO
     val tintaIcono by animateColorAsState(
-        if (activa) c.sobrePrimario else c.textoSecundario, Movimiento.transicion(Movimiento.MEDIO), label = "iconoPestana",
+        if (activa && conPildora) c.sobrePrimario else if (activa) c.primario else c.textoSecundario,
+        Movimiento.transicion(Movimiento.MEDIO, nivel), label = "iconoPestana",
     )
     Column(
         Modifier
             .weight(1f)
             .height(ALTO_BARRA)
-            .selectable(selected = activa, role = Role.Tab, onClick = onClick),
+            .selectable(selected = activa, role = Role.Tab, onClick = onClick)
+            .then(if (etiquetas) Modifier else Modifier.semantics { contentDescription = pestana.texto }),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Box(
-            Modifier.width(ANCHO_INDICADOR).height(ALTO_INDICADOR).clip(CuentasTema.formas.pildora).background(indicador),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(painterResource(pestana.icono), contentDescription = null, tint = tintaIcono, modifier = Modifier.size(ICONO_PESTANA))
+        if (conPildora) {
+            Box(
+                Modifier.width(ANCHO_INDICADOR).height(ALTO_INDICADOR).clip(CuentasTema.formas.pildora).background(indicador),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(painterResource(pestana.icono), contentDescription = null, tint = tintaIcono, modifier = Modifier.size(ICONO_PESTANA))
+            }
+        } else {
+            Box(Modifier.height(ALTO_INDICADOR), contentAlignment = Alignment.Center) {
+                Icon(painterResource(pestana.icono), contentDescription = null, tint = tintaIcono, modifier = Modifier.size(ICONO_PESTANA))
+            }
+            Box(Modifier.width(ANCHO_INDICADOR).height(GROSOR_SUBRAYADO).clip(CuentasTema.formas.pildora).background(indicador))
         }
-        Text(
-            pestana.texto,
-            style = CuentasTema.tipografia.etiqueta,
-            color = tinta,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        if (etiquetas) {
+            Text(
+                pestana.texto,
+                style = CuentasTema.tipografia.etiqueta,
+                color = tinta,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 
 @Composable
-private fun BotonNuevo(modifier: Modifier, onClick: () -> Unit) {
+private fun BotonNuevo(modifier: Modifier, forma: FormaMas, onClick: () -> Unit) {
     val c = CuentasTema.colores
+    val d = CuentasTema.diseno
     val interaccion = remember { MutableInteractionSource() }
     val presionado by interaccion.collectIsPressedAsState()
-    val escala by animateFloatAsState(if (presionado) 0.97f else 1f, Movimiento.resorte(), label = "escalaNuevo")
+    val escala by animateFloatAsState(if (presionado) d.escalaPresion else 1f, Movimiento.resorte(d.movimiento), label = "escalaNuevo")
+    val silueta = when (forma) {
+        FormaMas.DISCO, FormaMas.GOTA -> CircleShape
+        FormaMas.CUADRADO -> CuentasTema.formas.control
+    }
     Box(
         modifier
             .size(DISCO_MAS)
@@ -202,7 +237,7 @@ private fun BotonNuevo(modifier: Modifier, onClick: () -> Unit) {
                 scaleX = escala
                 scaleY = escala
             }
-            .clip(CircleShape)
+            .clip(silueta)
             .background(c.primario)
             .clickable(interactionSource = interaccion, indication = null, role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,

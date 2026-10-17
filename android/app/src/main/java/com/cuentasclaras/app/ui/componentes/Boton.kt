@@ -68,7 +68,8 @@ private fun BotonBase(
 ) {
     val interaccion = remember { MutableInteractionSource() }
     val presionado by interaccion.collectIsPressedAsState()
-    val escala by animateFloatAsState(if (presionado) 0.97f else 1f, Movimiento.resorte(), label = "escalaBoton")
+    val d = CuentasTema.diseno
+    val escala by animateFloatAsState(if (presionado) d.escalaPresion else 1f, Movimiento.resorte(d.movimiento), label = "escalaBoton")
     Button(
         onClick = onClick,
         modifier = modifier

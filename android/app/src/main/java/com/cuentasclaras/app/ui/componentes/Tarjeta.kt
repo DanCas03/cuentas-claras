@@ -18,6 +18,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.heading
@@ -29,15 +31,20 @@ import androidx.compose.ui.unit.sp
 import com.cuentasclaras.app.domain.Currency
 import com.cuentasclaras.app.domain.formatMoney
 import com.cuentasclaras.app.ui.theme.CuentasTema
+import com.cuentasclaras.app.ui.theme.EstiloTarjeta
 import kotlin.math.abs
 
 /** Signo visual de un monto: nunca solo color (DESIGN.md §4). */
 enum class Signo { NINGUNO, POSITIVO, NEGATIVO }
 
 /**
- * Tarjeta con doble bisel: una carcasa exterior en `superficie` y un núcleo concéntrico en `superficieElevada`
- * con un filo superior apenas iluminado. Sin bordes grises de 1 px ni sombras duras. El título (hasta 3 líneas) y
- * la acción comparten fila mientras al título le quede `medidas.anchoMinimoTexto`; si no, la acción baja.
+ * Tarjeta de la app. Su aspecto lo decide `CuentasTema.diseno.tarjeta`:
+ * - `BISEL` (Libreta): carcasa exterior en `superficie` y núcleo concéntrico en `superficieElevada` con un filo
+ *   superior apenas iluminado. Sin bordes grises de 1 px ni sombras duras.
+ * - `PLANA` (Tinta): `superficie` plana con el radio del diseño y un filete de 1 dp en `borde` solo abajo.
+ * - `CONTORNO` y `AURORA`: ver Tasks 6 y 7 del plan 2026-10-17; mientras tanto se pintan como `BISEL`.
+ * El título (hasta 3 líneas) y la acción comparten fila mientras al título le quede `medidas.anchoMinimoTexto`;
+ * si no, la acción baja.
  */
 @Composable
 fun Tarjeta(
@@ -49,46 +56,72 @@ fun Tarjeta(
     val c = CuentasTema.colores
     val e = CuentasTema.espacios
     val f = CuentasTema.formas
-    val nucleo = RoundedCornerShape(f.radioTarjeta - f.biselTarjeta)
-    Box(
-        modifier
-            .fillMaxWidth()
-            .clip(CuentasTema.formas.tarjeta)
-            .background(c.superficie)
-            .padding(f.biselTarjeta),
-    ) {
-        Column(
-            Modifier
+    when (CuentasTema.diseno.tarjeta) {
+        EstiloTarjeta.PLANA -> Column(
+            modifier
                 .fillMaxWidth()
-                .clip(nucleo)
-                .background(c.superficieElevada)
-                .border(1.dp, Brush.verticalGradient(listOf(c.texto.copy(alpha = 0.06f), Color.Transparent)), nucleo)
+                .clip(f.tarjeta)
+                .background(c.superficie)
+                .drawBehind {
+                    val y = size.height - 0.5.dp.toPx()
+                    drawLine(c.borde, Offset(0f, y), Offset(size.width, y), 1.dp.toPx())
+                }
                 .padding(e.m),
         ) {
-            if (titulo != null) {
-                // Si el título no cabe junto a la acción, la acción baja bajo él (FilaConFinal): nunca «Acceso a notificacion…».
-                FilaConFinal(
-                    texto = {
-                        Text(
-                            titulo,
-                            style = CuentasTema.tipografia.subtitulo,
-                            color = c.texto,
-                            maxLines = 3,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.semantics { heading() },
-                        )
-                    },
-                    final = { accion?.invoke() },
-                    separacion = e.s,
-                    modifier = Modifier.fillMaxWidth().padding(bottom = e.s),
-                )
-            } else if (accion != null) {
-                Row(Modifier.fillMaxWidth().padding(bottom = e.s), verticalAlignment = Alignment.CenterVertically) {
-                    Spacer(Modifier.weight(1f))
-                    accion()
+            CabeceraTarjeta(titulo, accion)
+            contenido()
+        }
+        EstiloTarjeta.BISEL, EstiloTarjeta.CONTORNO, EstiloTarjeta.AURORA -> {
+            val nucleo = RoundedCornerShape(f.radioTarjeta - f.biselTarjeta)
+            Box(
+                modifier
+                    .fillMaxWidth()
+                    .clip(f.tarjeta)
+                    .background(c.superficie)
+                    .padding(f.biselTarjeta),
+            ) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(nucleo)
+                        .background(c.superficieElevada)
+                        .border(1.dp, Brush.verticalGradient(listOf(c.texto.copy(alpha = 0.06f), Color.Transparent)), nucleo)
+                        .padding(e.m),
+                ) {
+                    CabeceraTarjeta(titulo, accion)
+                    contenido()
                 }
             }
-            contenido()
+        }
+    }
+}
+
+/** Título (encabezado accesible) y acción de la tarjeta; sin título ni acción no pinta nada. */
+@Composable
+private fun CabeceraTarjeta(titulo: String?, accion: (@Composable () -> Unit)?) {
+    val c = CuentasTema.colores
+    val e = CuentasTema.espacios
+    if (titulo != null) {
+        // Si el título no cabe junto a la acción, la acción baja bajo él (FilaConFinal): nunca «Acceso a notificacion…».
+        FilaConFinal(
+            texto = {
+                Text(
+                    titulo,
+                    style = CuentasTema.tipografia.subtitulo,
+                    color = c.texto,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.semantics { heading() },
+                )
+            },
+            final = { accion?.invoke() },
+            separacion = e.s,
+            modifier = Modifier.fillMaxWidth().padding(bottom = e.s),
+        )
+    } else if (accion != null) {
+        Row(Modifier.fillMaxWidth().padding(bottom = e.s), verticalAlignment = Alignment.CenterVertically) {
+            Spacer(Modifier.weight(1f))
+            accion()
         }
     }
 }

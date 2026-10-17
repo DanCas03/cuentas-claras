@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -25,6 +26,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -42,6 +45,8 @@ import com.cuentasclaras.app.ui.componentes.LocalAvisos
 import com.cuentasclaras.app.ui.componentes.LocalGuardiaFoco
 import com.cuentasclaras.app.ui.componentes.rememberAnfitrionAvisos
 import com.cuentasclaras.app.ui.componentes.rememberGuardiaFoco
+import com.cuentasclaras.app.data.Apariencia
+import com.cuentasclaras.app.ui.componentes.FondoDiseno
 import com.cuentasclaras.app.ui.nav.BarraInferior
 import com.cuentasclaras.app.capture.Notificador
 import com.cuentasclaras.app.ui.nav.CuentasNavHost
@@ -50,6 +55,7 @@ import com.cuentasclaras.app.ui.theme.CuentasTema
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -213,14 +219,21 @@ private fun RaizApp(capturaPedida: MutableStateFlow<String?>) {
             capturaPedida.value = null
         }
     }
+    // Nombres en la barra: preferencia de Apariencia (spec 2026-10-17 §6.3), leída del mismo DataStore que el tema.
+    val contexto = LocalContext.current
+    val repoApariencia = remember(contexto) { (contexto.applicationContext as? CuentasApp)?.container?.apariencia }
+    val apariencia by (repoApariencia?.apariencia ?: flowOf(Apariencia())).collectAsState(initial = Apariencia())
     CompositionLocalProvider(LocalAvisos provides avisos, LocalGuardiaFoco provides guardiaFoco) {
-        Scaffold(
-            bottomBar = { BarraInferior(nav) },
-            snackbarHost = { AvisosRaiz(avisos) },
-        ) { relleno ->
+        FondoDiseno {
+            Scaffold(
+                containerColor = Color.Transparent,
+                bottomBar = { BarraInferior(nav, etiquetas = apariencia.etiquetasBarra) },
+                snackbarHost = { AvisosRaiz(avisos) },
+            ) { relleno ->
             // El relleno (barras del sistema y barra inferior) se marca como consumido: un `imePadding()` de una
             // pantalla solo añade lo que el teclado sobrepasa a la barra inferior, sin relleno doble (I1).
-            CuentasNavHost(nav, Modifier.padding(relleno).consumeWindowInsets(relleno))
+                CuentasNavHost(nav, Modifier.padding(relleno).consumeWindowInsets(relleno))
+            }
         }
     }
 }

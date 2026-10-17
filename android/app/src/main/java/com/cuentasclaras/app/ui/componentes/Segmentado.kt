@@ -49,6 +49,7 @@ fun Segmentado(
     modifier: Modifier = Modifier,
 ) {
     val c = CuentasTema.colores
+    val nivel = CuentasTema.diseno.movimiento
     val pildora = CuentasTema.formas.pildora
     Row(
         modifier
@@ -62,12 +63,12 @@ fun Segmentado(
             val activo = indice == seleccion
             val fondo by animateColorAsState(
                 if (activo) c.primario else Color.Transparent,
-                Movimiento.transicion(),
+                Movimiento.transicion(nivel = nivel),
                 label = "fondoSegmento",
             )
             val tinta by animateColorAsState(
                 if (activo) c.sobrePrimario else c.texto,
-                Movimiento.transicion(),
+                Movimiento.transicion(nivel = nivel),
                 label = "tintaSegmento",
             )
             Box(

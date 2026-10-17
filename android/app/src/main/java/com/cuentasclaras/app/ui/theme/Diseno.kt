@@ -1,5 +1,7 @@
 package com.cuentasclaras.app.ui.theme
 
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.dp
 import com.cuentasclaras.app.data.ID_DISENO_POR_DEFECTO
 
 /** Cómo se pinta una `Tarjeta`. */
@@ -50,8 +52,31 @@ val DISENO_LIBRETA = Diseno(
     escalaPresion = 0.97f,
 )
 
+private val FORMAS_TINTA = Formas(
+    tarjeta = RoundedCornerShape(8.dp),
+    control = RoundedCornerShape(8.dp),
+    pildora = RoundedCornerShape(8.dp),
+    radioTarjeta = 8.dp,
+    biselTarjeta = 0.dp,
+    hoja = 16.dp,
+)
+
+/** Hecho sin invocar skills de diseño (Daniel quiso comparar). Plano y editorial. */
+val DISENO_TINTA = Diseno(
+    id = "tinta",
+    nombre = "Tinta",
+    descripcion = "Plano y editorial: esquinas de 8 dp, filetes finos, barra con subrayado.",
+    formas = FORMAS_TINTA,
+    tarjeta = EstiloTarjeta.PLANA,
+    barra = EstiloBarra.SUBRAYADO,
+    botonMas = FormaMas.CUADRADO,
+    fondo = EstiloFondo.LISO,
+    movimiento = NivelMovimiento.CONTENIDO,
+    escalaPresion = 0.98f,
+)
+
 /** Catálogo cerrado de diseños. */
-val DISENOS: List<Diseno> = listOf(DISENO_LIBRETA)
+val DISENOS: List<Diseno> = listOf(DISENO_LIBRETA, DISENO_TINTA)
 
 /** El diseño con ese id, o Libreta si el id no existe (versión vieja, respaldo). */
 fun disenoPorId(id: String?): Diseno = DISENOS.firstOrNull { it.id == id } ?: DISENOS.first { it.id == ID_DISENO_POR_DEFECTO }

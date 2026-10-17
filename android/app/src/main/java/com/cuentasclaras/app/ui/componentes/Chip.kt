@@ -7,7 +7,9 @@ import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.indication
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -22,8 +24,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
@@ -58,6 +60,7 @@ fun Chip(
     modifier: Modifier = Modifier,
 ) {
     val c = CuentasTema.colores
+    val d = CuentasTema.diseno
     val pildora = CuentasTema.formas.pildora
     val fondo by animateColorAsState(
         when {
@@ -65,7 +68,7 @@ fun Chip(
             sugerido -> c.primario.copy(alpha = 0.14f)
             else -> c.borde
         },
-        Movimiento.transicion(),
+        Movimiento.transicion(nivel = d.movimiento),
         label = "fondoChip",
     )
     val tinta = if (activo) c.sobrePrimario else c.texto
@@ -74,6 +77,9 @@ fun Chip(
     // `tactilMinimo` (48 dp) de alto y de ancho; la píldora visual sigue en 36 dp, centrada dentro, y es la que
     // pinta la onda del toque. Antes el `clickable` iba en la píldora y el objetivo medía 36 dp.
     val interaccion = remember { MutableInteractionSource() }
+    // Un chip tocable se hunde al presionarlo como los botones, con la escala y el resorte del diseño.
+    val presionado by interaccion.collectIsPressedAsState()
+    val escala by animateFloatAsState(if (presionado && onClick != null) d.escalaPresion else 1f, Movimiento.resorte(d.movimiento), label = "escalaChip")
     val tactil = CuentasTema.medidas.tactilMinimo
     val exterior = when {
         onClick != null -> modifier
@@ -86,7 +92,11 @@ fun Chip(
     Box(exterior, contentAlignment = Alignment.Center) {
         Box(
             Modifier
-                .alpha(if (enabled) 1f else 0.38f)
+                .graphicsLayer {
+                    scaleX = escala
+                    scaleY = escala
+                    alpha = if (enabled) 1f else 0.38f
+                }
                 .heightIn(min = ALTO_CHIP)
                 .clip(pildora)
                 .background(fondo)
