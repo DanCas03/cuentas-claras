@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.flowOf
 private val LocalColores = staticCompositionLocalOf { paletaPorId(null, oscura = true).colores }
 private val LocalTipografia = staticCompositionLocalOf { TipografiaSistema }
 private val LocalFormas = staticCompositionLocalOf { FormasCuentas }
+private val LocalDiseno = staticCompositionLocalOf { DISENO_LIBRETA }
 private val LocalEspacios = staticCompositionLocalOf { EspaciosCuentas }
 private val LocalMedidas = staticCompositionLocalOf { MedidasCuentas }
 private val LocalOscuro = staticCompositionLocalOf { true }
@@ -63,19 +64,30 @@ fun CuentasTema(content: @Composable () -> Unit) {
     if (apariencia == null) {
         Box(Modifier.fillMaxSize().background(paleta.colores.fondo))
     } else {
-        CuentasTemaConPaleta(paleta, fuente = fuentePorId(apariencia?.idFuente), content = content)
+        CuentasTemaConPaleta(
+            paleta,
+            fuente = fuentePorId(apariencia?.idFuente),
+            diseno = disenoPorId(apariencia?.idDiseno),
+            content = content,
+        )
     }
 }
 
-/** Aplica una paleta y una fuente concretas (usado por `CuentasTema` y por las vistas previas de Apariencia). */
+/** Aplica una paleta, una fuente y un diseño concretos (usado por `CuentasTema` y por las vistas previas de Apariencia). */
 @Composable
-fun CuentasTemaConPaleta(paleta: Paleta, fuente: Fuente = fuentePorId(null), content: @Composable () -> Unit) {
+fun CuentasTemaConPaleta(
+    paleta: Paleta,
+    fuente: Fuente = fuentePorId(null),
+    diseno: Diseno = disenoPorId(null),
+    content: @Composable () -> Unit,
+) {
     val assets = LocalContext.current.assets
     val tipografia = remember(assets, fuente) { tipografiaCuentas(assets, fuente) }
     CompositionLocalProvider(
         LocalColores provides paleta.colores,
         LocalTipografia provides tipografia,
-        LocalFormas provides FormasCuentas,
+        LocalFormas provides diseno.formas,
+        LocalDiseno provides diseno,
         LocalEspacios provides EspaciosCuentas,
         LocalMedidas provides MedidasCuentas,
         LocalOscuro provides paleta.esOscura,
@@ -83,7 +95,7 @@ fun CuentasTemaConPaleta(paleta: Paleta, fuente: Fuente = fuentePorId(null), con
         MaterialTheme(
             colorScheme = esquemaMaterial(paleta),
             typography = tipografia.comoMaterial(),
-            shapes = formasMaterial(),
+            shapes = formasMaterial(diseno.formas),
         ) {
             CompositionLocalProvider(LocalContentColor provides paleta.colores.texto, content = content)
         }
@@ -96,6 +108,9 @@ object CuentasTema {
     val formas: Formas @Composable @ReadOnlyComposable get() = LocalFormas.current
     val espacios: Espacios @Composable @ReadOnlyComposable get() = LocalEspacios.current
     val medidas: Medidas @Composable @ReadOnlyComposable get() = LocalMedidas.current
+
+    /** Diseño activo (spec 2026-10-17 §6). Lo leen solo los componentes base, nunca las pantallas. */
+    val diseno: Diseno @Composable @ReadOnlyComposable get() = LocalDiseno.current
 
     /** `true` si la paleta activa es oscura (p. ej. para el botón sol/luna de Inicio, E21). */
     val oscuro: Boolean @Composable @ReadOnlyComposable get() = LocalOscuro.current

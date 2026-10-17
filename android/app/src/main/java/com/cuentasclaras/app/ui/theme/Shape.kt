@@ -2,15 +2,24 @@ package com.cuentasclaras.app.ui.theme
 
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Shapes
-import androidx.compose.ui.graphics.Shape
+import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-/** Formas de la app (DESIGN.md §2): tarjeta 20 dp, control 12 dp, píldora 50 %. */
+/**
+ * Formas de la app (DESIGN.md §2). Salen de `CuentasTema.diseno.formas`; Libreta: tarjeta 20 dp (bisel 4 dp),
+ * control 12 dp, píldora 50 %, hoja 28 dp.
+ */
 data class Formas(
-    val tarjeta: Shape,
-    val control: Shape,
-    val pildora: Shape,
+    val tarjeta: CornerBasedShape,
+    val control: CornerBasedShape,
+    val pildora: CornerBasedShape,
+    /** Radio exterior de la tarjeta (el núcleo del doble bisel usa `radioTarjeta - biselTarjeta`). */
+    val radioTarjeta: Dp,
+    /** Grosor del bisel de la tarjeta (0 dp en los diseños sin bisel). */
+    val biselTarjeta: Dp,
+    /** Radio superior de la hoja modal. */
+    val hoja: Dp,
 )
 
 /** Ritmo de espacios en múltiplos de 4 dp (densidad cómoda de la dirección A). */
@@ -38,6 +47,9 @@ val FormasCuentas = Formas(
     tarjeta = RoundedCornerShape(RADIO_TARJETA),
     control = RoundedCornerShape(RADIO_CONTROL),
     pildora = RoundedCornerShape(percent = 50),
+    radioTarjeta = RADIO_TARJETA,
+    biselTarjeta = BISEL_TARJETA,
+    hoja = RADIO_HOJA,
 )
 
 val EspaciosCuentas = Espacios(
@@ -48,11 +60,11 @@ val EspaciosCuentas = Espacios(
     xl = 32.dp,
 )
 
-/** Formas de Material 3 derivadas de las propias (menús, diálogos, campos). */
-internal fun formasMaterial(): Shapes = Shapes(
-    extraSmall = RoundedCornerShape(RADIO_CONTROL),
-    small = RoundedCornerShape(RADIO_CONTROL),
-    medium = RoundedCornerShape(RADIO_CONTROL),
-    large = RoundedCornerShape(RADIO_TARJETA),
-    extraLarge = RoundedCornerShape(RADIO_HOJA),
+/** Formas de Material 3 derivadas de las del diseño activo (menús, diálogos, campos). */
+internal fun formasMaterial(f: Formas): Shapes = Shapes(
+    extraSmall = f.control,
+    small = f.control,
+    medium = f.control,
+    large = f.tarjeta,
+    extraLarge = RoundedCornerShape(f.hoja),
 )

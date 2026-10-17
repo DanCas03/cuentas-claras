@@ -30,7 +30,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import com.cuentasclaras.app.R
 import com.cuentasclaras.app.ui.theme.CuentasTema
-import com.cuentasclaras.app.ui.theme.RADIO_HOJA
 import kotlinx.coroutines.launch
 
 /**
@@ -66,7 +65,7 @@ fun HojaModal(titulo: String, onCerrar: () -> Unit, contenido: @Composable Colum
     ModalBottomSheet(
         onDismissRequest = onCerrar,
         sheetState = estado,
-        shape = RoundedCornerShape(topStart = RADIO_HOJA, topEnd = RADIO_HOJA),
+        shape = RoundedCornerShape(topStart = CuentasTema.formas.hoja, topEnd = CuentasTema.formas.hoja),
         containerColor = c.superficie,
         contentColor = c.texto,
         dragHandle = { BottomSheetDefaults.DragHandle(color = c.borde) },

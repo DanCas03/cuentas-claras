@@ -28,9 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cuentasclaras.app.domain.Currency
 import com.cuentasclaras.app.domain.formatMoney
-import com.cuentasclaras.app.ui.theme.BISEL_TARJETA
 import com.cuentasclaras.app.ui.theme.CuentasTema
-import com.cuentasclaras.app.ui.theme.RADIO_TARJETA
 import kotlin.math.abs
 
 /** Signo visual de un monto: nunca solo color (DESIGN.md §4). */
@@ -50,13 +48,14 @@ fun Tarjeta(
 ) {
     val c = CuentasTema.colores
     val e = CuentasTema.espacios
-    val nucleo = RoundedCornerShape(RADIO_TARJETA - BISEL_TARJETA)
+    val f = CuentasTema.formas
+    val nucleo = RoundedCornerShape(f.radioTarjeta - f.biselTarjeta)
     Box(
         modifier
             .fillMaxWidth()
             .clip(CuentasTema.formas.tarjeta)
             .background(c.superficie)
-            .padding(BISEL_TARJETA),
+            .padding(f.biselTarjeta),
     ) {
         Column(
             Modifier
