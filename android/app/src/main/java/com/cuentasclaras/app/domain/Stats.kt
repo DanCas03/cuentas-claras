@@ -14,7 +14,10 @@ data class ResumenMes(
     val byCategory: List<GastoCategoria>,
     /** v3: ingresos por categoría, desc por monto. */
     val incomeByCategory: List<IngresoCategoria>,
+    /** Gasto acumulado por día del mes. */
     val dailyCumulative: List<PuntoDiario>,
+    /** Ingreso acumulado por día del mes (gráficas de ingresos de «Este mes»). */
+    val dailyCumulativeIncome: List<PuntoDiario>,
     val omitidasSinTasa: Int,
 )
 
@@ -33,6 +36,7 @@ fun monthSummary(
     val porCategoria = LinkedHashMap<String?, Long>()
     val porCategoriaIngreso = LinkedHashMap<String?, Long>()
     val porDia = HashMap<Int, Long>()
+    val porDiaIngreso = HashMap<Int, Long>()
 
     for (t in txs) {
         if (!t.date.startsWith(month)) continue
@@ -47,12 +51,13 @@ fun monthSummary(
             }
             minor = convertMinor(minor, desde, viewCurrency, rate.vesPerUsd)
         }
+        // Una fecha corrupta (un respaldo sin validar) no tumba el resumen: esa tx se salta.
+        val dia = (if (t.date.length >= 10) t.date.substring(8, 10).toIntOrNull() else null) ?: continue
         if (t.type == TxType.INCOME) {
             incomeMinor += minor
             porCategoriaIngreso[t.categoryId] = (porCategoriaIngreso[t.categoryId] ?: 0L) + minor
+            porDiaIngreso[dia] = (porDiaIngreso[dia] ?: 0L) + minor
         } else {
-            // Una fecha corrupta (un respaldo sin validar) no tumba el resumen: esa tx se salta.
-            val dia = (if (t.date.length >= 10) t.date.substring(8, 10).toIntOrNull() else null) ?: continue
             expenseMinor += minor
             porCategoria[t.categoryId] = (porCategoria[t.categoryId] ?: 0L) + minor
             porDia[dia] = (porDia[dia] ?: 0L) + minor
@@ -60,14 +65,16 @@ fun monthSummary(
     }
 
     val diasDelMes = YearMonth.parse(month).lengthOfMonth()
-    var acumulado = 0L
-    val dailyCumulative = List(diasDelMes) { i ->
-        acumulado += porDia[i + 1] ?: 0L
-        PuntoDiario(i + 1, acumulado)
+    fun acumular(porDiaDe: Map<Int, Long>): List<PuntoDiario> {
+        var acumulado = 0L
+        return List(diasDelMes) { i ->
+            acumulado += porDiaDe[i + 1] ?: 0L
+            PuntoDiario(i + 1, acumulado)
+        }
     }
     val byCategory = porCategoria.map { GastoCategoria(it.key, it.value) }.sortedByDescending { it.expenseMinor }
     val incomeByCategory = porCategoriaIngreso.map { IngresoCategoria(it.key, it.value) }.sortedByDescending { it.incomeMinor }
-    return ResumenMes(month, incomeMinor, expenseMinor, byCategory, incomeByCategory, dailyCumulative, omitidasSinTasa)
+    return ResumenMes(month, incomeMinor, expenseMinor, byCategory, incomeByCategory, acumular(porDia), acumular(porDiaIngreso), omitidasSinTasa)
 }
 
 /** lastMonths("2026-01", 3) → ["2026-01", "2025-12", "2025-11"] */

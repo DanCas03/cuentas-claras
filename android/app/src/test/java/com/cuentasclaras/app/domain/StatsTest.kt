@@ -36,6 +36,18 @@ class StatsTest {
         assertEquals(PuntoDiario(31, 1800), r.dailyCumulative[30])
     }
 
+    @Test fun `acumula los ingresos por dia sin mezclar gastos`() {
+        // Bs 1.000,00 en la cuenta bnc → a 100 Bs/USD son $10.00 = 1000 minor
+        val conIngresos = txs + tx(TxType.INCOME, 100000, "2026-07-20", "bnc")
+        val r = monthSummary(conIngresos, cuentas, "2026-07", Currency.USD, rates, RateSource.BCV)
+        assertEquals(31, r.dailyCumulativeIncome.size)
+        assertEquals(PuntoDiario(2, 0), r.dailyCumulativeIncome[1])
+        assertEquals(PuntoDiario(3, 2000), r.dailyCumulativeIncome[2])
+        assertEquals(PuntoDiario(19, 2000), r.dailyCumulativeIncome[18])
+        assertEquals(PuntoDiario(31, 3000), r.dailyCumulativeIncome[30])
+        assertEquals(PuntoDiario(31, 1800), r.dailyCumulative[30]) // los gastos no cambian
+    }
+
     @Test fun `sin tasa omite y cuenta las VES, vista en Bs convierte las USD`() {
         val sinTasa = monthSummary(txs, cuentas, "2026-07", Currency.USD, emptyList(), RateSource.BCV)
         assertEquals(1, sinTasa.omitidasSinTasa)
