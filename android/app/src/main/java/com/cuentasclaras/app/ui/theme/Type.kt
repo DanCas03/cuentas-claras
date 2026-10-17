@@ -20,29 +20,22 @@ data class Tipografia(
     val cifra: TextStyle,
 )
 
-/** Bricolage Grotesque variable (OFL 1.1, `assets/fuentes/OFL.txt`). */
-private const val RUTA_BRICOLAGE = "fuentes/bricolage_grotesque_variable.ttf"
-
-/** Tamaño óptico para cuerpo, etiquetas y cifras pequeñas. */
-private const val OPSZ_TEXTO = 14f
-
-/** Tamaño óptico para títulos y la cifra grande. */
-private const val OPSZ_DISPLAY = 40f
-
 /**
  * E23: la fuente se carga desde `assets/` porque `Font(R.font…, variationSettings)` ignora la variación en el
  * Xiaomi de Daniel (Android 16) y pinta siempre la instancia por defecto (wght 800, opsz 96).
+ * Si la fuente no tiene eje `opsz` (`opsz == null`) solo se fija el peso.
  */
-private fun familiaBricolage(assets: AssetManager, opsz: Float, vararg pesos: Int): FontFamily = FontFamily(
+private fun familia(assets: AssetManager, fuente: Fuente, opsz: Float?, vararg pesos: Int): FontFamily = FontFamily(
     pesos.map { peso ->
+        val ajustes = buildList {
+            add(FontVariation.weight(peso))
+            if (opsz != null) add(FontVariation.Setting("opsz", opsz))
+        }
         Font(
-            path = RUTA_BRICOLAGE,
+            path = fuente.archivo,
             assetManager = assets,
             weight = FontWeight(peso),
-            variationSettings = FontVariation.Settings(
-                FontVariation.weight(peso),
-                FontVariation.Setting("opsz", opsz),
-            ),
+            variationSettings = FontVariation.Settings(*ajustes.toTypedArray()),
         )
     }
 )
@@ -69,10 +62,13 @@ private fun construirTipografia(texto: FontFamily, display: FontFamily) = Tipogr
     ),
 )
 
-/** Tipografía real de la app (Bricolage Grotesque desde `assets/`). Se construye una vez en `CuentasTema`. */
-fun tipografiaCuentas(assets: AssetManager): Tipografia = construirTipografia(
-    texto = familiaBricolage(assets, OPSZ_TEXTO, 400, 500, 600, 700),
-    display = familiaBricolage(assets, OPSZ_DISPLAY, 500, 600, 700),
+/**
+ * Tipografía real de la app con la fuente elegida (desde `assets/`). Se construye una vez por fuente en
+ * `CuentasTema`. Tamaños, pesos e interlíneas no dependen de la fuente (DESIGN.md §3).
+ */
+fun tipografiaCuentas(assets: AssetManager, fuente: Fuente = fuentePorId(null)): Tipografia = construirTipografia(
+    texto = familia(assets, fuente, fuente.opszTexto, 400, 500, 600, 700),
+    display = familia(assets, fuente, fuente.opszDisplay, 500, 600, 700),
 )
 
 /** Respaldo con la fuente del sistema, solo para el valor inicial del `CompositionLocal`. */

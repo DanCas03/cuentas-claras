@@ -63,15 +63,15 @@ fun CuentasTema(content: @Composable () -> Unit) {
     if (apariencia == null) {
         Box(Modifier.fillMaxSize().background(paleta.colores.fondo))
     } else {
-        CuentasTemaConPaleta(paleta, content)
+        CuentasTemaConPaleta(paleta, fuente = fuentePorId(apariencia?.idFuente), content = content)
     }
 }
 
-/** Aplica una paleta concreta (usado por `CuentasTema` y por las vistas previas de paletas en Ajustes). */
+/** Aplica una paleta y una fuente concretas (usado por `CuentasTema` y por las vistas previas de Apariencia). */
 @Composable
-fun CuentasTemaConPaleta(paleta: Paleta, content: @Composable () -> Unit) {
+fun CuentasTemaConPaleta(paleta: Paleta, fuente: Fuente = fuentePorId(null), content: @Composable () -> Unit) {
     val assets = LocalContext.current.assets
-    val tipografia = remember(assets) { tipografiaCuentas(assets) }
+    val tipografia = remember(assets, fuente) { tipografiaCuentas(assets, fuente) }
     CompositionLocalProvider(
         LocalColores provides paleta.colores,
         LocalTipografia provides tipografia,
