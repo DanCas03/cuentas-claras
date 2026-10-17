@@ -438,9 +438,17 @@ private fun FilaOcurrencia(
             if (o.estado == EstadoOcurrencia.HECHA) {
                 o.txIds.forEach { txId ->
                     val tx = txs[txId]
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(e.xs)) {
+                    // I2: el chip y su «quitar» van juntos, pero «quitar» baja a la línea siguiente si no cabe al lado
+                    // (antes, en una Row, el chip se quedaba todo el ancho y «quitar» con 0 dp). La cifra del chip
+                    // nunca se corta: si falta sitio, la nota acaba en «…».
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(e.xs),
+                        verticalArrangement = Arrangement.spacedBy(e.xs),
+                        itemVerticalAlignment = Alignment.CenterVertically,
+                    ) {
                         Chip(
-                            if (tx != null) "${tx.note ?: "movimiento"} · ${formatMoney(tx.amountMinor, monedaDe(tx.accountId))}" else "movimiento",
+                            tx?.note ?: "movimiento",
+                            cifra = tx?.let { formatMoney(it.amountMinor, monedaDe(it.accountId)) },
                         )
                         Chip(
                             "quitar", onClick = { onQuitar(txId) }, enabled = !guardando,

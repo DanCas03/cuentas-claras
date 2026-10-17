@@ -218,11 +218,14 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
   ≥ 48 dp de alto; activo en `primario`/`sobrePrimario`, inactivo con `texto`; color animado con la curva propia;
   semántica de pestañas. Texto `etiqueta` 600 con relleno horizontal `espacios.xs`: si un modo no cabe, se encoge
   (`TextAutoSize.StepBased`) hasta 11 sp sin cambiar el alto; la elipsis es el último recurso.
-- **`Chip(texto, onClick = null, activo = false, enabled = true, sugerido = false, icono: Int? = null)`** (E6): píldora de 36 dp de alto
+- **`Chip(texto, onClick = null, activo = false, enabled = true, sugerido = false, icono: Int? = null, cifra: String? = null)`** (E6): píldora de 36 dp de alto
   visual (área táctil 48 dp si es tocable), texto `etiqueta` 600 con dígitos tabulares (`tnum`). Normal `borde`/`texto`; activo
   `primario`/`sobrePrimario`; sugerido: tinte `primario` al 14 % + contorno `primario` de 1 dp + `texto`. `icono`:
   vector `ic_*` de 16 dp delante del texto, en el color del texto (chip de un evento sin categoría en Nuevo:
-  `ic_calendario`, nunca el emoji 📅).
+  `ic_calendario`, nunca el emoji 📅). `cifra`: monto ya formateado que sigue al texto tras «·» («nota · Bs 12,50»);
+  se mide primero y nunca se corta, y si falta ancho es el texto el que acaba en «…». Un chip con su acción
+  (movimiento + «quitar» en la lista del día del Calendario) va en un `FlowRow`, nunca en una `Row`: la acción baja a
+  la línea siguiente antes que quedarse sin ancho, y conserva su objetivo de 48 dp.
 - **`CuadroCategoria(emoji, vector, fondo, tintaVector = texto, marcada = false)`** + `fondoDeCategoria(hex)`: el
   cuadro de toda fila de lista (Movimientos, Esta semana, lista del día y «Todos los eventos» del Calendario,
   categorías de «Este mes»): `medidas.cuadroFila` (44 dp), radio `control`, fondo con el color de la categoría al

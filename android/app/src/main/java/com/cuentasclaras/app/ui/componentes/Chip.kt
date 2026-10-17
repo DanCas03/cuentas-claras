@@ -38,6 +38,8 @@ internal val ALTO_CHIP = 36.dp
  * `sugerido` (E6, T30): tinte suave de `primario` con contorno `primario`, para propuestas que el usuario confirma.
  * Sin `onClick` es una etiqueta estática. `icono`: vector `ic_*` de 16 dp delante del texto, en el color del texto
  * (p. ej. `ic_calendario` en el chip de un evento sin categoría); decorativo, el texto ya nombra el chip.
+ * `cifra`: monto ya formateado que va tras el texto («nota · Bs 12.345.678,90») y NUNCA se corta: se mide primero
+ * con su ancho natural y, si falta sitio, es el texto el que acaba en «…» (I2).
  */
 @Composable
 fun Chip(
@@ -47,6 +49,7 @@ fun Chip(
     enabled: Boolean = true,
     sugerido: Boolean = false,
     @DrawableRes icono: Int? = null,
+    cifra: String? = null,
     modifier: Modifier = Modifier,
 ) {
     val c = CuentasTema.colores
@@ -84,14 +87,23 @@ fun Chip(
             if (icono != null) {
                 Icon(painterResource(icono), contentDescription = null, tint = tinta, modifier = Modifier.size(CuentasTema.medidas.iconoEnLinea))
             }
-            Text(
-                texto,
-                // Dígitos tabulares: hay chips con montos («presup. $50.00») y fechas.
-                style = CuentasTema.tipografia.etiqueta.copy(fontWeight = FontWeight.W600, fontFeatureSettings = "tnum"),
-                color = tinta,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            // Dígitos tabulares: hay chips con montos («presup. $50.00») y fechas.
+            val estilo = CuentasTema.tipografia.etiqueta.copy(fontWeight = FontWeight.W600, fontFeatureSettings = "tnum")
+            if (cifra == null) {
+                Text(texto, style = estilo, color = tinta, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            } else {
+                // El texto lleva peso sin rellenar: la Row mide antes la cifra y le da al texto solo lo que sobra.
+                // El hueco tras «·» es el `espacios.xs` de la Row.
+                Text(
+                    "$texto ·",
+                    style = estilo,
+                    color = tinta,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                Text(cifra, style = estilo, color = tinta, maxLines = 1, softWrap = false)
+            }
         }
     }
 }
