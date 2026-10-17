@@ -63,7 +63,7 @@ private val TEXTO_MODOS = listOf("Sistema", "Claro", "Oscuro")
  */
 @Composable
 fun AparienciaPantalla(nav: NavHostController) {
-    val vm = vmCon { c, _ -> AparienciaViewModel(c.apariencia, c.iconoApp) }
+    val vm = vmCon { c, _ -> AparienciaViewModel(c.apariencia) }
     val apariencia by vm.apariencia.collectAsStateWithLifecycle()
     val actual: Apariencia = apariencia ?: return
     val e = CuentasTema.espacios

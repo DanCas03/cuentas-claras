@@ -84,7 +84,7 @@ fun GrupoIconos(paletaOscura: Paleta, idElegido: String, onElegir: (String) -> U
             }
         }
         Text(
-            "El lanzador puede tardar unos segundos en mostrar el cambio.",
+            "El ícono se cambia al salir de la app; el lanzador puede tardar unos segundos en mostrarlo.",
             style = CuentasTema.tipografia.etiqueta,
             color = c.textoSecundario,
         )

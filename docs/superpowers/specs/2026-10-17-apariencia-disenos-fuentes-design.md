@@ -45,8 +45,10 @@
 | `inter` | Inter | `inter_variable.ttf` | opsz 14 / 32, wght |
 | `manrope` | Manrope | `manrope_variable.ttf` | wght |
 | `space_grotesk` | Space Grotesk | `space_grotesk_variable.ttf` | wght |
-| `dm_sans` | DM Sans | `dm_sans_variable.ttf` | opsz 14 / 40, wght |
-| `fraunces` | Fraunces (serif) | `fraunces_variable.ttf` | opsz 14 / 72, wght |
+| `newsreader` | Newsreader (serif) | `newsreader_variable.ttf` | opsz 14 / 40, wght |
+
+> Enmienda (revisión final, 2026-10-17): DM Sans y Fraunces, previstas aquí, no traen `tnum` y se descartaron;
+> Newsreader (serif con `opsz` y `tnum`) ocupa el lugar del serif. Toda fuente del catálogo debe tener `tnum`.
 
 - Origen: `github.com/google/fonts/tree/main/ofl/<familia>` (archivos `[…wght].ttf`). Cada licencia se guarda como `assets/fuentes/OFL-<id>.txt`. Si en la implementación un archivo no está disponible o pesa más de 1 MB, se omite esa fuente de la tabla y se anota en DESIGN.md; el catálogo final puede tener 4-6 fuentes, nunca menos de 4.
 - `tipografiaCuentas(assets, fuente)` construye las dos familias (texto / display) con los `opsz` de la tabla cuando la fuente tiene el eje, y sin él cuando no. Los tamaños, pesos e interlíneas de DESIGN.md §3 no cambian por fuente. `cifra` y `cifraGrande` mantienen `tnum`.
@@ -102,7 +104,8 @@ val DISENOS: List<Diseno>; fun disenoPorId(id: String?): Diseno  // Libreta si n
 - Tres formas, vectores en `res/drawable/`: **`check`** (la «C» con visto actual), **`moneda`** (dos monedas superpuestas: un círculo con «$» y detrás otro con «Bs», trazos de 6-7 dp en la zona segura de 66 dp) y **`libreta`** (una libreta cerrada con el lomo a la izquierda y una cifra sugerida por tres rayas, la última más corta).
 - **Color por paleta oscura:** fondo = `fondo` de la paleta, trazo = `primario` de la paleta. Un `mipmap-anydpi-v26/ic_launcher_<forma>_<paleta>.xml` por combinación (3 × 6 = 18), con su `@color/launcher_fondo_<paleta>` y un vector `ic_launcher_<forma>_<paleta>.xml` generado por script (`scripts/generar-iconos-app.py`, que también escribe `colors.xml` de los lanzadores), más una capa monocroma por forma. El script es la fuente de verdad; se versiona.
 - Manifest: `MainActivity` pierde el `intent-filter` LAUNCHER; se añaden 18 `activity-alias` (`.Lanzador_<forma>_<paleta>`, `targetActivity=".MainActivity"`, `exported=true`, mismo `label`), solo `Lanzador_check_noche_lima` con `android:enabled="true"`.
-- `data/IconoAppRepo` (o función en `AparienciaRepo`): `aplicarIcono(forma, idPaletaOscura)` habilita el alias objetivo y deshabilita los demás con `PackageManager.setComponentEnabledSetting(…, DONT_KILL_APP)`. Se invoca al cambiar el ícono **y** al cambiar la paleta oscura. Preferencia `idIcono` (por defecto `check`).
+- `data/IconoAppRepo`: `aplicar(idIcono, idPaletaOscura)` habilita el alias objetivo y deshabilita los demás con `PackageManager.setComponentEnabledSetting(…, DONT_KILL_APP)`. Preferencia `idIcono` (por defecto `check`).
+  > Enmienda (revisión final, 2026-10-17): se aplica **al salir de la app** (`MainActivity.onStop`, en IO), no al tocar el selector: deshabilitar el alias con el que se lanzó la tarea la quita de Recientes y en primer plano cerraría la app. Ids desconocidos caen al valor por defecto, nunca a «ningún alias».
 - La notificación propia y el listener no cambian. El ícono adaptable sigue con capa `monochrome`.
 - Selector en Apariencia: tres cuadros de 64 dp con el ícono pintado en los colores de la paleta oscura **actual** y el nombre debajo; al cambiar la paleta oscura, las muestras se repintan.
 

@@ -15,14 +15,17 @@ data class Fuente(
     val serif: Boolean = false,
 )
 
-/** Catálogo cerrado. `id` es estable: se guarda en DataStore. Licencias en `assets/fuentes/OFL*.txt`. */
+/**
+ * Catálogo cerrado. `id` es estable: se guarda en DataStore. Licencias en `assets/fuentes/OFL*.txt`.
+ * Toda fuente debe traer `tnum` en su GSUB (las cifras son tabulares, DESIGN.md §3; lo comprueba `FuentesTest`):
+ * por eso DM Sans y Fraunces, que no lo tienen, quedaron fuera.
+ */
 val FUENTES: List<Fuente> = listOf(
     Fuente("bricolage", "Bricolage Grotesque", "fuentes/bricolage_grotesque_variable.ttf", 14f, 40f),
     Fuente("inter", "Inter", "fuentes/inter_variable.ttf", 14f, 32f),
     Fuente("manrope", "Manrope", "fuentes/manrope_variable.ttf", null, null),
     Fuente("space_grotesk", "Space Grotesk", "fuentes/space_grotesk_variable.ttf", null, null),
-    Fuente("dm_sans", "DM Sans", "fuentes/dm_sans_variable.ttf", 14f, 40f),
-    Fuente("fraunces", "Fraunces", "fuentes/fraunces_variable.ttf", 14f, 72f, serif = true),
+    Fuente("newsreader", "Newsreader", "fuentes/newsreader_variable.ttf", 14f, 40f, serif = true),
 )
 
 /** La fuente con ese id, o Bricolage si el id no existe (versión vieja, respaldo). */

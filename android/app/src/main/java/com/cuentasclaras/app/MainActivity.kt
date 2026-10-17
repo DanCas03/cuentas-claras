@@ -55,6 +55,9 @@ import com.cuentasclaras.app.ui.theme.CuentasTema
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
@@ -76,6 +79,9 @@ class MainActivity : ComponentActivity() {
     /** V25: la primera pantalla ya pinta contenido real (ver [LocalPrimerContenidoListo]). */
     @Volatile
     private var primerContenidoListo = false
+
+    /** Fuera de `lifecycleScope`: la escritura del alias debe terminar aunque la actividad muera. */
+    private val ambitoIcono = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -131,6 +137,20 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         leerCaptura(intent)
+    }
+
+    /**
+     * Ícono del lanzador (spec 2026-10-17 §7): se aplica al pasar a segundo plano, en IO y fuera del ciclo de vida
+     * de la actividad. Hecho en primer plano, deshabilitar el alias con el que se lanzó la tarea la quitaría de
+     * Recientes y cerraría la app en la cara del usuario. Idempotente: si nada cambió no escribe nada.
+     */
+    override fun onStop() {
+        super.onStop()
+        val container = (application as? CuentasApp)?.container ?: return
+        ambitoIcono.launch {
+            val a = container.apariencia.apariencia.first()
+            container.iconoApp.aplicar(a.idIcono, a.idPaletaOscura)
+        }
     }
 
     override fun onResume() {

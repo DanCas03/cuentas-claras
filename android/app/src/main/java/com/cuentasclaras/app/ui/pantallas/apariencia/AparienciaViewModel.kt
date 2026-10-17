@@ -4,12 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cuentasclaras.app.data.Apariencia
 import com.cuentasclaras.app.data.AparienciaRepo
-import com.cuentasclaras.app.data.IconoAppRepo
 import com.cuentasclaras.app.data.ModoTema
 import com.cuentasclaras.app.ui.escribir
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 
 /**
@@ -18,24 +16,18 @@ import kotlinx.coroutines.flow.stateIn
  * E30: cada cambio es una escritura idempotente de una sola preferencia; sus controles no se deshabilitan con
  * `guardando`, pero un fallo avisa (helper `escribir` sin ocupación).
  */
-class AparienciaViewModel(private val repo: AparienciaRepo, private val iconoApp: IconoAppRepo) : ViewModel() {
+class AparienciaViewModel(private val repo: AparienciaRepo) : ViewModel() {
     val apariencia: StateFlow<Apariencia?> =
         repo.apariencia.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     fun cambiarModo(modo: ModoTema) = escribir(null, MENSAJE_ERROR) { repo.cambiarModo(modo) }
-    /** La paleta oscura también tiñe el ícono del lanzador. */
-    fun cambiarPaletaOscura(id: String) = escribir(null, MENSAJE_ERROR) {
-        repo.cambiarPaletaOscura(id)
-        iconoApp.aplicar(repo.apariencia.first().idIcono, id)
-    }
+    /** La paleta oscura también tiñe el ícono del lanzador; el alias se aplica al salir de la app (`MainActivity.onStop`). */
+    fun cambiarPaletaOscura(id: String) = escribir(null, MENSAJE_ERROR) { repo.cambiarPaletaOscura(id) }
     fun cambiarPaletaClara(id: String) = escribir(null, MENSAJE_ERROR) { repo.cambiarPaletaClara(id) }
     fun cambiarFuente(id: String) = escribir(null, MENSAJE_ERROR) { repo.cambiarFuente(id) }
     fun cambiarDiseno(id: String) = escribir(null, MENSAJE_ERROR) { repo.cambiarDiseno(id) }
     fun cambiarEtiquetasBarra(mostrar: Boolean) = escribir(null, MENSAJE_ERROR) { repo.cambiarEtiquetasBarra(mostrar) }
-    fun cambiarIcono(id: String) = escribir(null, MENSAJE_ERROR) {
-        repo.cambiarIcono(id)
-        iconoApp.aplicar(id, repo.apariencia.first().idPaletaOscura)
-    }
+    fun cambiarIcono(id: String) = escribir(null, MENSAJE_ERROR) { repo.cambiarIcono(id) }
 
     private companion object {
         const val MENSAJE_ERROR = "No se pudo guardar la apariencia"

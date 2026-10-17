@@ -188,8 +188,10 @@ carácter en tamaños grandes. Desde el spec 2026-10-17 la fuente se elige en Ap
 | `inter` | Inter | `inter_variable.ttf` | 14 / 32 |
 | `manrope` | Manrope | `manrope_variable.ttf` | — (solo `wght`) |
 | `space_grotesk` | Space Grotesk | `space_grotesk_variable.ttf` | — (solo `wght`) |
-| `dm_sans` | DM Sans | `dm_sans_variable.ttf` | 14 / 40 |
-| `fraunces` | Fraunces (serif) | `fraunces_variable.ttf` | 14 / 72 |
+| `newsreader` | Newsreader (serif) | `newsreader_variable.ttf` | 14 / 40 |
+
+Toda fuente del catálogo trae `tnum` en su GSUB (lo comprueba `FuentesTest`); DM Sans y Fraunces se descartaron
+por no tenerlo: sus dígitos son proporcionales y las columnas de montos bailarían.
 
 - **Carga (E23):** desde `assets/fuentes/bricolage_grotesque_variable.ttf` con
   `Font(path, assetManager, weight, variationSettings = FontVariation.Settings(FontVariation.weight(p), FontVariation.Setting("opsz", x)))`.
@@ -366,8 +368,10 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
   `textoSecundario`) delante del título (📅 en la web); el texto accesible dice «evento {título}».
 - **Ícono de la app** (spec 2026-10-17 §7): tres formas elegibles en Apariencia («Visto» = la «C» abierta con un
   visto, «Monedas», «Libreta»), cada una pintada con el `fondo` y el `primario` de la **paleta oscura** elegida. Un
-  `activity-alias` por forma × paleta (18; solo uno habilitado, `IconoAppRepo.aplicar`), con capa monocroma por
-  forma. Los genera `scripts/generar-iconos-app.py` (fuente de verdad de las formas); `ic_launcher.xml` queda como
+  `activity-alias` por forma × paleta (18; solo uno habilitado). `IconoAppRepo.aplicar` se ejecuta **al salir de la
+  app** (`MainActivity.onStop`, en IO): deshabilitar el alias con el que se lanzó la tarea la quita de Recientes, y
+  hecho en primer plano cerraría la app. Un id de paleta o de ícono desconocido cae al valor por defecto, nunca a
+  «ningún alias». Capa monocroma por forma. Los genera `scripts/generar-iconos-app.py` (fuente de verdad de las formas); `ic_launcher.xml` queda como
   ícono genérico de `<application>`. Por defecto Visto × Noche lima.
 
 ## 5. Movimiento (`ui/theme/Movimiento.kt`)

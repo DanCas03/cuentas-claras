@@ -121,7 +121,7 @@ Desde Ajustes > Apariencia (pantalla propia) se eligen:
 - **Modo** (Sistema, Claro u Oscuro) y una **paleta** oscura y otra clara del catálogo cerrado `PALETAS`
   (`ui/theme/Color.kt`). Por defecto `noche_lima` y `noche_claro`. Sin colores dinámicos ni paletas fuera del catálogo.
 - **Fuente**, del catálogo `FUENTES` (`ui/theme/Fuentes.kt`): seis variables OFL en `assets/fuentes/`
-  (Bricolage Grotesque por defecto, Inter, Manrope, Space Grotesk, DM Sans, Fraunces).
+  (Bricolage Grotesque por defecto, Inter, Manrope, Space Grotesk y Newsreader), todas con dígitos tabulares.
 - **Diseño**, del catálogo `DISENOS` (`ui/theme/Diseno.kt`): Libreta (por defecto), Tinta, Isla y Aurora. Cambian
   formas, tarjetas, barra inferior, fondo y movimiento; solo los componentes base leen `CuentasTema.diseno`.
 - **Nombres en la barra** (íconos solos si se apaga) e **ícono de la app** (Visto, Monedas o Libreta), coloreado con la

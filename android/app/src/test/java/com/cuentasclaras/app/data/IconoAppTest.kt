@@ -26,5 +26,11 @@ class IconoAppTest {
         assertEquals(listOf(repo.aliasDe("moneda", "pizarra_cobalto")), habilitados())
     }
 
+    @Test fun `una paleta desconocida cae a la paleta por defecto y nunca deja la app sin lanzador`() {
+        repo.aplicar("moneda", "cacao")
+        repo.aplicar("moneda", "sepia_inexistente")
+        assertEquals(listOf(repo.aliasDe("moneda", ID_PALETA_OSCURA_POR_DEFECTO)), habilitados())
+    }
+
     @Test fun `un id de icono desconocido cae a check`() = assertEquals("check", iconoPorId("estrella").id)
 }
