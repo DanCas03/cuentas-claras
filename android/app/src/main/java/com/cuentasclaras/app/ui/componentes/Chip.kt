@@ -3,19 +3,23 @@ package com.cuentasclaras.app.ui.componentes
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -31,7 +35,7 @@ import androidx.compose.ui.unit.dp
 import com.cuentasclaras.app.ui.theme.CuentasTema
 import com.cuentasclaras.app.ui.theme.Movimiento
 
-/** Alto visual del chip; si es tocable, el área táctil se amplía a 48 dp. */
+/** Alto visual del chip; si es tocable, el objetivo táctil (y su nodo de accesibilidad) mide `tactilMinimo`. */
 internal val ALTO_CHIP = 36.dp
 
 /**
@@ -66,47 +70,60 @@ fun Chip(
     )
     val tinta = if (activo) c.sobrePrimario else c.texto
     val contorno = if (sugerido && !activo) c.primario else Color.Transparent
-    val base = if (onClick != null) modifier.minimumInteractiveComponentSize() else modifier
-    Box(
-        base
-            .alpha(if (enabled) 1f else 0.38f)
-            .heightIn(min = ALTO_CHIP)
-            .clip(pildora)
-            .background(fondo)
-            .border(1.dp, contorno, pildora)
-            .then(
-                when {
-                    onClick != null -> Modifier.clickable(enabled = enabled, role = Role.Button, onClick = onClick)
-                    // Con cifra, nota y cifra son dos textos: se leen como UNO («nota · Bs 12,50»), como antes.
-                    cifra != null -> Modifier.semantics(mergeDescendants = true) { }
-                    else -> Modifier
-                },
+    // N3: si es tocable, el `clickable` (y con él el nodo de accesibilidad) va en una caja exterior de al menos
+    // `tactilMinimo` (48 dp) de alto y de ancho; la píldora visual sigue en 36 dp, centrada dentro, y es la que
+    // pinta la onda del toque. Antes el `clickable` iba en la píldora y el objetivo medía 36 dp.
+    val interaccion = remember { MutableInteractionSource() }
+    val tactil = CuentasTema.medidas.tactilMinimo
+    val exterior = when {
+        onClick != null -> modifier
+            .clickable(interactionSource = interaccion, indication = null, enabled = enabled, role = Role.Button, onClick = onClick)
+            .sizeIn(minWidth = tactil, minHeight = tactil)
+        // Con cifra, nota y cifra son dos textos: se leen como UNO («nota · Bs 12,50»), como antes.
+        cifra != null -> modifier.semantics(mergeDescendants = true) { }
+        else -> modifier
+    }
+    Box(exterior, contentAlignment = Alignment.Center) {
+        Box(
+            Modifier
+                .alpha(if (enabled) 1f else 0.38f)
+                .heightIn(min = ALTO_CHIP)
+                .clip(pildora)
+                .background(fondo)
+                .border(1.dp, contorno, pildora)
+                .then(if (onClick != null) Modifier.indication(interaccion, LocalIndication.current) else Modifier)
+                .padding(horizontal = 14.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            ContenidoChip(texto, icono, cifra, tinta)
+        }
+    }
+}
+
+/** Ícono opcional, texto y, si la hay, «· cifra» que nunca se corta. */
+@Composable
+private fun ContenidoChip(texto: String, @DrawableRes icono: Int?, cifra: String?, tinta: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(CuentasTema.espacios.xs)) {
+        if (icono != null) {
+            Icon(painterResource(icono), contentDescription = null, tint = tinta, modifier = Modifier.size(CuentasTema.medidas.iconoEnLinea))
+        }
+        // Dígitos tabulares: hay chips con montos («presup. $50.00») y fechas.
+        val estilo = CuentasTema.tipografia.etiqueta.copy(fontWeight = FontWeight.W600, fontFeatureSettings = "tnum")
+        if (cifra == null) {
+            Text(texto, style = estilo, color = tinta, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        } else {
+            // El texto lleva peso sin rellenar: la Row mide antes «· cifra» y le da al texto solo lo que sobra.
+            // El «·» va con la cifra: si la nota se corta («pago del gimnas…»), el separador sigue ahí. El hueco
+            // antes de «·» es el `espacios.xs` de la Row.
+            Text(
+                texto,
+                style = estilo,
+                color = tinta,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
             )
-            .padding(horizontal = 14.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(CuentasTema.espacios.xs)) {
-            if (icono != null) {
-                Icon(painterResource(icono), contentDescription = null, tint = tinta, modifier = Modifier.size(CuentasTema.medidas.iconoEnLinea))
-            }
-            // Dígitos tabulares: hay chips con montos («presup. $50.00») y fechas.
-            val estilo = CuentasTema.tipografia.etiqueta.copy(fontWeight = FontWeight.W600, fontFeatureSettings = "tnum")
-            if (cifra == null) {
-                Text(texto, style = estilo, color = tinta, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            } else {
-                // El texto lleva peso sin rellenar: la Row mide antes «· cifra» y le da al texto solo lo que sobra.
-                // El «·» va con la cifra: si la nota se corta («pago del gimnas…»), el separador sigue ahí. El hueco
-                // antes de «·» es el `espacios.xs` de la Row.
-                Text(
-                    texto,
-                    style = estilo,
-                    color = tinta,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-                Text("· $cifra", style = estilo, color = tinta, maxLines = 1, softWrap = false)
-            }
+            Text("· $cifra", style = estilo, color = tinta, maxLines = 1, softWrap = false)
         }
     }
 }
