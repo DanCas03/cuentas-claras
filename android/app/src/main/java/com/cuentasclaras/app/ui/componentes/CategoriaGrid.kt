@@ -20,12 +20,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.intl.LocaleList
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.Hyphens
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -67,18 +71,29 @@ fun CategoriaGrid(
     modifier: Modifier = Modifier,
 ) {
     val e = CuentasTema.espacios
-    // Un solo medidor para todas las celdas: el nombre se mide antes de pintarlo para elegir su tamaño.
+    val estilo = CuentasTema.tipografia.etiqueta
+    // Un solo medidor y una sola medida del ancho para todo el grid: todas las celdas miden lo mismo, así que los
+    // nombres se ajustan de una vez, antes de pintarlos (M1).
     val medidor = rememberTextMeasurer()
-    Column(
-        modifier.fillMaxWidth().alpha(if (enabled) 1f else 0.38f),
-        verticalArrangement = Arrangement.spacedBy(e.xs),
-    ) {
-        categorias.chunked(COLUMNAS_CATEGORIAS).forEach { fila ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(e.xs)) {
-                fila.forEach { categoria ->
-                    CeldaCategoria(categoria, enabled, onElegir, medidor, Modifier.weight(1f))
+    BoxWithConstraints(modifier.fillMaxWidth()) {
+        val hueco = with(LocalDensity.current) { e.xs.roundToPx() }
+        val anchoCelda = (constraints.maxWidth - hueco * (COLUMNAS_CATEGORIAS - 1)) / COLUMNAS_CATEGORIAS
+        val nombres = categorias.map { it.name }
+        val ajustes = remember(nombres, estilo, anchoCelda, medidor) {
+            nombres.distinct().associateWith { ajustarNombre(medidor, it, estilo, anchoCelda) }
+        }
+        Column(
+            Modifier.fillMaxWidth().alpha(if (enabled) 1f else 0.38f),
+            verticalArrangement = Arrangement.spacedBy(e.xs),
+        ) {
+            categorias.chunked(COLUMNAS_CATEGORIAS).forEach { fila ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(e.xs)) {
+                    fila.forEach { categoria ->
+                        val ajuste = ajustes[categoria.name] ?: AjusteNombre(estilo.fontSize, ModoNombre.PALABRAS)
+                        CeldaCategoria(categoria, enabled, onElegir, ajuste, Modifier.weight(1f))
+                    }
+                    repeat(COLUMNAS_CATEGORIAS - fila.size) { Spacer(Modifier.weight(1f)) }
                 }
-                repeat(COLUMNAS_CATEGORIAS - fila.size) { Spacer(Modifier.weight(1f)) }
             }
         }
     }
@@ -90,45 +105,85 @@ private val NOMBRE_MINIMO = 11.sp
 /** Paso del autoajuste del nombre, de `etiqueta` (13 sp) hacia abajo: 13 · 12,5 · 12 · 11,5 · 11. */
 private val PASO_NOMBRE = 0.5.sp
 
-/** Tamaño elegido para el nombre; `unaLinea` = ni a 11 sp cabe sin partir una palabra (va en una línea con «…»). */
-private data class AjusteNombre(val tamano: TextUnit, val unaLinea: Boolean)
+/** Idioma de los cortes con guion del nombre (patrones de partición del español). */
+private val IDIOMA_GUION = LocaleList("es-VE")
+
+/** Cómo se pinta el nombre, en el orden en que se prueba (DESIGN.md §4, `CategoriaGrid`). */
+private enum class ModoNombre {
+    /** 1-2 líneas cortando solo entre palabras (o tras «-» / «/»). */
+    PALABRAS,
+
+    /** 1-2 líneas con guion automático en español: la palabra se corta, pero marcada con «-». */
+    GUION,
+
+    /** Ni con guion cabe: una línea con «…» al final. */
+    ELIPSIS,
+}
+
+/** Tamaño y modo elegidos para el nombre de una categoría. */
+private data class AjusteNombre(val tamano: TextUnit, val modo: ModoNombre)
+
+/** Estilo con el que se mide y se pinta el nombre en el modo dado. */
+private fun estiloNombre(estilo: TextStyle, tamano: TextUnit, modo: ModoNombre): TextStyle =
+    if (modo == ModoNombre.GUION) {
+        estilo.copy(fontSize = tamano, hyphens = Hyphens.Auto, lineBreak = LineBreak.Paragraph, localeList = IDIOMA_GUION)
+    } else {
+        estilo.copy(fontSize = tamano)
+    }
 
 /**
- * Mayor tamaño, de `estilo.fontSize` a [NOMBRE_MINIMO] en pasos de [PASO_NOMBRE], en que el nombre cabe en 2 líneas
- * sin partir ninguna palabra (M1: «Supermer/cado»). La interlínea del estilo no cambia: el alto de la fila del grid
- * es el mismo con cualquier tamaño.
+ * Elige cómo cabe el nombre en `ancho` px (M1: «Supermer/cado» no vuelve a salir). Orden:
+ * 1. palabras enteras en 2 líneas, de `estilo.fontSize` a [NOMBRE_MINIMO] en pasos de [PASO_NOMBRE];
+ * 2. guion automático en español, otra vez del tamaño mayor al mínimo;
+ * 3. una línea con «…».
+ * La interlínea del estilo no cambia: el alto de la fila del grid es el mismo con cualquier tamaño.
  */
 private fun ajustarNombre(medidor: TextMeasurer, nombre: String, estilo: TextStyle, ancho: Int): AjusteNombre {
-    var tamano = estilo.fontSize.value
-    while (tamano >= NOMBRE_MINIMO.value) {
-        val medida = medidor.measure(
-            nombre,
-            estilo.copy(fontSize = tamano.sp),
-            maxLines = 2,
-            constraints = Constraints(maxWidth = ancho),
-        )
-        if (!medida.hasVisualOverflow && !parteUnaPalabra(nombre, medida)) return AjusteNombre(tamano.sp, unaLinea = false)
-        tamano -= PASO_NOMBRE.value
+    for (modo in listOf(ModoNombre.PALABRAS, ModoNombre.GUION)) {
+        var tamano = estilo.fontSize.value
+        while (tamano >= NOMBRE_MINIMO.value) {
+            val estiloModo = estiloNombre(estilo, tamano.sp, modo)
+            val medida = medidor.measure(nombre, estiloModo, maxLines = 2, constraints = Constraints(maxWidth = ancho))
+            val cabe = !medida.hasVisualOverflow && when (modo) {
+                ModoNombre.PALABRAS -> cortesPartidos(nombre, medida).isEmpty()
+                else -> cortesPartidos(nombre, medida).all { linea -> llevaGuion(medidor, nombre, medida, linea, estiloModo) }
+            }
+            if (cabe) return AjusteNombre(tamano.sp, modo)
+            tamano -= PASO_NOMBRE.value
+        }
     }
-    return AjusteNombre(NOMBRE_MINIMO, unaLinea = true)
+    return AjusteNombre(NOMBRE_MINIMO, ModoNombre.ELIPSIS)
 }
 
 /**
- * true si alguna línea (salvo la primera) empieza a media palabra: el carácter anterior no es un espacio ni un
- * corte natural («-», «/»).
+ * Líneas que terminan a media palabra: la línea siguiente empieza tras un carácter que no es un espacio ni un corte
+ * natural («-», «/»).
  */
-private fun parteUnaPalabra(texto: String, medida: TextLayoutResult): Boolean =
-    (1 until medida.lineCount).any { linea ->
-        val inicio = medida.getLineStart(linea)
+private fun cortesPartidos(texto: String, medida: TextLayoutResult): List<Int> =
+    (0 until medida.lineCount - 1).filter { linea ->
+        val inicio = medida.getLineStart(linea + 1)
         inicio in 1 until texto.length && texto[inicio - 1].let { !it.isWhitespace() && it != '-' && it != '/' }
     }
+
+/**
+ * true si la línea partida termina con el guion que dibuja la partición automática. El guion no está en el texto,
+ * así que se nota en el ancho: la línea pintada mide al menos medio guion más que su texto solo. Un corte «a la
+ * desesperada» (la palabra no tiene punto de partición que quepa) no lo lleva y se rechaza.
+ */
+private fun llevaGuion(medidor: TextMeasurer, texto: String, medida: TextLayoutResult, linea: Int, estilo: TextStyle): Boolean {
+    val trozo = texto.substring(medida.getLineStart(linea), medida.getLineEnd(linea))
+    val anchoTrozo = medidor.measure(trozo, estilo, softWrap = false, maxLines = 1).size.width
+    val anchoGuion = medidor.measure("-", estilo, softWrap = false, maxLines = 1).size.width
+    val anchoLinea = medida.getLineRight(linea) - medida.getLineLeft(linea)
+    return anchoLinea >= anchoTrozo + anchoGuion / 2f
+}
 
 @Composable
 private fun CeldaCategoria(
     categoria: Category,
     enabled: Boolean,
     onElegir: (String) -> Unit,
-    medidor: TextMeasurer,
+    ajuste: AjusteNombre,
     modifier: Modifier,
 ) {
     val c = CuentasTema.colores
@@ -149,22 +204,18 @@ private fun CeldaCategoria(
             Text(categoria.icon, fontSize = 24.sp, modifier = Modifier.clearAndSetSemantics { })
         }
         Spacer(Modifier.height(e.xs))
-        // M1: una palabra nunca se parte. El nombre va en 1-2 líneas por palabras y se encoge hasta 11 sp; si ni así
-        // cabe, una línea con «…» al final.
-        BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
-            val estilo = CuentasTema.tipografia.etiqueta
-            val ancho = constraints.maxWidth
-            val ajuste = remember(categoria.name, estilo, ancho, medidor) { ajustarNombre(medidor, categoria.name, estilo, ancho) }
-            Text(
-                categoria.name,
-                style = estilo.copy(fontSize = ajuste.tamano),
-                color = c.texto,
-                maxLines = if (ajuste.unaLinea) 1 else 2,
-                softWrap = !ajuste.unaLinea,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
-            )
-        }
+        // M1: una palabra nunca se parte sin guion (el ajuste lo eligió el grid, ver `ajustarNombre`).
+        val elipsis = ajuste.modo == ModoNombre.ELIPSIS
+        Text(
+            categoria.name,
+            style = estiloNombre(CuentasTema.tipografia.etiqueta, ajuste.tamano, ajuste.modo),
+            color = c.texto,
+            maxLines = if (elipsis) 1 else 2,
+            softWrap = !elipsis,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 

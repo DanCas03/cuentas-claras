@@ -289,10 +289,14 @@ Firmas exactas; usar siempre estos componentes en lugar de los de Material direc
 - **`CategoriaGrid(categorias, enabled, onElegir)`**: 4 columnas sin scroll propio; cada celda: cuadro de 48 dp
   con el emoji de la categoría (24 sp) sobre el color de la categoría al 18 % (`medidas.alfaTinteCategoria`), nombre en `etiqueta` de 1 a 2 líneas
   (relleno vertical de celda `espacios.xs`, sin relleno horizontal: el nombre usa todo el ancho de la celda; 78 dp
-  con nombre de una línea, 96 dp con dos). **Una palabra nunca se
-  parte** («Supermer/cado»): el nombre se mide antes de pintarlo (`TextMeasurer`) y se encoge en pasos de 0,5 sp, de
-  13 a 11 sp, hasta que cabe en 2 líneas cortando solo entre palabras (o tras «-» / «/»); la interlínea sigue en 18 sp,
-  así el alto de la fila no cambia. Si ni a 11 sp cabe sin partir una palabra, va en una línea con «…» al final.
+  con nombre de una línea, 96 dp con dos). Siempre 4 columnas. **Una palabra nunca se parte sin guion**
+  («Supermer/cado»): el grid mide todos los nombres de una vez (`TextMeasurer`, un único `BoxWithConstraints` con el
+  ancho de celda) antes de pintarlos, y prueba en este orden:
+  1. palabras enteras en 1-2 líneas (cortes solo entre palabras o tras «-» / «/»), de 13 a 11 sp en pasos de 0,5 sp;
+  2. guion automático en español (`Hyphens.Auto`, `LineBreak.Paragraph`, `LocaleList("es-VE")`), otra vez de 13 a
+     11 sp: «Supermer-» / «cado». Un corte sin guion (la palabra no tiene punto de partición que quepa) no vale;
+  3. solo si ni con guion cabe, una línea con «…» al final.
+  La interlínea sigue en 18 sp con cualquier tamaño, así el alto de la fila no cambia.
   `enabled = false` al 38 % mientras se guarda. El color de la categoría es dato del usuario:
   `colorDeCategoria(hex, respaldo)`.
 - **`DialogoConfirmacion(titulo, texto, textoConfirmar, onConfirmar, onCancelar, textoCancelar = "Conservar", peligro = true, habilitado = true)`**:
