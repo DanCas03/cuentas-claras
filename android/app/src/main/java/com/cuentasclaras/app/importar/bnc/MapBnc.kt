@@ -76,7 +76,14 @@ fun mapBncRows(
     categories: List<Category>,
     capturadas: List<ReferenciaCapturada> = emptyList(),
 ): List<BncDraft> {
-    val porReferencia = rows.filter { it.referencia != "" && it.referencia != "0" }.groupingBy { it.referencia }.eachCount()
+    // La pareja cargo+comisión se cuenta sobre filas DISTINTAS (por bncImportKey): una fila repetida en el mismo
+    // texto (export pegado dos veces; la previa la desmarca como «Repetida en este texto») no es su propia pareja.
+    // La columna sigue siendo `Referencia` (T25).
+    val porReferencia = rows
+        .filter { it.referencia != "" && it.referencia != "0" }
+        .distinctBy { bncImportKey(it) }
+        .groupingBy { it.referencia }
+        .eachCount()
     val idComisiones = categories.firstOrNull { it.id == "cat-comisiones" }?.id
     val idPagoMovil = categories.firstOrNull { it.id == "cat-pago-movil-recibido" }?.id
     // D8 + E24: referencia normalizada + monto absoluto + sentido. Cada captura marca como mucho una fila

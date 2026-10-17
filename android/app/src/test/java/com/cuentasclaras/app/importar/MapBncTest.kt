@@ -48,6 +48,14 @@ class MapBncTest {
         assertNotEquals(bncImportKey(junio), bncImportKey(junio.copy(date = "2026-07-30")))
     }
 
+    @Test fun `una fila repetida en el mismo texto no forma pareja consigo misma`() {
+        // El export pegado dos veces: solo el cargo y su comisión (ref 100000004) son pareja, en ambas copias.
+        val d = mapBncRows(rows + rows, "acc-bnc", emptySet(), reglas, categorias)
+        assertEquals(18, d.size)
+        assertEquals(setOf("100000004"), d.mapNotNull { it.pairRef }.toSet())
+        assertEquals(4, d.count { it.pairRef == "100000004" })
+    }
+
     @Test fun `duplicados por importKey ya existente`() {
         val d = mapear(existentes = setOf(bncImportKey(rows[0]), bncImportKey(rows[3])))
         assertEquals(2, d.count { it.duplicate })
