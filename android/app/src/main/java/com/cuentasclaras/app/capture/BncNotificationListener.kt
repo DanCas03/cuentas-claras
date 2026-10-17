@@ -52,7 +52,13 @@ class BncNotificationListener : NotificationListenerService() {
         // del texto en las 24 h anteriores a `ahora`, y aquí `ahora` es la hora en que se publicó la notificación.
         conLog("No se pudieron revisar las notificaciones activas") {
             for (sbn in activeNotifications.orEmpty()) {
-                val texto = textoCapturable(sbn) ?: continue
+                // Cada notificación va aislada: un fallo al leer una no corta el resto del barrido.
+                val texto = try {
+                    textoCapturable(sbn)
+                } catch (e: Exception) {
+                    Log.w("CuentasClaras", "Notificación activa ignorada por error", e)
+                    null
+                } ?: continue
                 capturar(texto, Instant.ofEpochMilli(sbn.postTime))
             }
         }
