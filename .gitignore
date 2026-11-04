@@ -24,3 +24,7 @@ coverage/
 # PWA / build extra
 dev-dist/
 *.tsbuildinfo
+
+# Firmas (nunca commitear)
+*.jks
+*.keystore

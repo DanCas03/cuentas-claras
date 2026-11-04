@@ -20,6 +20,22 @@ android {
         manifestPlaceholders["etiquetaApp"] = "Cuentas Claras"
     }
 
+    // Firma de release: las cuatro propiedades viven en ~/.gradle/gradle.properties (nunca en el repo).
+    // Sin ellas, el APK release sale sin firmar (sirve para comprobar que compila, no para instalar).
+    val firmaRelease = listOf("CUENTAS_KEYSTORE", "CUENTAS_KEYSTORE_PASS", "CUENTAS_KEY_ALIAS", "CUENTAS_KEY_PASS")
+        .mapNotNull { k -> (project.findProperty(k) as String?)?.let { k to it } }.toMap()
+        .takeIf { it.size == 4 }
+    if (firmaRelease != null) {
+        signingConfigs {
+            create("release") {
+                storeFile = file(firmaRelease.getValue("CUENTAS_KEYSTORE"))
+                storePassword = firmaRelease.getValue("CUENTAS_KEYSTORE_PASS")
+                keyAlias = firmaRelease.getValue("CUENTAS_KEY_ALIAS")
+                keyPassword = firmaRelease.getValue("CUENTAS_KEY_PASS")
+            }
+        }
+    }
+
     buildTypes {
         // Build para verificaciones por adb: otro paquete y otra etiqueta, para no tocar los datos reales de la app normal.
         create("verif") {
@@ -31,6 +47,7 @@ android {
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            if (firmaRelease != null) signingConfig = signingConfigs.getByName("release")
         }
     }
 
