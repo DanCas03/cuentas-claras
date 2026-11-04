@@ -1,0 +1,61 @@
+name: Reporte de bug
+description: Algo no funciona como debería.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias por reportarlo. **No pegues notificaciones, comprobantes ni respaldos reales**: reemplaza montos, nombres y referencias por valores inventados.
+  - type: textarea
+    id: que-pasa
+    attributes:
+      label: Qué pasa
+      description: Describe el problema y qué esperabas que pasara en su lugar.
+    validations:
+      required: true
+  - type: textarea
+    id: pasos
+    attributes:
+      label: Pasos para reproducirlo
+      placeholder: |
+        1. Abrir...
+        2. Tocar...
+        3. Ver que...
+    validations:
+      required: true
+  - type: dropdown
+    id: parte
+    attributes:
+      label: Parte de la app
+      options:
+        - Inicio / saldos
+        - Movimientos y grupos
+        - Captura de notificaciones del BNC
+        - Import del TXT del BNC
+        - Tasas (BCV / paralelo)
+        - Deudas
+        - Calendario y eventos
+        - Respaldo / restauración
+        - Ajustes y apariencia
+        - Otra
+    validations:
+      required: true
+  - type: input
+    id: dispositivo
+    attributes:
+      label: Teléfono y versión de Android
+      description: Marca, modelo y versión. Si es Xiaomi/Redmi/POCO indica también la versión de MIUI o HyperOS.
+      placeholder: "Redmi Note 12, Android 14, HyperOS 1.0"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Versión de la app
+      description: La que aparece en Ajustes, o el commit si compilaste desde el código.
+  - type: textarea
+    id: extra
+    attributes:
+      label: Capturas o logs
+      description: Capturas de pantalla o salida de `adb logcat` con los datos personales tapados.

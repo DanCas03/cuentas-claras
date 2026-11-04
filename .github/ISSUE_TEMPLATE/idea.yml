@@ -1,0 +1,29 @@
+name: Idea o mejora
+description: Proponer una función nueva o un cambio de comportamiento.
+title: "[Idea]: "
+labels: ["idea"]
+body:
+  - type: textarea
+    id: problema
+    attributes:
+      label: Qué problema resuelve
+      description: Describe la situación real que te lleva a pedir esto. Es más útil que la solución.
+    validations:
+      required: true
+  - type: textarea
+    id: propuesta
+    attributes:
+      label: Qué propones
+      description: Cómo te imaginas que funcione. Si tienes un boceto o un ejemplo de otra app, inclúyelo.
+    validations:
+      required: true
+  - type: textarea
+    id: alternativas
+    attributes:
+      label: Alternativas que consideraste
+  - type: checkboxes
+    id: implementar
+    attributes:
+      label: Disponibilidad
+      options:
+        - label: Puedo implementarlo yo si la idea se acepta.

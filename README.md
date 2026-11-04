@@ -69,3 +69,8 @@ abre Movimientos ya filtrado por esa categoría y ese mes.
 
 `schemaVersion: 3` (9 tablas, incluye `calEvents`). Los respaldos **v2 se aceptan** y se
 normalizan al importarlos; los v1 siguen rechazados.
+
+## Contribuir y licencia
+
+Las contribuciones entran por pull request desde un fork; los detalles están en `CONTRIBUTING.md`.
+El código se publica bajo la licencia MIT (`LICENSE`).

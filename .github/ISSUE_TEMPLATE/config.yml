@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Guía de contribución
+    url: https://github.com/DanCas03/cuentas-claras/blob/main/CONTRIBUTING.md
+    about: Cómo proponer cambios, compilar y probar antes de abrir un issue o PR.
